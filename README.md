@@ -92,6 +92,7 @@ obtained manually with `git` and `dep` (create directories as needed):
 git clone https://github.com/HcashOrg/hcwallet $GOPATH/src/github.com/HcashOrg/hcwallet
 cd $GOPATH/src/github.com/HcashOrg/hcwallet
 dep ensure
+go install
 ```
 
 To update an existing source tree, pull the latest changes and install the
@@ -100,7 +101,8 @@ matching dependencies:
 ```
 cd $GOPATH/src/github.com/HcashOrg/hcwallet
 git pull
-dep ensure
+dep ensure -update
+go install
 ```
 
 **Building/Installing**:
