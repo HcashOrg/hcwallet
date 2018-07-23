@@ -3607,7 +3607,7 @@ type AccountTotalReceivedResult struct {
 }
 
 // TotalReceivedForAccounts iterates through a wallet's transaction history,
-// returning the total amount of decred received for all accounts.
+// returning the total amount of hcd received for all accounts.
 func (w *Wallet) TotalReceivedForAccounts(minConf int32) ([]AccountTotalReceivedResult, error) {
 	var results []AccountTotalReceivedResult
 	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
@@ -3672,7 +3672,7 @@ func (w *Wallet) TotalReceivedForAccounts(minConf int32) ([]AccountTotalReceived
 }
 
 // TotalReceivedForAddr iterates through a wallet's transaction history,
-// returning the total amount of decred received for a single wallet
+// returning the total amount of hcd received for a single wallet
 // address.
 func (w *Wallet) TotalReceivedForAddr(addr hcutil.Address, minConf int32) (hcutil.Amount, error) {
 	var amount hcutil.Amount

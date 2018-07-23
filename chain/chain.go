@@ -19,7 +19,7 @@ import (
 
 var requiredChainServerAPI = semver{major: 3, minor: 1, patch: 0}
 
-// RPCClient represents a persistent client connection to a decred RPC server
+// RPCClient represents a persistent client connection to a hcd RPC server
 // for information regarding the current best block chain.
 type RPCClient struct {
 	*hcrpcclient.Client
@@ -227,7 +227,7 @@ type (
 )
 
 // Notifications returns a channel of parsed notifications sent by the remote
-// decred RPC server.  This channel must be continually read or the process
+// hcd RPC server.  This channel must be continually read or the process
 // may abort for running out memory, as unread notifications are queued for
 // later reads.
 func (c *RPCClient) Notifications() <-chan interface{} {

@@ -711,7 +711,7 @@ func getBlockCount(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 }
 
 // getInfo handles a getinfo request by returning the a structure containing
-// information about the current state of dcrcwallet.
+// information about the current state of hcwallet.
 // exist.
 func getInfo(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
 	// Call down to hcd for all of the information in this command known
@@ -2428,7 +2428,7 @@ func sendToMultiSig(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient
 // payment addresses.  Leftover inputs not sent to the payment address
 // or a fee for the miner are sent back to a new address in the wallet.
 // Upon success, the TxID for the created transaction is returned.
-// DECRED TODO: Clean these up
+// hcd TODO: Clean these up
 func sendToSStx(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
 	cmd := icmd.(*dcrjson.SendToSStxCmd)
 	minconf := int32(*cmd.MinConf)
@@ -2492,7 +2492,7 @@ func sendToSStx(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Cli
 // sendToSSGen handles a sendtossgen RPC request by creating a new transaction
 // spending a stake ticket and generating stake rewards.
 // Upon success, the TxID for the created transaction is returned.
-// DECRED TODO: Clean these up
+// hcd TODO: Clean these up
 func sendToSSGen(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*dcrjson.SendToSSGenCmd)
 
@@ -2535,7 +2535,7 @@ func sendToSSGen(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // sendToSSRtx handles a sendtossrtx RPC request by creating a new transaction
 // spending a stake ticket and generating stake rewards.
 // Upon success, the TxID for the created transaction is returned.
-// DECRED TODO: Clean these up
+// hcd TODO: Clean these up
 func sendToSSRtx(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
 	cmd := icmd.(*dcrjson.SendToSSRtxCmd)
 

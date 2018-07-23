@@ -1498,7 +1498,7 @@ func (w *Wallet) txToSStxInternal(dbtx walletdb.ReadWriteTx, pair map[string]hcu
 }
 
 // txToSSGen ...
-// DECRED TODO
+// hcd TODO
 func (w *Wallet) txToSSGen(ticketHash chainhash.Hash, blockHash chainhash.Hash,
 	height int64, votebits uint16) (*CreatedTx, error) {
 	w.reorganizingLock.Lock()
@@ -1512,7 +1512,7 @@ func (w *Wallet) txToSSGen(ticketHash chainhash.Hash, blockHash chainhash.Hash,
 }
 
 // txToSSRtx ...
-// DECRED TODO
+// hcd TODO
 func (w *Wallet) txToSSRtx(ticketHash chainhash.Hash) (*CreatedTx, error) {
 	w.reorganizingLock.Lock()
 	reorg := w.reorganizing
