@@ -1,6 +1,6 @@
 // Copyright (c) 2015-2016 The btcsuite developers
 // Copyright (c) 2016 The Decred developers
-// Copyright (c) 2018-2020 The Hcd developers
+// Copyright (c) 2018-2020 The Hc developers
 //
 // Permission to use, copy, modify, and distribute this software for any
 // purpose with or without fee is hereby granted, provided that the above
