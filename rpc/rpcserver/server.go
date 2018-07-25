@@ -866,7 +866,7 @@ func (s *walletServer) ConstructTransaction(ctx context.Context, req *pb.Constru
 		if err != nil {
 			return nil, err
 		}
-		changeSource = func() ([]byte, uint16, error) { return script, version, nil }
+		changeSource = func(dbtx walletdb.ReadWriteTx) ([]byte, uint16, error) { return script, version, nil }
 	}
 
 	tx, err := s.wallet.NewUnsignedTransaction(outputs, feePerKb, req.SourceAccount,

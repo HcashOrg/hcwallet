@@ -1245,7 +1245,7 @@ type (
 	createMultisigTxRequest struct {
 		account   uint32
 		amount    hcutil.Amount
-		pubkeys   []*hcutil.AddressSecpPubKey
+		pubkeys   []hcutil.Address
 		nrequired int8
 		minconf   int32
 		resp      chan createMultisigTxResponse
@@ -1457,7 +1457,7 @@ func (w *Wallet) CreateSimpleTx(account uint32, outputs []*wire.TxOut,
 // CreateMultisigTx receives a request from the RPC and ships it to txCreator to
 // generate a new multisigtx.
 func (w *Wallet) CreateMultisigTx(account uint32, amount hcutil.Amount,
-	pubkeys []*hcutil.AddressSecpPubKey, nrequired int8,
+	pubkeys []hcutil.Address, nrequired int8,
 	minconf int32) (*CreatedTx, hcutil.Address, []byte, error) {
 
 	req := createMultisigTxRequest{
@@ -2537,6 +2537,31 @@ func (w *Wallet) ListAllTransactions() ([]dcrjson.ListTransactionsResult, error)
 		return w.TxStore.RangeTransactions(txmgrNs, -1, 0, rangeFn)
 	})
 	return txList, err
+}
+
+// ListTransactionDetails returns the listtransaction results for a single
+// transaction.
+func (w *Wallet) ListTransactionDetails(txHash *chainhash.Hash) ([]dcrjson.ListTransactionsResult, error) {
+
+	txList := []dcrjson.ListTransactionsResult{}
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
+
+		// Get current block.  The block height used for calculating
+		// the number of tx confirmations.
+		_, tipHeight := w.TxStore.MainChainTip(txmgrNs)
+
+		txd, err := w.TxStore.TxDetails(txmgrNs, txHash)
+		if err != nil {
+			return err
+		}
+		txList = listTransactions(dbtx, txd, w.Manager, tipHeight, w.chainParams)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return txList, nil
 }
 
 // BlockIdentifier identifies a block by either a height in the main chain or a
@@ -3845,8 +3870,7 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 					addrStr := addr.EncodeAddress()
 					script, ok := p2shRedeemScriptsByAddress[addrStr]
 					if !ok {
-						return nil, errors.New("no script for " +
-							"address")
+						return nil, errors.New("no script for address")
 					}
 					return script, nil
 				}
@@ -3931,7 +3955,7 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 				// that it's not a multisignature underflow, indicating that
 				// we didn't have enough signatures in front of the
 				// redeemScript rather than an actual error.
-				if !multisigNotEnoughSigs {
+				if multisigNotEnoughSigs {
 					signErrors = append(signErrors, SignatureError{
 						InputIndex: uint32(i),
 						Error:      err,

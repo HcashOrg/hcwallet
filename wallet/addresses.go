@@ -727,14 +727,15 @@ func (w *Wallet) AccountBranchAddressRange(account, branch, start, end uint32) (
 			return nil, err
 		}
 		//TODO
-		return deriveBlissAddresses(branchXpriv, start+uint32(w.gapLimit), end-start, w.chainParams)
+
+		return deriveBlissAddresses(branchXpriv, start, end-start, w.chainParams)
 	}
 	return nil, fmt.Errorf("unknown pubkey type")
 }
 
 func (w *Wallet) changeSource(persist persistReturnedChildFunc, account uint32) txauthor.ChangeSource {
-	return func() ([]byte, uint16, error) {
-		changeAddress, err := w.newChangeAddress(persist, account, nil)
+	return func(dbtx walletdb.ReadWriteTx) ([]byte, uint16, error) {
+		changeAddress, err := w.newChangeAddress(persist, account, dbtx)
 		if err != nil {
 			return nil, 0, err
 		}

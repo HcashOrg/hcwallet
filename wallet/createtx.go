@@ -48,11 +48,15 @@ const (
 	// appended to the end of the signature.
 	sigScriptEstimate = 1 + 73 + 1 + 33 + 1
 
+	sigScriptEstimateBliss = 1 + 727 + 1 + 897 + 1
+
 	// A best case tx input serialization cost is chainhash.HashSize, 4 bytes
 	// of output index, 1 byte for tree, 4 bytes of sequence, 16 bytes for
 	// fraud proof, 1 varint for the sigscript size, and the estimated
 	// signature script size.
 	txInEstimate = chainhash.HashSize + 4 + 1 + 4 + 16 + 1 + sigScriptEstimate
+
+	txInEstimateBliss = chainhash.HashSize + 4 + 1 + 4 + 16 + 1 + sigScriptEstimateBliss
 
 	// A P2PKH pkScript contains the following bytes:
 	//  - OP_DUP
@@ -105,15 +109,22 @@ var (
 	maxTxSize = chaincfg.MainNetParams.MaxTxSize
 )
 
-func estimateTxSize(numInputs, numOutputs int) int {
-	return txOverheadEstimate + txInEstimate*numInputs + txOutEstimate*numOutputs
+func estimateTxSize(numInputs, numOutputs int, account uint32) int {
+	var txInEst int
+	if uint8(account) == udb.AcctypeBliss {
+		txInEst = txInEstimateBliss
+	} else {
+		txInEst = txInEstimate
+	}
+	return txOverheadEstimate + txInEst*numInputs + txOutEstimate*numOutputs
+
 }
 
 // EstimateTxSize is the exported version of estimateTxSize which provides
 // an estimate of the tx size based on the number of inputs, outputs, and some
 // assumed overhead.
-func EstimateTxSize(numInputs, numOutputs int) int {
-	return estimateTxSize(numInputs, numOutputs)
+func EstimateTxSize(numInputs, numOutputs int, account uint32) int {
+	return estimateTxSize(numInputs, numOutputs, account)
 }
 
 func feeForSize(incr hcutil.Amount, sz int) hcutil.Amount {
@@ -506,7 +517,7 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 // txToMultisig spends funds to a multisig output, partially signs the
 // transaction, then returns fund
 func (w *Wallet) txToMultisig(account uint32, amount hcutil.Amount,
-	pubkeys []*hcutil.AddressSecpPubKey, nRequired int8,
+	pubkeys []hcutil.Address, nRequired int8,
 	minconf int32) (*CreatedTx, hcutil.Address, []byte, error) {
 
 	var (
@@ -524,7 +535,7 @@ func (w *Wallet) txToMultisig(account uint32, amount hcutil.Amount,
 }
 
 func (w *Wallet) txToMultisigInternal(dbtx walletdb.ReadWriteTx, account uint32,
-	amount hcutil.Amount, pubkeys []*hcutil.AddressSecpPubKey, nRequired int8,
+	amount hcutil.Amount, pubkeys []hcutil.Address, nRequired int8,
 	minconf int32) (*CreatedTx, hcutil.Address, []byte, error) {
 
 	addrmgrNs := dbtx.ReadWriteBucket(waddrmgrNamespaceKey)
@@ -622,7 +633,7 @@ func (w *Wallet) txToMultisigInternal(dbtx walletdb.ReadWriteTx, account uint32,
 	// totalInput == amount+feeEst is skipped because
 	// we don't need to add a change output in this
 	// case.
-	feeSize := estimateTxSize(numInputs, 2)
+	feeSize := estimateTxSize(numInputs, 2, account)
 	feeIncrement := w.RelayFee()
 
 	feeEst := feeForSize(feeIncrement, feeSize)
@@ -632,7 +643,7 @@ func (w *Wallet) txToMultisigInternal(dbtx walletdb.ReadWriteTx, account uint32,
 			"multisig address after accounting for fees"))
 	}
 	if totalInput > amount+feeEst {
-		pkScript, _, err := w.changeSource(w.persistReturnedChild(dbtx), account)()
+		pkScript, _, err := w.changeSource(w.persistReturnedChild(dbtx), account)(dbtx)
 		if err != nil {
 			return txToMultisigError(err)
 		}
@@ -749,7 +760,7 @@ func (w *Wallet) compressWalletInternal(dbtx walletdb.ReadWriteTx, maxNumIns int
 
 	// Get an initial fee estimate based on the number of selected inputs
 	// and added outputs, with no change.
-	szEst := estimateTxSize(txInCount, 1)
+	szEst := estimateTxSize(txInCount, 1, account)
 	feeIncrement := w.RelayFee()
 
 	feeEst := feeForSize(feeIncrement, szEst)
@@ -973,6 +984,8 @@ func (w *Wallet) purchaseTickets(req purchaseTicketRequest) ([]*chainhash.Hash, 
 		return nil, err
 	}
 
+	account := req.account
+
 	// Ensure the minimum number of required confirmations is positive.
 	if req.minConf < 0 {
 		return nil, fmt.Errorf("need positive minconf")
@@ -1001,8 +1014,20 @@ func (w *Wallet) purchaseTickets(req purchaseTicketRequest) ([]*chainhash.Hash, 
 	// addrFunc returns a change address.
 	addrFunc := w.newChangeAddress
 	if w.addressReuse {
-		xpub := w.addressBuffers[udb.DefaultAccountNum].albExternal.branchXpub
-		addr, err := deriveChildAddress(xpub, 0, w.chainParams)
+		var err error
+		var addr hcutil.Address
+
+		if account == udb.DefaultAccountNum {
+			xpub := w.addressBuffers[udb.DefaultAccountNum].albExternal.branchXpub
+			addr, err = deriveChildAddress(xpub, 0, w.chainParams)
+		} else {
+			err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+				addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+				addr, err = w.Manager.LoadBlissAddr(addrmgrNs, account, udb.ExternalBranch, 0)
+				return err
+			})
+		}
+
 		addrFunc = func(persistReturnedChildFunc, uint32, walletdb.ReadWriteTx) (hcutil.Address, error) {
 			return addr, err
 		}
@@ -1018,7 +1043,6 @@ func (w *Wallet) purchaseTickets(req purchaseTicketRequest) ([]*chainhash.Hash, 
 	// required plus fees for the split is larger than the
 	// balance we have, wasting an address. In the future,
 	// address this better and prevent address burning.
-	account := req.account
 
 	// Get the current ticket price from the daemon.
 	ticketPricesF64, err := w.ChainClient().GetStakeDifficulty()
@@ -1671,7 +1695,8 @@ func (w *Wallet) findEligibleOutputsAmount(dbtx walletdb.ReadTx, account uint32,
 			!(class == txscript.PubKeyHashTy ||
 				class == txscript.StakeGenTy ||
 				class == txscript.StakeRevocationTy ||
-				class == txscript.StakeSubChangeTy) {
+				class == txscript.StakeSubChangeTy ||
+				class == txscript.PubkeyHashAltTy) {
 			continue
 		}
 

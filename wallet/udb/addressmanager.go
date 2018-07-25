@@ -15,7 +15,7 @@ import (
 
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/chaincfg/chainec"
-	"github.com/HcashOrg/hcd/crypto/bliss"
+	bs "github.com/HcashOrg/hcd/crypto/bliss"
 	"github.com/HcashOrg/hcutil"
 	"github.com/HcashOrg/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcwallet/apperrors"
@@ -140,6 +140,8 @@ func isReservedAccountNum(acct uint32) bool {
 func normalizeAddress(addr hcutil.Address) hcutil.Address {
 	switch addr := addr.(type) {
 	case *hcutil.AddressSecpPubKey:
+		return addr.AddressPubKeyHash()
+	case *hcutil.AddressBlissPubKey:
 		return addr.AddressPubKeyHash()
 	default:
 		return addr
@@ -777,7 +779,7 @@ func (m *Manager) importedAddressRowToManaged(row *dbImportedAddressRow) (Manage
 	if len(pubBytes) == 33 || len(pubBytes) == 65 {
 		pubKey, err = chainec.Secp256k1.ParsePubKey(pubBytes)
 	} else {
-		pubKey, err = bliss.Bliss.ParsePubKey(pubBytes)
+		pubKey, err = bs.Bliss.ParsePubKey(pubBytes)
 	}
 
 	if err != nil {
@@ -1204,7 +1206,7 @@ func (m *Manager) ImportPrivateKey(ns walletdb.ReadWriteBucket, wif *hcutil.WIF)
 	var managedAddr *managedAddress
 	// Save the new imported address to the db and update start block (if
 	// needed) in a single transaction.
-	if wif.AlgorithmType != bliss.BSTypeBliss {
+	if wif.AlgorithmType != bs.BSTypeBliss {
 		managedAddr, err = newManagedAddressWithoutPrivKey(m, ImportedAddrAccount,
 			chainec.Secp256k1.NewPublicKey(wif.PrivKey.Public()), true)
 		if err != nil {
@@ -1212,7 +1214,7 @@ func (m *Manager) ImportPrivateKey(ns walletdb.ReadWriteBucket, wif *hcutil.WIF)
 		}
 	} else {
 		managedAddr, err = newManagedAddressWithoutPrivKey(m, ImportedAddrAccount,
-			wif.PrivKey.(bliss.PrivateKey).PublicKey(), true)
+			wif.PrivKey.(bs.PrivateKey).PublicKey(), true)
 		if err != nil {
 			return nil, err
 		}
@@ -2028,7 +2030,7 @@ func (m *Manager) PrivateKey(ns walletdb.ReadBucket, addr hcutil.Address) (key c
 			return nil, nil, err
 		}
 		if len(privKeyBytes) == 385 {
-			key, _ = bliss.Bliss.PrivKeyFromBytes(privKeyBytes)
+			key, _ = bs.Bliss.PrivKeyFromBytes(privKeyBytes)
 		} else {
 			key, _ = chainec.Secp256k1.PrivKeyFromBytes(privKeyBytes)
 		}
