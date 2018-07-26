@@ -21,6 +21,7 @@ import (
 	"github.com/HcashOrg/hcwallet/wallet/internal/txsizes"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
+	"github.com/HcashOrg/hcwallet/walletdb"
 )
 
 const (

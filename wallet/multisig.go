@@ -8,7 +8,6 @@ package wallet
 import (
 	"errors"
 
-	"github.com/HcashOrg/hcd/chaincfg/chainec"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
 	"github.com/HcashOrg/hcutil"

@@ -46,7 +46,7 @@
     "txscript",
     "wire"
   ]
-  revision = "6842321293b87f7684a4ecf5d4e9162d8b7bbd8c"
+  revision = "c75056e3ce23cb2e1e19013273a7e828459125da"
 
 [[projects]]
   branch = "master"
@@ -62,7 +62,7 @@
     "base58",
     "hdkeychain"
   ]
-  revision = "e4faa4c85db69545617b775995bc08101b6fa55b"
+  revision = "2c3a0d8ec59525d1b7f15f582e498b3de4074f4d"
 
 [[projects]]
   branch = "master"
@@ -96,6 +96,19 @@
   name = "github.com/btcsuite/websocket"
   packages = ["."]
   revision = "31079b6807923eb23992c421b114992b95131b55"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/coolsnady/hcd"
+  packages = [
+    "chaincfg/chainec",
+    "chaincfg/chainhash",
+    "crypto",
+    "dcrec/edwards",
+    "dcrec/secp256k1",
+    "dcrec/secp256k1/schnorr"
+  ]
+  revision = "9500c70e5adcbda658556393bfa17ad922433466"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"

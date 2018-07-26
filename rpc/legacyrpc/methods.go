@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/chaincfg/chainec"
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
+	"github.com/HcashOrg/hcd/crypto/bliss"
 	"github.com/HcashOrg/hcd/dcrjson"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
@@ -383,7 +385,7 @@ func makeMultiSigScript(w *wallet.Wallet, keys []string,
 					return nil, err
 				}
 				keysesPrecious[i] = pubKeyAddr
-			} else if pkType == chainec.ECTypeBliss {
+			} else if pkType == bliss.BSTypeBliss {
 				pubKeyAddr, err := hcutil.NewAddressBlissPubKey(pubKey.Serialize(), w.ChainParams())
 				if err != nil {
 					return nil, err
@@ -2300,11 +2302,7 @@ func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		}
 	}
 
-	account, err := w.AccountNumber(cmd.AccountName)
-	if err != nil {
-		return nil, err
-	}
-
+	account := uint32(udb.DefaultAccountNum)
 	amt, err := hcutil.NewAmount(cmd.Amount)
 	if err != nil {
 		return nil, err
@@ -2351,7 +2349,7 @@ func getStraightPubKey(icmd interface{}, w *wallet.Wallet, chainClient *hcrpccli
 				return nil, err
 			}
 			result.StraightPubKey = pubKeyAddr.String()
-		case chainec.ECTypeBliss:
+		case bliss.BSTypeBliss:
 			pubKeyAddr, err := hcutil.NewAddressBlissPubKey(pubKey.Serialize(), w.ChainParams())
 			if err != nil {
 				return nil, err
@@ -2423,7 +2421,7 @@ func sendToMultiSig(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient
 					return nil, err
 				}
 				pubkeys[i] = pubKeyAddr
-			case chainec.ECTypeBliss:
+			case bliss.BSTypeBliss:
 				pubKeyAddr, err := hcutil.NewAddressBlissPubKey(
 					pubKey.Serialize(), w.ChainParams())
 				if err != nil {
