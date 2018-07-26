@@ -1,0 +1,81 @@
+hash: e514db2d43ef8f6f243cc0c1dabad8b05b47ee8cac27cda8f7a93726f3a09af7
+updated: 2018-07-20T18:02:36.109076459+08:00
+imports:
+- name: github.com/agl/ed25519
+  version: 5312a61534124124185d41f09206b9fef1d88403
+  subpackages:
+  - edwards25519
+- name: github.com/btcsuite/btclog
+  version: 84c8d2346e9fc8c7b947e243b9c24e6df9fd206a
+- name: github.com/btcsuite/go-socks
+  version: 4720035b7bfd2a9bb130b1c184f8bbe41b6f0d0f
+  subpackages:
+  - socks
+- name: github.com/btcsuite/goleveldb
+  version: 7834afc9e8cd15233b6c3d97e12674a31ca24602
+  subpackages:
+  - leveldb
+  - leveldb/cache
+  - leveldb/comparer
+  - leveldb/errors
+  - leveldb/filter
+  - leveldb/iterator
+  - leveldb/journal
+  - leveldb/memdb
+  - leveldb/opt
+  - leveldb/storage
+  - leveldb/table
+  - leveldb/util
+- name: github.com/btcsuite/snappy-go
+  version: 0bdef8d067237991ddaa1bb6072a740bc40601ba
+- name: github.com/btcsuite/websocket
+  version: 31079b6807923eb23992c421b114992b95131b55
+- name: github.com/btcsuite/winsvc
+  version: f8fb11f83f7e860e3769a08e6811d1b399a43722
+  subpackages:
+  - eventlog
+  - mgr
+  - registry
+  - svc
+  - winapi
+- name: github.com/davecgh/go-spew
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
+  subpackages:
+  - spew
+- name: github.com/dchest/blake256
+  version: dee3fe6eb0e98dc774a94fc231f85baf7c29d360
+- name: github.com/HcashOrg/bitset
+  version: 3b5f0c752dfbeeda856fd6af60e997257ca399fc
+- name: github.com/HcashOrg/bliss
+  version: f5d53c2a9b7d05ffa1600cad036d3d51dd5423cc
+  subpackages:
+  - huffman
+  - params
+  - poly
+  - sampler
+- name: github.com/HcashOrg/hcrpcclient
+  version: 502dc8993aae5f43511eabcaa50ab02a627607e3
+- name: github.com/HcashOrg/hcutil
+  version: 6f59f99116eb93bf2ec0ff93b2b620dc896e9b70
+  subpackages:
+  - base58
+  - bloom
+  - hdkeychain
+- name: github.com/jessevdk/go-flags
+  version: c6ca198ec95c841fdb89fc0de7496fed11ab854e
+- name: github.com/jrick/logrotate
+  version: a93b200c26cbae3bb09dd0dc2c7c7fe1468a034a
+  subpackages:
+  - rotator
+- name: golang.org/x/crypto
+  version: a49355c7e3f8fe157a85be2f77e6e269a0f89602
+  subpackages:
+  - ripemd160
+  - sha3
+  - ssh/terminal
+- name: golang.org/x/sys
+  version: 1b2967e3c290b7c545b3db0deeda16e9be4f98a2
+  subpackages:
+  - unix
+  - windows
+testImports: []
