@@ -518,10 +518,11 @@ func loadConfig() (*config, []string, error) {
 	// Warn about missing config file after the final command line parse
 	// succeeds.  This prevents the warning on help messages and invalid
 	// options.
-	if configFileError != nil {
-		log.Warnf("%v", configFileError)
+	switch t := configFileError.(type) {
+		case *os.PathError:
+		default:
+			log.Errorf("%v", t)
 	}
-
 	// Check deprecated options.  The new options receive priority when both
 	// are changed from the default.
 	if cfg.DataDir.ExplicitlySet() {
