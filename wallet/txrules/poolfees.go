@@ -65,12 +65,7 @@ func StakePoolTicketFee(stakeDiff hcutil.Amount, relayFee hcutil.Amount,
 	initSubsidyCacheOnce.Do(func() {
 		subsidyCache = blockchain.NewSubsidyCache(int64(height), params)
 	})
-	subsidy := blockchain.CalcStakeVoteSubsidy(subsidyCache, int64(height),
-		params)
-	for i := 0; i < adjs; i++ {
-		subsidy *= 100
-		subsidy /= 101
-	}
+	subsidy := blockchain.CalcStakeVoteSubsidy(subsidyCache, int64(height)+params.SubsidyReductionInterval*int64(adjs), params)
 
 	// The numerator is (p*10000*s*(v+z)) << 64.
 	shift := uint(64)
