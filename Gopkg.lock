@@ -41,28 +41,21 @@
     "dcrec/secp256k1",
     "dcrec/secp256k1/schnorr",
     "dcrjson",
+    "hcutil",
+    "hcutil/base58",
+    "hcutil/hdkeychain",
     "mempool",
     "mining",
     "txscript",
     "wire"
   ]
-  revision = "18cc081629f3e5eed9901f127c895a8a82835825"
+  revision = "338210ca1125caf5eaabdc232ffe0fd6bc236bd1"
 
 [[projects]]
   branch = "master"
   name = "github.com/HcashOrg/hcrpcclient"
   packages = ["."]
-  revision = "ab4035ccd1248103b82290a76146645c0f6e9e5e"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/HcashOrg/hcd/hcutil"
-  packages = [
-    ".",
-    "base58",
-    "hdkeychain"
-  ]
-  revision = "3744332ddbf115271697b74199630785dc87c474"
+  revision = "bc79ffac5bcef6131f880de25da5bc0d1a4b2b22"
 
 [[projects]]
   branch = "master"
@@ -252,6 +245,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9d5cf3ea77582b891943c0b15e3206d4720e2e3d2a8eaed468dd643e37106b24"
+  inputs-digest = "95429edaa43555991d864412bf1c3ea24aed311a2739a1c8cb60075f89d1083f"
   solver-name = "gps-cdcl"
   solver-version = 1
