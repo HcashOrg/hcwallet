@@ -27,8 +27,8 @@ import (
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
 	hcrpcclient "github.com/HcashOrg/hcrpcclient"
-	"github.com/HcashOrg/hcutil"
-	"github.com/HcashOrg/hcutil/hdkeychain"
+	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/wallet"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
@@ -2789,8 +2789,7 @@ func signRawTransaction(icmd interface{}, w *wallet.Wallet, chainClient *hcrpccl
 			}
 		}
 		requested[txIn.PreviousOutPoint] = chainClient.GetTxOutAsync(
-			&txIn.PreviousOutPoint.Hash, txIn.PreviousOutPoint.Index,
-			true)
+			&txIn.PreviousOutPoint.Hash, txIn.PreviousOutPoint.Index, true)
 	}
 
 	// Parse list of private keys, if present. If there are any keys here

@@ -20,7 +20,7 @@ import (
 
 	xcontext "golang.org/x/net/context"
 
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcwallet/loader"
 	"github.com/HcashOrg/hcwallet/rpc/legacyrpc"
 	"github.com/HcashOrg/hcwallet/rpc/rpcserver"

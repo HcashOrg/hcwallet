@@ -12,8 +12,8 @@ import (
 
 	"github.com/HcashOrg/bitset"
 	hcrpcclient "github.com/HcashOrg/hcrpcclient"
-	"github.com/HcashOrg/hcutil"
-	"github.com/HcashOrg/hcutil/hdkeychain"
+	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 	"github.com/HcashOrg/hcwallet/walletdb"
 )

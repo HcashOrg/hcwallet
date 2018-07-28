@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/walletdb"
 )

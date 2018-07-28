@@ -10,8 +10,8 @@ import (
 
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/txscript"
-	"github.com/HcashOrg/hcutil"
-	"github.com/HcashOrg/hcutil/hdkeychain"
+	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/wallet/txauthor"
 	"github.com/HcashOrg/hcwallet/wallet/udb"

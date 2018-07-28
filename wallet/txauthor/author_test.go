@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/HcashOrg/hcd/wire"
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 	. "github.com/HcashOrg/hcwallet/wallet/txauthor"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 

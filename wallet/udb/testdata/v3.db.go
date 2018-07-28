@@ -16,7 +16,7 @@ import (
 	"os"
 
 	"github.com/HcashOrg/hcd/chaincfg"
-	"github.com/HcashOrg/hcutil/hdkeychain"
+	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 	"github.com/HcashOrg/hcwallet/walletdb"
 	_ "github.com/HcashOrg/hcwallet/walletdb/bdb"

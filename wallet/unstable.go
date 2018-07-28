@@ -7,7 +7,7 @@ package wallet
 
 import (
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 	"github.com/HcashOrg/hcwallet/walletdb"
 )

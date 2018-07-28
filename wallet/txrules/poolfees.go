@@ -13,7 +13,7 @@ import (
 
 	"github.com/HcashOrg/hcd/blockchain"
 	"github.com/HcashOrg/hcd/chaincfg"
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 )
 
 // maxPoolFeeRate is the maximum value of the pool fee

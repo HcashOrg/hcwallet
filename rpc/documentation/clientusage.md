@@ -57,7 +57,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 )
 
 var certificateFile = filepath.Join(hcutil.AppDataDir("hcwallet", false), "rpc.cert")

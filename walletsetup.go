@@ -16,7 +16,7 @@ import (
 
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/wire"
-	"github.com/HcashOrg/hcutil/hdkeychain"
+	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcwallet/internal/prompt"
 	"github.com/HcashOrg/hcwallet/loader"
 	"github.com/HcashOrg/hcwallet/wallet"

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 )
 
 var (

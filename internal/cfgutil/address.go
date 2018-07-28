@@ -6,7 +6,7 @@
 
 package cfgutil
 
-import "github.com/HcashOrg/hcutil"
+import "github.com/HcashOrg/hcd/hcutil"
 
 // AddressFlag embeds a hcutil.Address and implements the flags.Marshaler and
 // Unmarshaler interfaces so it can be used as a config struct field.

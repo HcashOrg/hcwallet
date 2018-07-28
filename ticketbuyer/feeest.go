@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 )
 
 const (

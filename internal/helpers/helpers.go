@@ -10,7 +10,7 @@ package helpers
 
 import (
 	"github.com/HcashOrg/hcd/wire"
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 )
 
 // SumOutputValues sums up the list of TxOuts and returns an Amount.

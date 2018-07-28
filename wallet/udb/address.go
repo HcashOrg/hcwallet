@@ -10,8 +10,8 @@ import (
 	"encoding/hex"
 
 	"github.com/HcashOrg/hcd/chaincfg/chainec"
-	"github.com/HcashOrg/hcutil"
-	"github.com/HcashOrg/hcutil/hdkeychain"
+	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcwallet/apperrors"
 )
 

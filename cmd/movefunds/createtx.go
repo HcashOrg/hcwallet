@@ -19,7 +19,7 @@ package main
 import (
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 )
 
 // makeTx generates a transaction spending outputs to a single address.

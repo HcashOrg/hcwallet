@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	"github.com/btcsuite/btclog"
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcwallet/internal/cfgutil"
 	"github.com/HcashOrg/hcwallet/netparams"
 	"github.com/HcashOrg/hcwallet/ticketbuyer"

@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 )
 
 // AmountFlag embeds a hcutil.Amount and implements the flags.Marshaler and

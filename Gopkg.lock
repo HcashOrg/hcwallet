@@ -46,7 +46,7 @@
     "txscript",
     "wire"
   ]
-  revision = "c75056e3ce23cb2e1e19013273a7e828459125da"
+  revision = "18cc081629f3e5eed9901f127c895a8a82835825"
 
 [[projects]]
   branch = "master"
@@ -56,13 +56,13 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/HcashOrg/hcutil"
+  name = "github.com/HcashOrg/hcd/hcutil"
   packages = [
     ".",
     "base58",
     "hdkeychain"
   ]
-  revision = "2c3a0d8ec59525d1b7f15f582e498b3de4074f4d"
+  revision = "3744332ddbf115271697b74199630785dc87c474"
 
 [[projects]]
   branch = "master"
@@ -96,19 +96,6 @@
   name = "github.com/btcsuite/websocket"
   packages = ["."]
   revision = "31079b6807923eb23992c421b114992b95131b55"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/coolsnady/hcd"
-  packages = [
-    "chaincfg/chainec",
-    "chaincfg/chainhash",
-    "crypto",
-    "dcrec/edwards",
-    "dcrec/secp256k1",
-    "dcrec/secp256k1/schnorr"
-  ]
-  revision = "9500c70e5adcbda658556393bfa17ad922433466"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -201,7 +188,7 @@
     "unix",
     "windows"
   ]
-  revision = "e072cadbbdc8dd3d3ffa82b8b4b9304c261d9311"
+  revision = "bd9dbc187b6e1dacfdd2722a87e83093c2d7bd6e"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -228,7 +215,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "02b4e95473316948020af0b7a4f0f22c73929b0e"
+  revision = "2a72893556e4d1f6c795a4c039314c9fa751eedb"
 
 [[projects]]
   name = "google.golang.org/grpc"

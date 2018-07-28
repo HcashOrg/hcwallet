@@ -16,7 +16,7 @@ import (
 	"github.com/HcashOrg/hcd/crypto/bliss"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 	h "github.com/HcashOrg/hcwallet/internal/helpers"
 	"github.com/HcashOrg/hcwallet/wallet/internal/txsizes"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"

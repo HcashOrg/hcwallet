@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/HcashOrg/hcd/wire"
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcwallet/walletdb"
 	_ "github.com/HcashOrg/hcwallet/walletdb/bdb"
 )

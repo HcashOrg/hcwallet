@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/HcashOrg/hcd/chaincfg"
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 	. "github.com/HcashOrg/hcwallet/wallet/txrules"
 )
 

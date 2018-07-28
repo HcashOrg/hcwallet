@@ -21,7 +21,7 @@ import (
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
 
 	rpc "github.com/HcashOrg/hcrpcclient"
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 )
 
 var (

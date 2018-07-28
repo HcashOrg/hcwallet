@@ -15,7 +15,7 @@ import (
 	"github.com/HcashOrg/hcd/blockchain"
 	"github.com/HcashOrg/hcd/chaincfg"
 	hcrpcclient "github.com/HcashOrg/hcrpcclient"
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcwallet/wallet"
 )
 
