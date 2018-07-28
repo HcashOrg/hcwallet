@@ -49,9 +49,6 @@
   branch = "master"
   name = "github.com/HcashOrg/hcrpcclient"
 
-[[constraint]]
-  branch = "master"
-  name = "github.com/HcashOrg/hcd/hcutil"
 
 [[constraint]]
   name = "github.com/golang/protobuf"
