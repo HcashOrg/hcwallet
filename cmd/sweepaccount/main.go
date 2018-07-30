@@ -14,10 +14,10 @@ import (
 
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
 	"github.com/HcashOrg/hcd/dcrjson"
+	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
 	hcrpcclient "github.com/HcashOrg/hcrpcclient"
-	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcwallet/internal/cfgutil"
 	"github.com/HcashOrg/hcwallet/netparams"
 	"github.com/HcashOrg/hcwallet/wallet/txauthor"
@@ -44,8 +44,8 @@ func errContext(err error, context string) error {
 
 // Flags.
 var opts = struct {
-	TestNet               bool                `long:"testnet" description:"Use the test decred network"`
-	SimNet                bool                `long:"simnet" description:"Use the simulation decred network"`
+	TestNet               bool                `long:"testnet" description:"Use the test HC network"`
+	SimNet                bool                `long:"simnet" description:"Use the simulation HC network"`
 	RPCConnect            string              `short:"c" long:"connect" description:"Hostname[:port] of wallet RPC server"`
 	RPCUsername           string              `short:"u" long:"rpcuser" description:"Wallet RPC username"`
 	RPCCertificateFile    string              `long:"cafile" description:"Wallet RPC TLS certificate"`
@@ -83,7 +83,7 @@ func init() {
 	}
 
 	if opts.TestNet && opts.SimNet {
-		fatalf("Multiple decred networks may not be used simultaneously")
+		fatalf("Multiple HC networks may not be used simultaneously")
 	}
 	var activeNet = &netparams.MainNetParams
 	if opts.TestNet {

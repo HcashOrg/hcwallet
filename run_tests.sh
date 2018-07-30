@@ -45,7 +45,7 @@ if [ $GOVERSION == "local" ]; then
     exit
 fi
 
-DOCKER_IMAGE_TAG=decred-golang-builder-$GOVERSION
+DOCKER_IMAGE_TAG=hcd-golang-builder-$GOVERSION
 
 docker pull HcashOrg/$DOCKER_IMAGE_TAG
 

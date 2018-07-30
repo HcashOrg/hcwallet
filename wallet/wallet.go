@@ -27,11 +27,11 @@ import (
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
 	"github.com/HcashOrg/hcd/dcrec/secp256k1"
 	"github.com/HcashOrg/hcd/dcrjson"
+	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
 	hcrpcclient "github.com/HcashOrg/hcrpcclient"
-	"github.com/HcashOrg/hcd/hcutil"
-	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/chain"
 	"github.com/HcashOrg/hcwallet/wallet/txauthor"
@@ -3017,7 +3017,7 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32, addresses map[string]struct
 			case stake.TxTypeSStx:
 				// Ticket commitment, only spendable after ticket maturity.
 				// You can only spent it after TM many blocks has gone past, so
-				// ticket maturity + 1??? Check this DECRED TODO
+				// ticket maturity + 1??? Check this HC TODO
 				if output.Index == 0 {
 					if !confirmed(int32(w.chainParams.TicketMaturity+1),
 						details.Height(), tipHeight) {
