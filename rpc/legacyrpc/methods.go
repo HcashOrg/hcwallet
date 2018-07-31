@@ -410,16 +410,16 @@ func addMultiSigAddress(icmd interface{}, w *wallet.Wallet, chainClient *hcrpccl
 		return nil, &ErrNotImportedAccount
 	}
 
-	secp256k1Addrs := make([]hcutil.Address, len(cmd.Keys))
+	addrs := make([]hcutil.Address, len(cmd.Keys))
 	for i, k := range cmd.Keys {
 		addr, err := decodeAddress(k, w.ChainParams())
 		if err != nil {
 			return nil, ParseError{err}
 		}
-		secp256k1Addrs[i] = addr
+		addrs[i] = addr
 	}
 
-	script, err := w.MakeMultiSigScript(secp256k1Addrs, cmd.NRequired)
+	script, err := w.MakeMultiSigScript(addrs, cmd.NRequired)
 	if err != nil {
 		return nil, err
 	}
@@ -2844,6 +2844,9 @@ func signRawTransaction(icmd interface{}, w *wallet.Wallet, chainClient *hcrpccl
 		result, err := resp.Receive()
 		if err != nil {
 			return nil, err
+		}
+		if result == nil {
+			return nil, errors.New("query tx err,tx not exist or  PreOutPoint.Index err")
 		}
 		script, err := hex.DecodeString(result.ScriptPubKey.Hex)
 		if err != nil {

@@ -49,7 +49,7 @@
     "txscript",
     "wire"
   ]
-  revision = "338210ca1125caf5eaabdc232ffe0fd6bc236bd1"
+  revision = "067cf20fd39c40f7cb1f7d2d8074a29c94b62cb0"
 
 [[projects]]
   branch = "master"
@@ -166,7 +166,7 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "3673e40ba22529d22c3fd7c93e97b0ce50fa7bdd"
+  revision = "a0f8a16cb08c06df97cbdf9c47f4731ba548c33c"
 
 [[projects]]
   branch = "master"
