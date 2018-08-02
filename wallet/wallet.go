@@ -3906,11 +3906,12 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 				if class == txscript.PubkeyAltTy ||
 					class == txscript.PubkeyHashAltTy {
 					var err error
-					ecType, err = txscript.ExtractPkScriptAltSigType(prevOutScript)
+					ecTy, err := txscript.ExtractPkScriptAltSigType(prevOutScript)
 					if err != nil {
 						return errors.New("unknown checksigalt signature " +
 							"suite specified")
 					}
+					ecType = int(ecTy)
 				}
 
 				script, err := txscript.SignTxOutput(w.ChainParams(),

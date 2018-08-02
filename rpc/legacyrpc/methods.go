@@ -24,11 +24,11 @@ import (
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
 	"github.com/HcashOrg/hcd/crypto/bliss"
 	"github.com/HcashOrg/hcd/dcrjson"
+	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
 	hcrpcclient "github.com/HcashOrg/hcrpcclient"
-	"github.com/HcashOrg/hcd/hcutil"
-	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/wallet"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
@@ -652,11 +652,30 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 			return nil, err
 		}
 
+		var (
+			totImmatureCoinbase hcutil.Amount
+			totImmatureStakegen hcutil.Amount
+			totLocked           hcutil.Amount
+			totSpendable        hcutil.Amount
+			totUnconfirmed      hcutil.Amount
+			totVotingAuthority  hcutil.Amount
+			cumTot              hcutil.Amount
+		)
+
 		for _, bal := range balances {
 			accountName, err := w.AccountName(bal.Account)
 			if err != nil {
 				return nil, err
 			}
+
+			totImmatureCoinbase += bal.ImmatureCoinbaseRewards
+			totImmatureStakegen += bal.ImmatureStakeGeneration
+			totLocked += bal.LockedByTickets
+			totSpendable += bal.Spendable
+			totUnconfirmed += bal.Unconfirmed
+			totVotingAuthority += bal.VotingAuthority
+			cumTot += bal.Total
+
 			json := dcrjson.GetAccountBalanceResult{
 				AccountName:             accountName,
 				ImmatureCoinbaseRewards: bal.ImmatureCoinbaseRewards.ToCoin(),
@@ -669,6 +688,14 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 			}
 			result.Balances = append(result.Balances, json)
 		}
+
+		result.TotalImmatureCoinbaseRewards = totImmatureCoinbase.ToCoin()
+		result.TotalImmatureStakeGeneration = totImmatureStakegen.ToCoin()
+		result.TotalLockedByTickets = totLocked.ToCoin()
+		result.TotalSpendable = totSpendable.ToCoin()
+		result.TotalUnconfirmed = totUnconfirmed.ToCoin()
+		result.TotalVotingAuthority = totVotingAuthority.ToCoin()
+		result.CumulativeTotal = cumTot.ToCoin()
 	} else {
 		account, err := w.AccountNumber(accountName)
 		if err != nil {

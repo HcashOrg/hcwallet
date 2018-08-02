@@ -19,11 +19,11 @@ import (
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
 	bs "github.com/HcashOrg/hcd/crypto/bliss"
 	"github.com/HcashOrg/hcd/dcrjson"
+	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcd/mempool"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
 	hcrpcclient "github.com/HcashOrg/hcrpcclient"
-	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/wallet/internal/txsizes"
 	"github.com/HcashOrg/hcwallet/wallet/txauthor"
@@ -211,6 +211,13 @@ const (
 func (w *Wallet) NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcutil.Amount, account uint32, minConf int32,
 	algo OutputSelectionAlgorithm, changeSource txauthor.ChangeSource) (*txauthor.AuthoredTx, error) {
 
+	var doneFuncs []func()
+	defer func() {
+		for _, f := range doneFuncs {
+			f()
+		}
+	}()
+
 	var authoredTx *txauthor.AuthoredTx
 	var changeSourceUpdates []func(walletdb.ReadWriteTx) error
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
@@ -257,9 +264,28 @@ func (w *Wallet) NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcu
 			changeSource = w.changeSource(persist, account)
 		}
 
+		getScript := txscript.ScriptClosure(func(addr hcutil.Address) ([]byte, error) {
+			// First check tx manager script store.
+			scrTxStore, err := w.TxStore.GetTxScript(txmgrNs, addr.ScriptAddress())
+			if err != nil {
+				return nil, err
+			}
+			if scrTxStore != nil {
+				return scrTxStore, nil
+			}
+
+			// Then check the address manager.
+			script, done, err := w.Manager.RedeemScript(addrmgrNs, addr)
+			if err != nil {
+				return nil, err
+			}
+			doneFuncs = append(doneFuncs, done)
+			return script, nil
+		})
+
 		var err error
 		authoredTx, err = txauthor.NewUnsignedTransaction(outputs, relayFeePerKb,
-			inputSource, changeSource, udb.AcctypeEc)
+			inputSource, changeSource, udb.AcctypeEc, w.chainParams, getScript)
 		return err
 	})
 	if err != nil {
@@ -414,6 +440,13 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32, minconf int3
 func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minconf int32,
 	chainClient *hcrpcclient.Client, randomizeChangeIdx bool, txFee hcutil.Amount) (*txauthor.AuthoredTx, error) {
 
+	var doneFuncs []func()
+	defer func() {
+		for _, f := range doneFuncs {
+			f()
+		}
+	}()
+
 	var atx *txauthor.AuthoredTx
 	var changeSourceUpdates []func(walletdb.ReadWriteTx) error
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
@@ -426,9 +459,6 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 			return err
 		}
 		accType := accprop.AccountType
-		if accType != udb.AcctypeEc && accType != udb.AcctypeBliss {
-			return errors.New("unsupport type!!")
-		}
 
 		// Create the unsigned transaction.
 		_, tipHeight := w.TxStore.MainChainTip(txmgrNs)
@@ -437,8 +467,27 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		persist := w.deferPersistReturnedChild(&changeSourceUpdates)
 		changeSource := w.changeSource(persist, account)
 
+		getScript := txscript.ScriptClosure(func(addr hcutil.Address) ([]byte, error) {
+			// First check tx manager script store.
+			scrTxStore, err := w.TxStore.GetTxScript(txmgrNs, addr.ScriptAddress())
+			if err != nil {
+				return nil, err
+			}
+			if scrTxStore != nil {
+				return scrTxStore, nil
+			}
+
+			// Then check the address manager.
+			script, done, err := w.Manager.RedeemScript(addrmgrNs, addr)
+			if err != nil {
+				return nil, err
+			}
+			doneFuncs = append(doneFuncs, done)
+			return script, nil
+		})
+
 		atx, err = txauthor.NewUnsignedTransaction(outputs, txFee,
-			inputSource.SelectInputs, changeSource, accType)
+			inputSource.SelectInputs, changeSource, accType, w.chainParams, getScript)
 		if err != nil {
 			return err
 		}
@@ -1951,7 +2000,7 @@ func createUnsignedRevocation(ticketHash *chainhash.Hash, ticketPurchase *wire.M
 	// Revocations must pay a fee but do so by decreasing one of the output
 	// values instead of increasing the input value and using a change output.
 	// Calculate the estimated signed serialize size.
-	sizeEstimate := txsizes.EstimateSerializeSize(1, revocation.TxOut, false, udb.AcctypeEc)
+	sizeEstimate, _ := txsizes.EstimateSerializeSizeByAccount(1, revocation.TxOut, false, udb.AcctypeEc)
 	feeEstimate := txrules.FeeForSerializeSize(feePerKB, sizeEstimate)
 
 	// Reduce the output value of one of the outputs to accomodate for the relay

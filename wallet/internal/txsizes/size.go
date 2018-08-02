@@ -7,8 +7,14 @@
 package txsizes
 
 import (
-	"github.com/HcashOrg/hcd/wire"
+	"fmt"
+	"sort"
 
+	"github.com/HcashOrg/hcd/chaincfg"
+	"github.com/HcashOrg/hcd/chaincfg/chainec"
+	"github.com/HcashOrg/hcd/crypto/bliss"
+	"github.com/HcashOrg/hcd/txscript"
+	"github.com/HcashOrg/hcd/wire"
 	h "github.com/HcashOrg/hcwallet/internal/helpers"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 )
@@ -71,24 +77,90 @@ const (
 )
 
 // EstimateSerializeSize returns a worst case serialize size estimate for a
+// signed transaction that spends input Scripts
+// and contains each transaction output from txOuts.  The estimated size is
+// incremented for an additional P2PKH change output if addChangeOutput is true.
+func EstimateSerializeSizeByInputStripts(inputScripts [][]byte, txOuts []*wire.TxOut, addChangeOutput bool, params *chaincfg.Params, sdb txscript.ScriptDB) (int, error) {
+	changeSize := 0
+	inputSize := 0
+	bSecp256k1 := false
+
+	var sigTypes []uint8
+	var required int
+	var lenSigTypes int
+	var err error
+	for _, script := range inputScripts {
+		sigTypes, required, err = txscript.ExtractP2XScriptSigType(sdb, params, script)
+		if err != nil {
+			return -1, err
+		} else {
+			lenSigTypes = len(sigTypes)
+			if lenSigTypes != required {
+				//multisig
+				var iSigTypes []int
+				for _, st := range sigTypes {
+					iSigTypes = append(iSigTypes, int(st))
+				}
+
+				sigTypes = sigTypes[0:0]
+			
+				sort.Sort(sort.Reverse(sort.IntSlice(iSigTypes)))
+				for i := 0; i < required; i++ {
+					sigTypes = append(sigTypes, uint8(iSigTypes[i]))
+				}
+			}
+
+			for _, sigType := range sigTypes {
+				switch int(sigType) {
+				case chainec.ECTypeSecp256k1:
+					inputSize += RedeemP2PKHInputSize
+					bSecp256k1 = true
+				case bliss.BSTypeBliss:
+					inputSize += RedeemP2PKHAltInputSize
+				}
+			}
+		}
+	}
+
+	// mix sig ,change addr from default account.other change addr from bliss account
+	if lenSigTypes != required || required > 1 {
+		changeSize = P2PKHOutputSize
+	} else if bSecp256k1 {
+		changeSize = P2PKHOutputSize
+	} else {
+		changeSize = P2PKHAltOutputSize
+	}
+
+	return 12 + (2 * wire.VarIntSerializeSize(uint64(len(inputScripts)))) +
+		wire.VarIntSerializeSize(uint64(len(txOuts))) +
+		inputSize + h.SumOutputSerializeSizes(txOuts) +
+		changeSize, nil
+}
+
+// EstimateSerializeSizeByAccount returns a worst case serialize size estimate for a
 // signed transaction that spends inputCount number of compressed P2PKH outputs
 // and contains each transaction output from txOuts.  The estimated size is
 // incremented for an additional P2PKH change output if addChangeOutput is true.
-func EstimateSerializeSize(inputCount int, txOuts []*wire.TxOut, addChangeOutput bool, accType uint8) int {
+// Mainly rely on the account to estimate the size
+func EstimateSerializeSizeByAccount(inputCount int, txOuts []*wire.TxOut, addChangeOutput bool, accType uint8) (int, error) {
+	if accType != udb.AcctypeEc && accType != udb.AcctypeBliss {
+		return -1, fmt.Errorf("unsupport type")
+	}
+
 	changeSize := 0
 	inputSize := 0
 	outputCount := len(txOuts)
 	if addChangeOutput {
 		if accType == udb.AcctypeEc {
 			changeSize = P2PKHOutputSize
-		} else if accType == udb.AcctypeBliss {
+		} else {
 			changeSize = P2PKHAltOutputSize
 		}
 		outputCount++
 	}
 	if accType == udb.AcctypeEc {
 		inputSize = RedeemP2PKHInputSize
-	}else if accType == udb.AcctypeBliss {
+	} else if accType == udb.AcctypeBliss {
 		inputSize = RedeemP2PKHAltInputSize
 	}
 
@@ -97,5 +169,5 @@ func EstimateSerializeSize(inputCount int, txOuts []*wire.TxOut, addChangeOutput
 		wire.VarIntSerializeSize(uint64(outputCount)) +
 		inputCount*inputSize +
 		h.SumOutputSerializeSizes(txOuts) +
-		changeSize
+		changeSize, nil
 }

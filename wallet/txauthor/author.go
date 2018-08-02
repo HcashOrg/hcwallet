@@ -9,14 +9,13 @@ package txauthor
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/chaincfg/chainec"
 	"github.com/HcashOrg/hcd/crypto/bliss"
+	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
-	"github.com/HcashOrg/hcd/hcutil"
 	h "github.com/HcashOrg/hcwallet/internal/helpers"
 	"github.com/HcashOrg/hcwallet/wallet/internal/txsizes"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
@@ -99,10 +98,15 @@ type ChangeSource func(dbtx walletdb.ReadWriteTx) ([]byte, uint16, error)
 //
 // BUGS: Fee estimation may be off when redeeming non-compressed P2PKH outputs.
 func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcutil.Amount,
-	fetchInputs InputSource, fetchChange ChangeSource, accType uint8) (*AuthoredTx, error) {
+	fetchInputs InputSource, fetchChange ChangeSource, accType uint8, params *chaincfg.Params, sdb txscript.ScriptDB) (*AuthoredTx, error) {
 
 	targetAmount := h.SumOutputValues(outputs)
-	estimatedSize := txsizes.EstimateSerializeSize(1, outputs, true, accType)
+	if accType != udb.AcctypeBliss && accType != udb.AcctypeEc {
+		//Import account are evaluated according to ECC
+		accType = udb.AcctypeEc
+	}
+
+	estimatedSize, _ := txsizes.EstimateSerializeSizeByAccount(1, outputs, true, accType)
 	targetFee := txrules.FeeForSerializeSize(relayFeePerKb, estimatedSize)
 
 	for {
@@ -114,7 +118,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcutil.Amount,
 			return nil, InsufficientFundsError{}
 		}
 
-		maxSignedSize := txsizes.EstimateSerializeSize(len(inputs), outputs, true, accType)
+		maxSignedSize, _ := txsizes.EstimateSerializeSizeByInputStripts(scripts, outputs, true, params, sdb)
 		maxRequiredFee := txrules.FeeForSerializeSize(relayFeePerKb, maxSignedSize)
 		remainingAmount := inputAmount - targetAmount
 		if remainingAmount < maxRequiredFee {
@@ -139,19 +143,16 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcutil.Amount,
 				return nil, err
 			}
 
-			if accType == udb.AcctypeEc {
-				if len(changeScript) > txsizes.P2PKHPkScriptSize+1 {
-					return nil, errors.New("fee estimation requires change " +
-						"scripts no larger than P2PKH output scripts")
-				}
-			} else if accType == udb.AcctypeBliss {
+			if accType == udb.AcctypeBliss {
 				if len(changeScript) > txsizes.P2PKBlissPKScriptSize+1 {
 					return nil, errors.New("fee estimation requires change " +
 						"scripts no larger than P2PKH output scripts")
 				}
 			} else {
-				errStr := fmt.Sprintf("err account type:%d", accType)
-				return nil, errors.New(errStr)
+				if len(changeScript) > txsizes.P2PKHPkScriptSize+1 {
+					return nil, errors.New("fee estimation requires change " +
+						"scripts no larger than P2PKH output scripts")
+				}
 			}
 
 			change := &wire.TxOut{
@@ -164,8 +165,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcutil.Amount,
 			changeIndex = l
 		}
 
-		estSignedSize := txsizes.EstimateSerializeSize(len(unsignedTransaction.TxIn),
-			unsignedTransaction.TxOut, false, accType)
+		estSignedSize, _ := txsizes.EstimateSerializeSizeByInputStripts(scripts, unsignedTransaction.TxOut, false, params, sdb)
 		return &AuthoredTx{
 			Tx:                           unsignedTransaction,
 			PrevScripts:                  scripts,
@@ -226,7 +226,7 @@ func AddAllInputScripts(tx *wire.MsgTx, prevPkScripts [][]byte, secrets SecretsS
 		pkScript := prevPkScripts[i]
 		sigType := chainec.ECTypeSecp256k1
 		alType, _ := txscript.ExtractPkScriptAltSigType(pkScript)
-		if alType == int(bliss.BSTypeBliss) {
+		if alType == bliss.BSTypeBliss {
 			sigType = bliss.BSTypeBliss
 		}
 		sigScript := inputs[i].SignatureScript
