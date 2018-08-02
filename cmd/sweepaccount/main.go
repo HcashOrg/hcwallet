@@ -24,6 +24,7 @@ import (
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 	"github.com/jessevdk/go-flags"
+	"github.com/HcashOrg/hcwallet/walletdb"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -189,7 +190,7 @@ func makeInputSource(outputs []dcrjson.ListUnspentResult) txauthor.InputSource {
 // all correlated previous input value.  A non-change address is created by this
 // function.
 func makeDestinationScriptSource(rpcClient *hcrpcclient.Client, accountName string) txauthor.ChangeSource {
-	return func() ([]byte, uint16, error) {
+	return func(dbtx walletdb.ReadWriteTx) ([]byte, uint16, error) {
 		destinationAddress, err := rpcClient.GetNewAddress(accountName)
 		if err != nil {
 			return nil, 0, err
