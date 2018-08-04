@@ -1947,7 +1947,7 @@ func (s *loaderServer) StartConsensusRpc(ctx context.Context, req *pb.StartConse
 
 	s.rpcClient = rpcClient
 	s.loader.SetChainClient(rpcClient.Client)
-
+	wallet.SynchronizeRPC(rpcClient)
 	return &pb.StartConsensusRpcResponse{}, nil
 }
 
