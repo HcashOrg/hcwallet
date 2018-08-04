@@ -195,17 +195,20 @@ func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Addre
 		quit:                     make(chan struct{}),
 	}
 
-	w.wg.Add(1)
-	go w.walletLocker()
-
-	// TODO: remove newWallet, stick the above in Open, and don't ignore this
-	// error.
 	var vb stake.VoteBits
 	var unlockAfter <-chan time.Time
 	var extKey, intKey *hdkeychain.ExtendedKey
-	err := w.Unlock(privpass, unlockAfter)
-	if err != nil {
-		return nil, err
+
+	if !w.Manager.WatchingOnly() {
+		w.wg.Add(1)
+		go w.walletLocker()
+		// TODO: remove newWallet, stick the above in Open, and don't ignore this
+		// error.
+
+		err := w.Unlock(privpass, unlockAfter)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	walletdb.View(w.db, func(tx walletdb.ReadTx) error {
@@ -1180,10 +1183,12 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 		return err
 	}
 
-	// Discover any addresses for this wallet that have not yet been created.
-	err = w.DiscoverActiveAddresses(chainClient, w.initiallyUnlocked)
-	if err != nil {
-		return err
+	if !w.Manager.WatchingOnly() {
+		// Discover any addresses for this wallet that have not yet been created.
+		err = w.DiscoverActiveAddresses(chainClient, w.initiallyUnlocked)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Load transaction filters with all active addresses and watched outpoints.
