@@ -349,7 +349,9 @@ func (m *Manager) lock() {
 	// Remove clear text private keys and scripts from all address entries.
 	m.returnedSecretsMu.Lock()
 	for _, privKey := range m.returnedPrivKeys {
-		zero.BigInt(privKey.GetD())
+		if privKey.GetD() != nil {
+			zero.BigInt(privKey.GetD())
+		}
 	}
 	for _, script := range m.returnedScripts {
 		zero.Bytes(script)
@@ -1094,7 +1096,9 @@ func (m *Manager) ConvertToWatchingOnly(ns walletdb.ReadWriteBucket) error {
 	// all address entries.
 	m.returnedSecretsMu.Lock()
 	for _, privKey := range m.returnedPrivKeys {
-		zero.BigInt(privKey.GetD())
+		if privKey.GetD() != nil {
+			zero.BigInt(privKey.GetD())
+		}
 	}
 	for _, script := range m.returnedScripts {
 		zero.Bytes(script)
@@ -2061,6 +2065,7 @@ func (m *Manager) PrivateKey(ns walletdb.ReadBucket, addr hcutil.Address) (key c
 	if m.returnedPrivKeys == nil {
 		m.returnedPrivKeys = make(map[[ripemd160.Size]byte]chainec.PrivateKey)
 	}
+
 	m.returnedPrivKeys[*addr.Hash160()] = key
 
 	return key, done, nil
