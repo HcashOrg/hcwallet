@@ -160,7 +160,9 @@ func (w *Wallet) switchToSideChain(dbtx walletdb.ReadWriteTx) (*MainTipChangedNo
 	sideChainForkHeight := sideChain[0].headerData.SerializedHeader.Height()
 
 	_, tipHeight := w.TxStore.MainChainTip(txmgrNs)
-
+	if tipHeight-sideChainForkHeight+1 < 0 {
+		return nil, errors.New("switch to side chain, but tipHeight is smaller than sideChainForkHeight")
+	}
 	chainTipChanges := &MainTipChangedNotification{
 		AttachedBlocks: make([]*chainhash.Hash, len(sideChain)),
 		DetachedBlocks: make([]*chainhash.Hash, tipHeight-sideChainForkHeight+1),
@@ -281,8 +283,8 @@ func (w *Wallet) onBlockConnected(serializedBlockHeader []byte, transactions [][
 	// Prune all expired transactions and all stake tickets that no longer
 	// meet the minimum stake difficulty.
 	err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
-	//	txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
-	//	return w.TxStore.PruneUnconfirmed(txmgrNs, height, blockHeader.SBits)
+		//	txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
+		//	return w.TxStore.PruneUnconfirmed(txmgrNs, height, blockHeader.SBits)
 		return w.TxStore.PruneUnmined(dbtx, blockHeader.SBits)
 	})
 	if err != nil {
@@ -946,7 +948,7 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash,
 					ticketHash, err)
 				continue
 			}
-			if isSSGEN,_ := stake.IsSSGen(vote) ;!isSSGEN{
+			if isSSGEN, _ := stake.IsSSGen(vote); !isSSGEN {
 				log.Errorf("not a correct SSGEN format")
 				continue
 			}
@@ -957,9 +959,9 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash,
 	if err != nil {
 		log.Errorf("View failed: %v", err)
 	}
-	
+
 	for i, vote := range votes {
-		go func(i int ,vote *wire.MsgTx){
+		go func(i int, vote *wire.MsgTx) {
 			if vote == nil {
 				return
 			}
@@ -967,7 +969,7 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash,
 			if err != nil {
 				log.Errorf("Failed to create transaction record for vote %v: %v",
 					ticketHashes[i], err)
-					return
+				return
 			}
 			voteHash := &txRec.Hash
 			err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
@@ -984,15 +986,15 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash,
 				_, err = chainClient.SendRawTransaction(vote, true)
 				return err
 			})
-			if err !=nil {
+			if err != nil {
 				log.Errorf("Failed to send vote for ticket hash %v: %v",
 					ticketHashes[i], err)
-					return
+				return
 			}
 			log.Infof("Voted on block %v (height %v) using ticket %v "+
 				"(vote hash: %v bits: %v)", blockHash, blockHeight,
 				ticketHashes[i], voteHash, voteBits.Bits)
-		}(i,vote)
+		}(i, vote)
 	}
 	return nil
 }
@@ -1064,7 +1066,7 @@ func (w *Wallet) handleMissedTickets(blockHash *chainhash.Hash, blockHeight int3
 				log.Errorf("Failed to sign revocation for ticket hash %v: %v",
 					ticketHash, err)
 			}
-		
+
 			revocations[i] = revocation
 		}
 		return nil
