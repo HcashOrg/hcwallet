@@ -372,6 +372,8 @@ func makeMultiSigScript(w *wallet.Wallet, keys []string,
 		switch addr := a.(type) {
 		case *hcutil.AddressSecpPubKey:
 			keysesPrecious[i] = addr
+		case *hcutil.AddressBlissPubKey:
+			keysesPrecious[i] = addr
 		default:
 			pubKey, err := w.PubKeyForAddress(addr)
 			if err != nil {
