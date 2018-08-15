@@ -1717,6 +1717,7 @@ func (w *Wallet) findEligibleOutputsAmount(dbtx walletdb.ReadTx, account uint32,
 
 	addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
 	txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
+	var outTotal hcutil.Amount
 
 	unspent, err := w.TxStore.UnspentOutputsForAmount(txmgrNs, addrmgrNs,
 		amount, currentHeight, minconf, false, account)
@@ -1758,8 +1759,12 @@ func (w *Wallet) findEligibleOutputsAmount(dbtx walletdb.ReadTx, account uint32,
 		}
 
 		eligible = append(eligible, *output)
+		outTotal += output.Amount
 	}
 
+	if outTotal < amount {
+		return nil, nil
+	}		
 	return eligible, nil
 }
 
@@ -1914,8 +1919,7 @@ func createUnsignedVote(ticketHash *chainhash.Hash, ticketPurchase *wire.MsgTx,
 		stake.TxSStxStakeOutputInfo(ticketPurchase)
 
 	// Calculate the subsidy for votes at this height.
-	subsidy := blockchain.CalcStakeVoteSubsidy(subsidyCache, int64(blockHeight),
-		params)
+	subsidy := blockchain.CalcStakeVoteSubsidy(subsidyCache, int64(blockHeight), params)
 
 	// Calculate the output values from this vote using the subsidy.
 	voteRewardValues := stake.CalculateRewards(ticketValues,
