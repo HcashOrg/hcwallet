@@ -1098,10 +1098,16 @@ func (s *walletServer) SignTransaction(ctx context.Context, req *pb.SignTransact
 	var additionalPkScripts map[wire.OutPoint][]byte
 	if len(req.AdditionalScripts) > 0 {
 		additionalPkScripts = make(map[wire.OutPoint][]byte, len(req.AdditionalScripts))
-		for _, s := range req.AdditionalScripts {
-			op := wire.OutPoint{Index: s.OutputIndex, Tree: int8(s.Tree)}
-			copy(op.Hash[:], s.TransactionHash)
-			additionalPkScripts[op] = s.PkScript
+		for _, script := range req.AdditionalScripts {
+			op := wire.OutPoint{Index: script.OutputIndex, Tree: int8(script.Tree)}
+			if len(script.TransactionHash) != chainhash.HashSize {
+				return nil, status.Errorf(codes.InvalidArgument,
+					"Invalid transaction hash length for script %v, expected %v got %v",
+					script, chainhash.HashSize, len(script.TransactionHash))
+			}
+
+			copy(op.Hash[:], script.TransactionHash)
+			additionalPkScripts[op] = script.PkScript
 		}
 	}
 
@@ -1249,11 +1255,10 @@ func (s *walletServer) PurchaseTickets(ctx context.Context,
 
 	expiry := int32(req.Expiry)
 	txFee := hcutil.Amount(req.TxFee)
-	ticketFee := hcutil.Amount(req.TicketFee)
-
-	if txFee < 0 || ticketFee < 0 {
-		return nil, status.Errorf(codes.InvalidArgument,
-			"Negative fees per KB given")
+	ticketFee := s.wallet.TicketFeeIncrement()
+ 	// Set the ticket fee if specified
+	if req.TicketFee > 0 {
+		ticketFee = hcutil.Amount(req.TicketFee)
 	}
 
 	lock := make(chan time.Time, 1)

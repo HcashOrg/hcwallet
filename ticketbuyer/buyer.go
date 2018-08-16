@@ -118,6 +118,7 @@ type TicketPurchaser struct {
 
 // Config returns the current ticket buyer configuration.
 func (t *TicketPurchaser) Config() (*Config, error) {
+	defer t.purchaserMtx.Unlock()
 	t.purchaserMtx.Lock()
 	accountName, err := t.wallet.AccountName(t.account)
 	if err != nil {
@@ -146,7 +147,6 @@ func (t *TicketPurchaser) Config() (*Config, error) {
 		TicketAddress:             t.cfg.TicketAddress,
 		TxFee:                     t.cfg.TxFee,
 	}
-	t.purchaserMtx.Unlock()
 	return config, nil
 }
 
