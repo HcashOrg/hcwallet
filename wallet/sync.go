@@ -59,7 +59,7 @@ Bsearch:
 
 		var results [scanLen]result
 		var wg sync.WaitGroup
-		for i := scanLen - 1; i >= 0; i-- {
+		for i := int(scanLen) - 1; i >= 0; i-- {
 			var wgs sync.WaitGroup
 			i := i
 			account := mid*scanLen + uint32(i)
@@ -92,7 +92,7 @@ Bsearch:
 			}
 		}
 		wg.Wait()
-		for i := scanLen - 1; i >= 0; i-- {
+		for i := int(scanLen) - 1; i >= 0; i-- {
 			if results[i].err != nil {
 				return 0, 0, nil, results[i].err
 			}

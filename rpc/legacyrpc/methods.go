@@ -1915,9 +1915,18 @@ func purchaseTicket(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		expiry = int32(*cmd.Expiry)
 	}
 
+	ticketFee := w.TicketFeeIncrement()
+	// Set the ticket fee if specified.
+	if cmd.TicketFee != nil {
+		ticketFee, err = hcutil.NewAmount(*cmd.TicketFee)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	hashes, err := w.PurchaseTickets(0, spendLimit, minConf, ticketAddr,
 		account, numTickets, poolAddr, poolFee, expiry, w.RelayFee(),
-		w.TicketFeeIncrement())
+		ticketFee)
 	if err != nil {
 		return nil, err
 	}
@@ -2878,8 +2887,10 @@ func signRawTransaction(icmd interface{}, w *wallet.Wallet, chainClient *hcrpccl
 		if err != nil {
 			return nil, err
 		}
+		// gettxout returns JSON null if the output is found, but is spent by
+		// another transaction in the main chain.
 		if result == nil {
-			return nil, errors.New("query tx err,tx not exist or  PreOutPoint.Index err")
+			continue
 		}
 		script, err := hex.DecodeString(result.ScriptPubKey.Hex)
 		if err != nil {

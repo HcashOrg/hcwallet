@@ -195,15 +195,15 @@ func View(db DB, f func(tx ReadTx) error) error {
 	if err != nil {
 		return err
 	}
-	err = f(tx)
-	rollbackErr := tx.Rollback()
-	if err != nil {
-		return err
-	}
-	if rollbackErr != nil {
-		return rollbackErr
-	}
-	return nil
+	// Rollback the transaction after f returns or panics.  Do not recover from
+	// any panic to keep the original stack trace intact.
+	defer func() {
+		rollbackErr := tx.Rollback()
+		if err != nil {
+			err = rollbackErr
+		}
+	}()
+	return f(tx)
 }
 
 // Update opens a database read/write transaction and executes the function f
@@ -217,14 +217,20 @@ func Update(db DB, f func(tx ReadWriteTx) error) error {
 	if err != nil {
 		return err
 	}
+	// Commit or rollback the transaction after f returns or panics.  Do not
+	// recover from the panic to keep the original stack trace intact.
+	panicked := true
+	defer func() {
+		if panicked || err != nil {
+			tx.Rollback()
+			return
+		}
+ 		err = tx.Commit()
+	}()
+	
 	err = f(tx)
-	if err != nil {
-		// Want to return the original error, not a rollback error if
-		// any occur.
-		_ = tx.Rollback()
-		return err
-	}
-	return tx.Commit()
+	panicked = false
+	return err
 }
 
 // Driver defines a structure for backend drivers to use when they registered
