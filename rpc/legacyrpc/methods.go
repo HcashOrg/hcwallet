@@ -595,6 +595,9 @@ func getAddressesByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, err
 		return nil, err
 	}
 
+	if account == udb.ImportedAddrAccount{
+		return w.FetchImortedAccountAddress()
+	}
 	// Find the next child address indexes for the account.
 	endExt, endInt, err := w.BIP0044BranchNextIndexes(account)
 	if err != nil {
@@ -2709,6 +2712,7 @@ func signRawTransactionNoChainRPC(icmd interface{}, w *wallet.Wallet) (interface
 func signRawTransaction(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
 	cmd := icmd.(*dcrjson.SignRawTransactionCmd)
 
+	fmt.Printf("cmd:%#v", cmd)
 	serializedTx, err := decodeHexStr(cmd.RawTx)
 	if err != nil {
 		return nil, err

@@ -31,7 +31,7 @@ import (
 	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
-	hcrpcclient "github.com/HcashOrg/hcrpcclient"
+	"github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/chain"
 	"github.com/HcashOrg/hcwallet/wallet/txauthor"
@@ -2204,7 +2204,7 @@ type CreditCategory byte
 
 // These constants define the possible credit categories.
 const (
-	CreditReceive CreditCategory = iota
+	CreditReceive  CreditCategory = iota
 	CreditGenerate
 	CreditImmature
 )
@@ -2944,17 +2944,17 @@ func (s creditSlice) Less(i, j int) bool {
 	case s[i].OutPoint.Hash == s[j].OutPoint.Hash:
 		return s[i].OutPoint.Index < s[j].OutPoint.Index
 
-	// If both transactions are unmined, sort by their received date.
+		// If both transactions are unmined, sort by their received date.
 	case s[i].Height == -1 && s[j].Height == -1:
 		return s[i].Received.Before(s[j].Received)
 
-	// Unmined (newer) txs always come last.
+		// Unmined (newer) txs always come last.
 	case s[i].Height == -1:
 		return false
 	case s[j].Height == -1:
 		return true
 
-	// If both txs are mined in different blocks, sort by block height.
+		// If both txs are mined in different blocks, sort by block height.
 	default:
 		return s[i].Height < s[j].Height
 	}
@@ -3088,17 +3088,17 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32, addresses map[string]struct
 			}
 
 		include:
-			// At the moment watch-only addresses are not supported, so all
-			// recorded outputs that are not multisig are "spendable".
-			// Multisig outputs are only "spendable" if all keys are
-			// controlled by this wallet.
-			//
-			// TODO: Each case will need updates when watch-only addrs
-			// is added.  For P2PK, P2PKH, and P2SH, the address must be
-			// looked up and not be watching-only.  For multisig, all
-			// pubkeys must belong to the manager with the associated
-			// private key (currently it only checks whether the pubkey
-			// exists, since the private key is required at the moment).
+		// At the moment watch-only addresses are not supported, so all
+		// recorded outputs that are not multisig are "spendable".
+		// Multisig outputs are only "spendable" if all keys are
+		// controlled by this wallet.
+		//
+		// TODO: Each case will need updates when watch-only addrs
+		// is added.  For P2PK, P2PKH, and P2SH, the address must be
+		// looked up and not be watching-only.  For multisig, all
+		// pubkeys must belong to the manager with the associated
+		// private key (currently it only checks whether the pubkey
+		// exists, since the private key is required at the moment).
 			var spendable bool
 		scSwitch:
 			switch sc {
@@ -3267,6 +3267,25 @@ func (w *Wallet) ImportScript(rs []byte) error {
 
 		return nil
 	})
+}
+
+// fetch imported account address
+func (w *Wallet) FetchImortedAccountAddress()([]string, error){
+	var addrs []string
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
+		// Imported addresses are still sent as a single slice for now.  Could
+		// use the optimization above to avoid appends and reallocations.
+
+		err := w.Manager.ForEachAccountAddress(addrmgrNs, udb.ImportedAddrAccount,
+			func(a udb.ManagedAddress) error {
+				addrs = append(addrs, a.Address().String())
+				return nil
+			})
+		return err
+	})
+
+	return addrs, err
 }
 
 // RedeemScriptCopy returns a copy of a redeem script to redeem outputs payed to

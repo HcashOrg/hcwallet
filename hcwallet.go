@@ -154,6 +154,8 @@ func walletMain() error {
 			passphrase = []byte(cfg.Pass)
 		}
 
+		//passphrase := []byte("111111")
+
 		// Load the wallet database.  It must have been created already
 		// or this will return an appropriate error.
 		w, err := loader.OpenExistingWallet(walletPass, passphrase)

@@ -49,7 +49,7 @@
     "txscript",
     "wire"
   ]
-  revision = "3e4cce8e3779e03de2996b7f68ceca145024b3a7"
+  revision = "4926bc454d0d2b7f0db8ad68df8fe0247f568c1b"
 
 [[projects]]
   branch = "master"
@@ -152,7 +152,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "c126467f60eb25f8f27e5a981f32a87e3965053f"
+  revision = "80fca2ff14a3fb7db622c9a5462f8ce9ea026cba"
 
 [[projects]]
   branch = "master"
@@ -166,7 +166,7 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "49c15d80dfbc983ea25246ee959d970efe09ec09"
+  revision = "f4c29de78a2a91c00474a2e689954305c350adf9"
 
 [[projects]]
   branch = "master"
@@ -181,7 +181,7 @@
     "unix",
     "windows"
   ]
-  revision = "bd9dbc187b6e1dacfdd2722a87e83093c2d7bd6e"
+  revision = "2be389f392cd91df245b41638f818a1c041f0c08"
 
 [[projects]]
   name = "golang.org/x/text"
