@@ -2204,7 +2204,7 @@ type CreditCategory byte
 
 // These constants define the possible credit categories.
 const (
-	CreditReceive  CreditCategory = iota
+	CreditReceive CreditCategory = iota
 	CreditGenerate
 	CreditImmature
 )
@@ -3088,17 +3088,17 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32, addresses map[string]struct
 			}
 
 		include:
-		// At the moment watch-only addresses are not supported, so all
-		// recorded outputs that are not multisig are "spendable".
-		// Multisig outputs are only "spendable" if all keys are
-		// controlled by this wallet.
-		//
-		// TODO: Each case will need updates when watch-only addrs
-		// is added.  For P2PK, P2PKH, and P2SH, the address must be
-		// looked up and not be watching-only.  For multisig, all
-		// pubkeys must belong to the manager with the associated
-		// private key (currently it only checks whether the pubkey
-		// exists, since the private key is required at the moment).
+			// At the moment watch-only addresses are not supported, so all
+			// recorded outputs that are not multisig are "spendable".
+			// Multisig outputs are only "spendable" if all keys are
+			// controlled by this wallet.
+			//
+			// TODO: Each case will need updates when watch-only addrs
+			// is added.  For P2PK, P2PKH, and P2SH, the address must be
+			// looked up and not be watching-only.  For multisig, all
+			// pubkeys must belong to the manager with the associated
+			// private key (currently it only checks whether the pubkey
+			// exists, since the private key is required at the moment).
 			var spendable bool
 		scSwitch:
 			switch sc {
@@ -3270,7 +3270,7 @@ func (w *Wallet) ImportScript(rs []byte) error {
 }
 
 // fetch imported account address
-func (w *Wallet) FetchImortedAccountAddress()([]string, error){
+func (w *Wallet) FetchImortedAccountAddress() ([]string, error) {
 	var addrs []string
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
 		addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
@@ -4253,7 +4253,6 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 	if err != nil {
 		return nil, err
 	}
-
 	stakePoolColdAddrs, err := decodeStakePoolColdExtKey(stakePoolColdExtKey,
 		params)
 	if err != nil {
@@ -4290,9 +4289,32 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 		params,
 		privPass,
 	)
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+		lastRecorded, err := addrMgr.LastAccount(ns)
+		if err != nil {
+			return err
+		}
+		havebliss := false
+		for i := uint32(0); i <= lastRecorded; i++ {
+			accountinfo, err := addrMgr.AccountProperties(ns, i)
+			if err != nil {
+				return err
+			}
+			if accountinfo.AccountType == udb.AcctypeBliss {
+				havebliss = true
+			}
+		}
+		if !havebliss {
+			_, err = addrMgr.NewAccount(ns, "postquantum", udb.AcctypeBliss)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-
 	return w, nil
 }
