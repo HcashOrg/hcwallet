@@ -138,7 +138,6 @@ func walletMain() error {
 			}
 		}
 
-		fmt.Println(cfg.Pass)
 		if cfg.Pass == "" {
 			os.Stdout.Sync()
 			for {
