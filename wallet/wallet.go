@@ -31,7 +31,7 @@ import (
 	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
-	hcrpcclient "github.com/HcashOrg/hcrpcclient"
+	"github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/chain"
 	"github.com/HcashOrg/hcwallet/wallet/txauthor"
@@ -2944,17 +2944,17 @@ func (s creditSlice) Less(i, j int) bool {
 	case s[i].OutPoint.Hash == s[j].OutPoint.Hash:
 		return s[i].OutPoint.Index < s[j].OutPoint.Index
 
-	// If both transactions are unmined, sort by their received date.
+		// If both transactions are unmined, sort by their received date.
 	case s[i].Height == -1 && s[j].Height == -1:
 		return s[i].Received.Before(s[j].Received)
 
-	// Unmined (newer) txs always come last.
+		// Unmined (newer) txs always come last.
 	case s[i].Height == -1:
 		return false
 	case s[j].Height == -1:
 		return true
 
-	// If both txs are mined in different blocks, sort by block height.
+		// If both txs are mined in different blocks, sort by block height.
 	default:
 		return s[i].Height < s[j].Height
 	}
@@ -3267,6 +3267,25 @@ func (w *Wallet) ImportScript(rs []byte) error {
 
 		return nil
 	})
+}
+
+// fetch imported account address
+func (w *Wallet) FetchImortedAccountAddress() ([]string, error) {
+	var addrs []string
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
+		// Imported addresses are still sent as a single slice for now.  Could
+		// use the optimization above to avoid appends and reallocations.
+
+		err := w.Manager.ForEachAccountAddress(addrmgrNs, udb.ImportedAddrAccount,
+			func(a udb.ManagedAddress) error {
+				addrs = append(addrs, a.Address().String())
+				return nil
+			})
+		return err
+	})
+
+	return addrs, err
 }
 
 // RedeemScriptCopy returns a copy of a redeem script to redeem outputs payed to
@@ -4234,7 +4253,6 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 	if err != nil {
 		return nil, err
 	}
-
 	stakePoolColdAddrs, err := decodeStakePoolColdExtKey(stakePoolColdExtKey,
 		params)
 	if err != nil {
@@ -4271,9 +4289,32 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 		params,
 		privPass,
 	)
+	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
+		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+		lastRecorded, err := addrMgr.LastAccount(ns)
+		if err != nil {
+			return err
+		}
+		havebliss := false
+		for i := uint32(0); i <= lastRecorded; i++ {
+			accountinfo, err := addrMgr.AccountProperties(ns, i)
+			if err != nil {
+				return err
+			}
+			if accountinfo.AccountType == udb.AcctypeBliss {
+				havebliss = true
+			}
+		}
+		if !havebliss {
+			_, err = addrMgr.NewAccount(ns, "postquantum", udb.AcctypeBliss)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-
 	return w, nil
 }

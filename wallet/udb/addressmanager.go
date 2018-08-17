@@ -422,7 +422,7 @@ func (m *Manager) Close() error {
 //
 // This function MUST be called with the manager lock held for writes.
 func (m *Manager) keyToManaged(derivedKey *hdkeychain.ExtendedKey, account,
-	branch, index uint32) (ManagedAddress, error) {
+branch, index uint32) (ManagedAddress, error) {
 	// Create a new managed address based on the public or private key
 	// depending on whether the passed key is private.  Also, zero the
 	// key after creating the managed address from it.
@@ -790,8 +790,7 @@ func (m *Manager) importedAddressRowToManaged(row *dbImportedAddressRow) (Manage
 	}
 
 	compressed := len(pubBytes) == chainec.Secp256k1.PubKeyBytesLenCompressed()
-	ma, err := newManagedAddressWithoutPrivKey(m, row.account, pubKey,
-		compressed)
+	ma, err := newManagedAddressWithoutPrivKey(m, row.account, pubKey, compressed)
 	if err != nil {
 		return nil, err
 	}
