@@ -37,10 +37,10 @@
     "crypto",
     "crypto/bliss",
     "database",
-    "dcrec/edwards",
-    "dcrec/secp256k1",
-    "dcrec/secp256k1/schnorr",
-    "dcrjson",
+    "hcec/edwards",
+    "hcec/secp256k1",
+    "hcec/secp256k1/schnorr",
+    "hcjson",
     "hcutil",
     "hcutil/base58",
     "hcutil/hdkeychain",
@@ -49,13 +49,13 @@
     "txscript",
     "wire"
   ]
-  revision = "4926bc454d0d2b7f0db8ad68df8fe0247f568c1b"
+  revision = "1a4ec2bb81eec5894b5370830d22ce7462c06884"
 
 [[projects]]
   branch = "master"
   name = "github.com/HcashOrg/hcrpcclient"
   packages = ["."]
-  revision = "bc79ffac5bcef6131f880de25da5bc0d1a4b2b22"
+  revision = "0da4a4507b9cb9cbeb0ef071018315c40111a0dc"
 
 [[projects]]
   branch = "master"
@@ -93,8 +93,8 @@
 [[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
-  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
-  version = "v1.1.0"
+  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/dchest/blake256"
@@ -152,7 +152,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "80fca2ff14a3fb7db622c9a5462f8ce9ea026cba"
+  revision = "aabede6cba87e37f413b3e60ebfc214f8eeca1b0"
 
 [[projects]]
   branch = "master"
@@ -166,7 +166,7 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "f4c29de78a2a91c00474a2e689954305c350adf9"
+  revision = "aaf60122140d3fcf75376d319f0554393160eb50"
 
 [[projects]]
   branch = "master"
@@ -181,7 +181,7 @@
     "unix",
     "windows"
   ]
-  revision = "2be389f392cd91df245b41638f818a1c041f0c08"
+  revision = "1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -208,7 +208,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "daca94659cb50e9f37c1b834680f2e46358f10b0"
+  revision = "c66870c02cf823ceb633bcd05be3c7cda29976f4"
 
 [[projects]]
   name = "google.golang.org/grpc"
