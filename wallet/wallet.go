@@ -2303,7 +2303,6 @@ outputs:
 		// Determine if this output is a credit, and if so, determine
 		// its spentness.
 		var isCredit bool
-		var spentCredit bool
 		for _, cred := range details.Credits {
 			if cred.Index == uint32(i) {
 				// Change outputs are ignored.
@@ -2312,7 +2311,6 @@ outputs:
 				}
 
 				isCredit = true
-				spentCredit = cred.Spent
 				break
 			}
 		}
@@ -2326,6 +2324,7 @@ outputs:
 			address = addr.EncodeAddress()
 			account, err := addrMgr.AddrAccount(addrmgrNs, addrs[0])
 			if err == nil {
+				// If the address is inside the addrmgr,the output is receive hc
 				accountName, err = addrMgr.AccountName(addrmgrNs, account)
 				if err != nil {
 					accountName = ""
@@ -2367,7 +2366,7 @@ outputs:
 		// controlled by this wallet, all non-credits from transactions
 		// with debits are grouped under the send category.
 
-		if send || spentCredit {
+		if send {
 			result.Category = "send"
 			result.Amount = -amountF64
 			result.Fee = &feeF64

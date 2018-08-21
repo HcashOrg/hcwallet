@@ -49,13 +49,13 @@
     "txscript",
     "wire"
   ]
-  revision = "1a4ec2bb81eec5894b5370830d22ce7462c06884"
+  revision = "f4e1f9e3ee8b61ef5987205f47efe36499cc575b"
 
 [[projects]]
   branch = "master"
   name = "github.com/HcashOrg/hcrpcclient"
   packages = ["."]
-  revision = "0da4a4507b9cb9cbeb0ef071018315c40111a0dc"
+  revision = "90a10418b98085c301c982c309a6ae9709598a3a"
 
 [[projects]]
   branch = "master"
@@ -246,6 +246,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "95429edaa43555991d864412bf1c3ea24aed311a2739a1c8cb60075f89d1083f"
+  inputs-digest = "b334f73258eea7ba8b17768b272bf014be63ad1471943c9225a459730cd23843"
   solver-name = "gps-cdcl"
   solver-version = 1
