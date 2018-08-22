@@ -16,13 +16,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/btcsuite/btclog"
 	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcwallet/internal/cfgutil"
 	"github.com/HcashOrg/hcwallet/netparams"
 	"github.com/HcashOrg/hcwallet/ticketbuyer"
 	"github.com/HcashOrg/hcwallet/wallet"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
+	"github.com/btcsuite/btclog"
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -70,7 +70,7 @@ const (
 )
 
 var (
-	dcrdDefaultCAFile  = filepath.Join(hcutil.AppDataDir("hcd", false), "rpc.cert")
+	hcdDefaultCAFile   = filepath.Join(hcutil.AppDataDir("hcd", false), "rpc.cert")
 	defaultAppDataDir  = hcutil.AppDataDir("hcwallet", false)
 	defaultConfigFile  = filepath.Join(defaultAppDataDir, defaultConfigFilename)
 	defaultRPCKeyFile  = filepath.Join(defaultAppDataDir, "rpc.key")
@@ -519,9 +519,9 @@ func loadConfig() (*config, []string, error) {
 	// succeeds.  This prevents the warning on help messages and invalid
 	// options.
 	switch t := configFileError.(type) {
-		case *os.PathError:
-		default:
-			log.Errorf("%v", t)
+	case *os.PathError:
+	default:
+		log.Errorf("%v", t)
 	}
 	// Check deprecated options.  The new options receive priority when both
 	// are changed from the default.
@@ -779,14 +779,14 @@ func loadConfig() (*config, []string, error) {
 			}
 			if !certExists {
 				if _, ok := localhostListeners[RPCHost]; ok {
-					dcrdCertExists, err := cfgutil.FileExists(
-						dcrdDefaultCAFile)
+					hcdCertExists, err := cfgutil.FileExists(
+						hcdDefaultCAFile)
 					if err != nil {
 						fmt.Fprintln(os.Stderr, err)
 						return loadConfigError(err)
 					}
-					if dcrdCertExists {
-						cfg.CAFile.Value = dcrdDefaultCAFile
+					if hcdCertExists {
+						cfg.CAFile.Value = hcdDefaultCAFile
 					}
 				}
 			}

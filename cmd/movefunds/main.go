@@ -28,9 +28,9 @@ import (
 
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
-	"github.com/HcashOrg/hcd/dcrjson"
-	"github.com/HcashOrg/hcd/wire"
+	"github.com/HcashOrg/hcd/hcjson"
 	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/wire"
 )
 
 // params is the global representing the chain parameters. It is assigned
@@ -42,7 +42,7 @@ type configJSON struct {
 	TxFee         int64  `json:"txfee"`
 	SendToAddress string `json:"sendtoaddress"`
 	Network       string `json:"network"`
-	DcrctlArgs    string `json:"dcrctlargs"`
+	HcctlArgs     string `json:"hcctlargs"`
 }
 
 // extendedOutPoint is a UTXO with an amount.
@@ -68,7 +68,7 @@ func (e extendedOutPoints) Swap(i, j int) {
 // convertJSONUnspentToOutPoints converts a JSON raw dump from listunspent to
 // a set of UTXOs.
 func convertJSONUnspentToOutPoints(
-	utxos []dcrjson.ListUnspentResult) []*extendedOutPoint {
+	utxos []hcjson.ListUnspentResult) []*extendedOutPoint {
 	var eops []*extendedOutPoint
 	for _, utxo := range utxos {
 		if utxo.TxType == 1 && utxo.Vout == 0 {
@@ -106,7 +106,7 @@ func main() {
 		fmt.Println("error opening unspent file unspent.json", err.Error())
 	}
 
-	var utxos []dcrjson.ListUnspentResult
+	var utxos []hcjson.ListUnspentResult
 
 	jsonParser := json.NewDecoder(unspentFile)
 	if err = jsonParser.Decode(&utxos); err != nil {
@@ -186,7 +186,7 @@ func main() {
 	// The command to sign the transaction.
 	var buf bytes.Buffer
 	buf.WriteString("hcctl ")
-	buf.WriteString(cfg.DcrctlArgs)
+	buf.WriteString(cfg.HcctlArgs)
 	buf.WriteString(" signrawtransaction ")
 	buf.WriteString(hex.EncodeToString(txB))
 	buf.WriteString(" '[")

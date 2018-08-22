@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
-	"github.com/HcashOrg/hcd/dcrjson"
+	"github.com/HcashOrg/hcd/hcjson"
 	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
@@ -141,7 +141,7 @@ func (noInputValue) Error() string { return "no input value" }
 // output is consumed.  The InputSource does not return any previous output
 // scripts as they are not needed for creating the unsinged transaction and are
 // looked up again by the wallet during the call to signrawtransaction.
-func makeInputSource(outputs []dcrjson.ListUnspentResult) txauthor.InputSource {
+func makeInputSource(outputs []hcjson.ListUnspentResult) txauthor.InputSource {
 	var (
 		totalInputValue hcutil.Amount
 		inputs          = make([]*wire.TxIn, 0, len(outputs))
@@ -238,7 +238,7 @@ func sweep() error {
 	if err != nil {
 		return errContext(err, "failed to fetch unspent outputs")
 	}
-	sourceOutputs := make(map[string][]dcrjson.ListUnspentResult)
+	sourceOutputs := make(map[string][]hcjson.ListUnspentResult)
 	for _, unspentOutput := range unspentOutputs {
 		if !unspentOutput.Spendable {
 			continue
@@ -338,7 +338,7 @@ func saneOutputValue(amount hcutil.Amount) bool {
 	return amount >= 0 && amount <= hcutil.MaxAmount
 }
 
-func parseOutPoint(input *dcrjson.ListUnspentResult) (wire.OutPoint, error) {
+func parseOutPoint(input *hcjson.ListUnspentResult) (wire.OutPoint, error) {
 	txHash, err := chainhash.NewHashFromStr(input.TxID)
 	if err != nil {
 		return wire.OutPoint{}, err

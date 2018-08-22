@@ -8,7 +8,7 @@
 
 package rpchelp
 
-import "github.com/HcashOrg/hcd/dcrjson"
+import "github.com/HcashOrg/hcd/hcjson"
 
 // Common return types.
 var (
@@ -16,7 +16,7 @@ var (
 	returnsNumber      = []interface{}{(*float64)(nil)}
 	returnsString      = []interface{}{(*string)(nil)}
 	returnsStringArray = []interface{}{(*[]string)(nil)}
-	returnsLTRArray    = []interface{}{(*[]dcrjson.ListTransactionsResult)(nil)}
+	returnsLTRArray    = []interface{}{(*[]hcjson.ListTransactionsResult)(nil)}
 )
 
 // Methods contains all methods and result types that help is generated for,
@@ -29,7 +29,7 @@ var Methods = []struct {
 	{"accountsyncaddressindex", nil},
 	{"addmultisigaddress", returnsString},
 	{"consolidate", returnsString},
-	{"createmultisig", []interface{}{(*dcrjson.CreateMultiSigResult)(nil)}},
+	{"createmultisig", []interface{}{(*hcjson.CreateMultiSigResult)(nil)}},
 	{"dumpprivkey", returnsString},
 	{"getaccount", returnsString},
 	{"getaccountaddress", returnsString},
@@ -37,30 +37,30 @@ var Methods = []struct {
 	{"getbalance", append(returnsNumber, returnsNumber[0])},
 	{"getbestblockhash", returnsString},
 	{"getblockcount", returnsNumber},
-	{"getinfo", []interface{}{(*dcrjson.InfoWalletResult)(nil)}},
+	{"getinfo", []interface{}{(*hcjson.InfoWalletResult)(nil)}},
 	{"getmasterpubkey", []interface{}{(*string)(nil)}},
-	{"getmultisigoutinfo", []interface{}{(*dcrjson.GetMultisigOutInfoResult)(nil)}},
+	{"getmultisigoutinfo", []interface{}{(*hcjson.GetMultisigOutInfoResult)(nil)}},
 	{"getnewaddress", returnsString},
 	{"getrawchangeaddress", returnsString},
 	{"getreceivedbyaccount", returnsNumber},
 	{"getreceivedbyaddress", returnsNumber},
-	{"gettickets", []interface{}{(*dcrjson.GetTicketsResult)(nil)}},
-	{"gettransaction", []interface{}{(*dcrjson.GetTransactionResult)(nil)}},
-	{"getvotechoices", []interface{}{(*dcrjson.GetVoteChoicesResult)(nil)}},
+	{"gettickets", []interface{}{(*hcjson.GetTicketsResult)(nil)}},
+	{"gettransaction", []interface{}{(*hcjson.GetTransactionResult)(nil)}},
+	{"getvotechoices", []interface{}{(*hcjson.GetVoteChoicesResult)(nil)}},
 	{"help", append(returnsString, returnsString[0])},
 	{"importprivkey", nil},
 	{"importscript", nil},
 	{"keypoolrefill", nil},
 	{"listaccounts", []interface{}{(*map[string]float64)(nil)}},
-	{"listlockunspent", []interface{}{(*[]dcrjson.TransactionInput)(nil)}},
-	{"listreceivedbyaccount", []interface{}{(*[]dcrjson.ListReceivedByAccountResult)(nil)}},
-	{"listreceivedbyaddress", []interface{}{(*[]dcrjson.ListReceivedByAddressResult)(nil)}},
-	{"listsinceblock", []interface{}{(*dcrjson.ListSinceBlockResult)(nil)}},
+	{"listlockunspent", []interface{}{(*[]hcjson.TransactionInput)(nil)}},
+	{"listreceivedbyaccount", []interface{}{(*[]hcjson.ListReceivedByAccountResult)(nil)}},
+	{"listreceivedbyaddress", []interface{}{(*[]hcjson.ListReceivedByAddressResult)(nil)}},
+	{"listsinceblock", []interface{}{(*hcjson.ListSinceBlockResult)(nil)}},
 	{"listtransactions", returnsLTRArray},
-	{"listunspent", []interface{}{(*dcrjson.ListUnspentResult)(nil)}},
+	{"listunspent", []interface{}{(*hcjson.ListUnspentResult)(nil)}},
 	{"lockunspent", returnsBool},
-	{"redeemmultisigout", []interface{}{(*dcrjson.RedeemMultiSigOutResult)(nil)}},
-	{"redeemmultisigouts", []interface{}{(*dcrjson.RedeemMultiSigOutResult)(nil)}},
+	{"redeemmultisigout", []interface{}{(*hcjson.RedeemMultiSigOutResult)(nil)}},
+	{"redeemmultisigouts", []interface{}{(*hcjson.RedeemMultiSigOutResult)(nil)}},
 	{"rescanwallet", nil},
 	{"revoketickets", nil},
 	{"sendfrom", returnsString},
@@ -70,37 +70,37 @@ var Methods = []struct {
 	{"settxfee", returnsBool},
 	{"setvotechoice", nil},
 	{"signmessage", returnsString},
-	{"signrawtransaction", []interface{}{(*dcrjson.SignRawTransactionResult)(nil)}},
-	{"signrawtransactions", []interface{}{(*dcrjson.SignRawTransactionsResult)(nil)}},
-	{"validateaddress", []interface{}{(*dcrjson.ValidateAddressWalletResult)(nil)}},
+	{"signrawtransaction", []interface{}{(*hcjson.SignRawTransactionResult)(nil)}},
+	{"signrawtransactions", []interface{}{(*hcjson.SignRawTransactionsResult)(nil)}},
+	{"validateaddress", []interface{}{(*hcjson.ValidateAddressWalletResult)(nil)}},
 	{"verifymessage", returnsBool},
-	{"version", []interface{}{(*map[string]dcrjson.VersionResult)(nil)}},
+	{"version", []interface{}{(*map[string]hcjson.VersionResult)(nil)}},
 	{"walletlock", nil},
 	{"walletpassphrase", nil},
 	{"walletpassphrasechange", nil},
 	{"createnewaccount", nil},
 	{"exportwatchingwallet", returnsString},
-	{"getbestblock", []interface{}{(*dcrjson.GetBestBlockResult)(nil)}},
+	{"getbestblock", []interface{}{(*hcjson.GetBestBlockResult)(nil)}},
 	{"getunconfirmedbalance", returnsNumber},
 	{"listaddresstransactions", returnsLTRArray},
 	{"listalltransactions", returnsLTRArray},
 	{"renameaccount", nil},
 	{"walletislocked", returnsBool},
-	{"walletinfo", []interface{}{(*dcrjson.WalletInfoResult)(nil)}},
+	{"walletinfo", []interface{}{(*hcjson.WalletInfoResult)(nil)}},
 
 	// TODO Alphabetize
 	{"purchaseticket", returnsString},
 	{"sendtossrtx", returnsString},
 	{"sendtosstx", returnsString},
 	{"sendtossgen", returnsString},
-	{"generatevote", []interface{}{(*dcrjson.GenerateVoteResult)(nil)}},
-	{"getstakeinfo", []interface{}{(*dcrjson.GetStakeInfoResult)(nil)}},
+	{"generatevote", []interface{}{(*hcjson.GenerateVoteResult)(nil)}},
+	{"getstakeinfo", []interface{}{(*hcjson.GetStakeInfoResult)(nil)}},
 	{"getticketfee", returnsNumber},
 	{"setticketfee", returnsBool},
 	{"getwalletfee", returnsNumber},
 	{"addticket", nil},
-	{"listscripts", []interface{}{(*dcrjson.ListScriptsResult)(nil)}},
-	{"stakepooluserinfo", []interface{}{(*dcrjson.StakePoolUserInfoResult)(nil)}},
+	{"listscripts", []interface{}{(*hcjson.ListScriptsResult)(nil)}},
+	{"stakepooluserinfo", []interface{}{(*hcjson.StakePoolUserInfoResult)(nil)}},
 	{"ticketsforaddress", returnsBool},
 }
 

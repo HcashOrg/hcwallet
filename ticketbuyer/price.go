@@ -62,15 +62,15 @@ func (t *TicketPurchaser) calcAverageTicketPrice(height int64) (hcutil.Amount, e
 	// these two prices.
 	var avgPricePoolAmt hcutil.Amount
 	if t.priceMode == AvgPricePoolMode || t.priceMode == AvgPriceDualMode {
-		poolValue, err := t.dcrdChainSvr.GetTicketPoolValue()
+		poolValue, err := t.hcdChainSvr.GetTicketPoolValue()
 		if err != nil {
 			return 0, err
 		}
-		bestBlockH, err := t.dcrdChainSvr.GetBestBlockHash()
+		bestBlockH, err := t.hcdChainSvr.GetBestBlockHash()
 		if err != nil {
 			return 0, err
 		}
-		blkHeader, err := t.dcrdChainSvr.GetBlockHeader(bestBlockH)
+		blkHeader, err := t.hcdChainSvr.GetBlockHeader(bestBlockH)
 		if err != nil {
 			return 0, err
 		}
@@ -103,7 +103,7 @@ func (t *TicketPurchaser) calcAverageTicketPrice(height int64) (hcutil.Amount, e
 		// if the chain gives us an issue.
 		var err error
 		for i := 0; i < vwapReqTries; i++ {
-			ticketVWAP, err = t.dcrdChainSvr.TicketVWAP(&startVWAPHeight,
+			ticketVWAP, err = t.hcdChainSvr.TicketVWAP(&startVWAPHeight,
 				&endVWAPHeight)
 			if err != nil && containsVWAPHeightOffsetError(err) {
 				log.Tracef("Failed to fetch ticket VWAP "+

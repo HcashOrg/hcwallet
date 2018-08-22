@@ -14,8 +14,8 @@ import (
 
 	"github.com/HcashOrg/hcd/blockchain"
 	"github.com/HcashOrg/hcd/chaincfg"
-	hcrpcclient "github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcd/hcutil"
+	hcrpcclient "github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcwallet/wallet"
 )
 
@@ -86,7 +86,7 @@ type Config struct {
 type TicketPurchaser struct {
 	cfg              *Config
 	activeNet        *chaincfg.Params
-	dcrdChainSvr     *hcrpcclient.Client
+	hcdChainSvr      *hcrpcclient.Client
 	wallet           *wallet.Wallet
 	ticketAddress    hcutil.Address
 	poolAddress      hcutil.Address
@@ -341,7 +341,7 @@ func (t *TicketPurchaser) SetExpiryDelta(expiryDelta int) {
 
 // NewTicketPurchaser creates a new TicketPurchaser.
 func NewTicketPurchaser(cfg *Config,
-	dcrdChainSvr *hcrpcclient.Client,
+	hcdChainSvr *hcrpcclient.Client,
 	w *wallet.Wallet,
 	activeNet *chaincfg.Params) (*TicketPurchaser, error) {
 	priceMode := avgPriceMode(AvgPriceVWAPMode)
@@ -360,7 +360,7 @@ func NewTicketPurchaser(cfg *Config,
 	return &TicketPurchaser{
 		cfg:           cfg,
 		activeNet:     activeNet,
-		dcrdChainSvr:  dcrdChainSvr,
+		hcdChainSvr:   hcdChainSvr,
 		wallet:        w,
 		firstStart:    true,
 		ticketAddress: cfg.TicketAddress,
@@ -443,7 +443,7 @@ func (t *TicketPurchaser) Purchase(height int64) (*PurchaseStats, error) {
 		var curStakeInfo *wallet.StakeInfoData
 		var err error
 		for i := 1; i <= stakeInfoReqTries; i++ {
-			curStakeInfo, err = t.wallet.StakeInfo(t.dcrdChainSvr)
+			curStakeInfo, err = t.wallet.StakeInfo(t.hcdChainSvr)
 			if err != nil {
 				log.Debugf("Waiting for StakeInfo, attempt %v: (%v)", i, err.Error())
 				time.Sleep(stakeInfoReqTryDelay)
@@ -502,7 +502,7 @@ func (t *TicketPurchaser) Purchase(height int64) (*PurchaseStats, error) {
 	t.ticketPrice = nextStakeDiff
 	ps.TicketPrice = nextStakeDiff
 
-	sDiffEsts, err := t.dcrdChainSvr.EstimateStakeDiff(nil)
+	sDiffEsts, err := t.hcdChainSvr.EstimateStakeDiff(nil)
 	if err == nil {
 		ps.PriceNext, err = hcutil.NewAmount(sDiffEsts.Expected)
 		if err != nil {
@@ -567,7 +567,7 @@ func (t *TicketPurchaser) Purchase(height int64) (*PurchaseStats, error) {
 
 	// Lookup how many tickets purchase slots were filled in the last block
 	oneBlock := uint32(1)
-	info, err := t.dcrdChainSvr.TicketFeeInfo(&oneBlock, &zeroUint32)
+	info, err := t.hcdChainSvr.TicketFeeInfo(&oneBlock, &zeroUint32)
 	if err != nil {
 		return ps, err
 	}
