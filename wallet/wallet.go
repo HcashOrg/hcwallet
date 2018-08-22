@@ -4291,6 +4291,12 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 	if err != nil {
 		return nil, err
 	}
+
+	//create postquantum account only,begin
+	w.addressBuffersMu.Lock()
+	acctXpubs := make(map[uint32]*hdkeychain.ExtendedKey)
+	acctXprivs := make(map[uint32]*hdkeychain.ExtendedKey)
+	var acct uint32 = 1
 	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		lastRecorded, err := addrMgr.LastAccount(ns)
@@ -4308,7 +4314,7 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 			}
 		}
 		if !havebliss {
-			acct, err := addrMgr.NewAccount(ns, "postquantum", udb.AcctypeBliss)
+			acct, err = addrMgr.NewAccount(ns, "postquantum", udb.AcctypeBliss)
 			if err != nil {
 				return err
 			}
@@ -4320,9 +4326,62 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 			if err != nil {
 				return err
 			}
+
+			xpub, err := addrMgr.AccountExtendedPubKey(tx, acct)
+			if err != nil {
+				return err
+			}
+			acctXpubs[acct] = xpub
+			if xpub.GetAlgType() == udb.AcctypeBliss {
+				xpriv, err := addrMgr.AccountExtendedPrivKey(tx, acct)
+				if err != nil {
+					return err
+				}
+				acctXprivs[acct] = xpriv
+			}
 		}
 		return nil
 	})
+	if err != nil {
+		w.addressBuffersMu.Unlock()
+		return w, err
+	}
+	_, ok := w.addressBuffers[acct]
+	if !ok {
+		var extKey *hdkeychain.ExtendedKey
+		var intKey *hdkeychain.ExtendedKey
+		if acctXpubs[acct].GetAlgType() == udb.AcctypeBliss {
+			intKeypriv, err := acctXprivs[acct].Child(udb.InternalBranch)
+			if err != nil {
+				w.addressBuffersMu.Unlock()
+				return w, err
+			}
+			intKey, err = intKeypriv.Neuter()
+			if err != nil {
+				w.addressBuffersMu.Unlock()
+				return w, err
+			}
+			extKeypriv, err := acctXprivs[acct].Child(udb.ExternalBranch)
+			if err != nil {
+				w.addressBuffersMu.Unlock()
+				return w, err
+			}
+			extKey, err = extKeypriv.Neuter()
+			if err != nil {
+				w.addressBuffersMu.Unlock()
+				return w, err
+			}
+			intKeypriv.Zero()
+			extKeypriv.Zero()
+			acctXprivs[acct].Zero()
+		}
+		w.addressBuffers[acct] = &bip0044AccountData{
+			albExternal: addressBuffer{branchXpub: extKey},
+			albInternal: addressBuffer{branchXpub: intKey},
+		}
+	}
+	w.addressBuffersMu.Unlock()
+	//create postquantum account only,end
 	if err != nil {
 		return nil, err
 	}
