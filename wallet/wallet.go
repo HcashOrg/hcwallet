@@ -4288,6 +4288,9 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 		params,
 		privPass,
 	)
+	if err != nil {
+		return nil, err
+	}
 	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		lastRecorded, err := addrMgr.LastAccount(ns)
@@ -4305,7 +4308,15 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 			}
 		}
 		if !havebliss {
-			_, err = addrMgr.NewAccount(ns, "postquantum", udb.AcctypeBliss)
+			acct, err := addrMgr.NewAccount(ns, "postquantum", udb.AcctypeBliss)
+			if err != nil {
+				return err
+			}
+			err = udb.PutLastAccount(ns, acct)
+			if err != nil {
+				return err
+			}
+			err = udb.CreateBlissBucket(ns)
 			if err != nil {
 				return err
 			}
