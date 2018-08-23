@@ -388,6 +388,19 @@ var helpDescsEnUS = map[string]string{
 	"sendmany-comment":        "Unused",
 	"sendmany--result0":       "The transaction hash of the sent transaction",
 
+
+	// SendManyV2Cmd help.
+	"sendmanyv2--synopsis": "Authors, signs, and sends a transaction that outputs to many payment addresses.\n" +
+		"A change addr is set or automatically included to send extra output value back to the original account first addr.",
+	"sendmanyv2-fromaccount":    "DEPRECATED -- Account to pick unspent outputs from",
+	"sendmanyv2-amounts":        "Pairs of payment addresses and the output amount to pay each",
+	"sendmanyv2-amounts--desc":  "JSON object using payment addresses as keys and output amounts valued in HC to send to each address",
+	"sendmanyv2-amounts--key":   "Address to pay",
+	"sendmanyv2-amounts--value": "Amount to send to the payment address valued in HC",
+	"sendmanyv2-minconf":        "Minimum number of block confirmations required before a transaction output is eligible to be spent",
+	"sendmanyv2-changeaddr":     "change addr, if not set, use account first first addr",
+	"sendmanyv2--result0":       "The transaction hash of the sent transaction",
+
 	// SendToAddressCmd help.
 	"sendtoaddress--synopsis": "Authors, signs, and sends a transaction that outputs some amount to a payment address.\n" +
 		"Unlike sendfrom, outputs are always chosen from the default account.\n" +

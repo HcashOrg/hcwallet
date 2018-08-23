@@ -1237,10 +1237,11 @@ type (
 		resp    chan consolidateResponse
 	}
 	createTxRequest struct {
-		account uint32
-		outputs []*wire.TxOut
-		minconf int32
-		resp    chan createTxResponse
+		account    uint32
+		outputs    []*wire.TxOut
+		minconf    int32
+		changeAddr string
+		resp       chan createTxResponse
 	}
 	createMultisigTxRequest struct {
 		account   uint32
@@ -1348,7 +1349,7 @@ out:
 				continue
 			}
 			tx, err := w.txToOutputs(txr.outputs, txr.account,
-				txr.minconf, true)
+				txr.minconf, true, txr.changeAddr)
 			heldUnlock.release()
 			txr.resp <- createTxResponse{tx, err}
 
@@ -1441,13 +1442,14 @@ func (w *Wallet) Consolidate(inputs int, account uint32,
 // function is serialized to prevent the creation of many transactions which
 // spend the same outputs.
 func (w *Wallet) CreateSimpleTx(account uint32, outputs []*wire.TxOut,
-	minconf int32) (*txauthor.AuthoredTx, error) {
+	minconf int32, changeAddr string) (*txauthor.AuthoredTx, error) {
 
 	req := createTxRequest{
-		account: account,
-		outputs: outputs,
-		minconf: minconf,
-		resp:    make(chan createTxResponse),
+		account:    account,
+		outputs:    outputs,
+		minconf:    minconf,
+		changeAddr: changeAddr,
+		resp:       make(chan createTxResponse),
 	}
 	w.createTxRequests <- req
 	resp := <-req.resp
@@ -3765,7 +3767,7 @@ func (w *Wallet) TotalReceivedForAddr(addr hcutil.Address, minConf int32) (hcuti
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction hash upon success
 func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
-	minconf int32) (*chainhash.Hash, error) {
+	minconf int32, changeAddr string) (*chainhash.Hash, error) {
 
 	relayFee := w.RelayFee()
 	for _, output := range outputs {
@@ -3777,7 +3779,7 @@ func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
 
 	// Create transaction, replying with an error if the creation
 	// was not successful.
-	createdTx, err := w.CreateSimpleTx(account, outputs, minconf)
+	createdTx, err := w.CreateSimpleTx(account, outputs, minconf, changeAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -4288,6 +4290,15 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 		params,
 		privPass,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	//create postquantum account only,begin
+	w.addressBuffersMu.Lock()
+	acctXpubs := make(map[uint32]*hdkeychain.ExtendedKey)
+	acctXprivs := make(map[uint32]*hdkeychain.ExtendedKey)
+	var acct uint32 = 1
 	err = walletdb.Update(db, func(tx walletdb.ReadWriteTx) error {
 		ns := tx.ReadWriteBucket(waddrmgrNamespaceKey)
 		lastRecorded, err := addrMgr.LastAccount(ns)
@@ -4305,13 +4316,74 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 			}
 		}
 		if !havebliss {
-			_, err = addrMgr.NewAccount(ns, "postquantum", udb.AcctypeBliss)
+			acct, err = addrMgr.NewAccount(ns, "postquantum", udb.AcctypeBliss)
 			if err != nil {
 				return err
+			}
+			err = udb.PutLastAccount(ns, acct)
+			if err != nil {
+				return err
+			}
+			err = udb.CreateBlissBucket(ns)
+			if err != nil {
+				return err
+			}
+
+			xpub, err := addrMgr.AccountExtendedPubKey(tx, acct)
+			if err != nil {
+				return err
+			}
+			acctXpubs[acct] = xpub
+			if xpub.GetAlgType() == udb.AcctypeBliss {
+				xpriv, err := addrMgr.AccountExtendedPrivKey(tx, acct)
+				if err != nil {
+					return err
+				}
+				acctXprivs[acct] = xpriv
 			}
 		}
 		return nil
 	})
+	if err != nil {
+		w.addressBuffersMu.Unlock()
+		return w, err
+	}
+	_, ok := w.addressBuffers[acct]
+	if !ok {
+		var extKey *hdkeychain.ExtendedKey
+		var intKey *hdkeychain.ExtendedKey
+		if acctXpubs[acct].GetAlgType() == udb.AcctypeBliss {
+			intKeypriv, err := acctXprivs[acct].Child(udb.InternalBranch)
+			if err != nil {
+				w.addressBuffersMu.Unlock()
+				return w, err
+			}
+			intKey, err = intKeypriv.Neuter()
+			if err != nil {
+				w.addressBuffersMu.Unlock()
+				return w, err
+			}
+			extKeypriv, err := acctXprivs[acct].Child(udb.ExternalBranch)
+			if err != nil {
+				w.addressBuffersMu.Unlock()
+				return w, err
+			}
+			extKey, err = extKeypriv.Neuter()
+			if err != nil {
+				w.addressBuffersMu.Unlock()
+				return w, err
+			}
+			intKeypriv.Zero()
+			extKeypriv.Zero()
+			acctXprivs[acct].Zero()
+		}
+		w.addressBuffers[acct] = &bip0044AccountData{
+			albExternal: addressBuffer{branchXpub: extKey},
+			albInternal: addressBuffer{branchXpub: intKey},
+		}
+	}
+	w.addressBuffersMu.Unlock()
+	//create postquantum account only,end
 	if err != nil {
 		return nil, err
 	}

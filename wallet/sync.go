@@ -11,9 +11,9 @@ import (
 	"sync"
 
 	"github.com/HcashOrg/bitset"
-	hcrpcclient "github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
+	hcrpcclient "github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 	"github.com/HcashOrg/hcwallet/walletdb"
 )

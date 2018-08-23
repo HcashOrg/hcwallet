@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
-	"github.com/HcashOrg/hcd/wire"
 	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/wire"
 )
 
 // Note: The following common types should never reference the Wallet type.
