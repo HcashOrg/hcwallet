@@ -140,7 +140,8 @@ type Wallet struct {
 	sideChain        []sideChainBlock
 	reorganizing     bool
 
-	NtfnServer *NotificationServer
+	NtfnServer      *NotificationServer
+	NtfnServerMutex sync.Mutex
 
 	chainParams *chaincfg.Params
 

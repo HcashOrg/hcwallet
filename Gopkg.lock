@@ -49,7 +49,7 @@
     "txscript",
     "wire"
   ]
-  revision = "9aa84f449d5267bbe136ece1be93e95638ee7c74"
+  revision = "b9d77d33d3487a1e2600c99616156653da7d9ff1"
 
 [[projects]]
   branch = "master"
@@ -181,7 +181,7 @@
     "unix",
     "windows"
   ]
-  revision = "3b58ed4ad3395d483fc92d5d14123ce2c3581fec"
+  revision = "11551d06cbcc94edc80a0facaccbda56473c19c1"
 
 [[projects]]
   name = "golang.org/x/text"

@@ -222,6 +222,7 @@ func (w *Wallet) onBlockConnected(serializedBlockHeader []byte, transactions [][
 	if err != nil {
 		return err
 	}
+
 	block := udb.BlockHeaderData{BlockHash: blockHeader.BlockHash()}
 	err = copyHeaderSliceToArray(&block.SerializedHeader, serializedBlockHeader)
 	if err != nil {
@@ -233,6 +234,8 @@ func (w *Wallet) onBlockConnected(serializedBlockHeader []byte, transactions [][
 	w.reorganizingLock.Lock()
 	reorg, reorgToHash := w.reorganizing, w.reorganizeToHash
 	w.reorganizingLock.Unlock()
+
+	w.NtfnServerMutex.Lock()
 	if reorg {
 		// add to side chain
 		scBlock := sideChainBlock{
@@ -246,6 +249,7 @@ func (w *Wallet) onBlockConnected(serializedBlockHeader []byte, transactions [][
 		if block.BlockHash != reorgToHash {
 			// Nothing left to do until the later blocks are
 			// received.
+			w.NtfnServerMutex.Unlock()
 			return nil
 		}
 
@@ -255,6 +259,7 @@ func (w *Wallet) onBlockConnected(serializedBlockHeader []byte, transactions [][
 			return err
 		})
 		if err != nil {
+			w.NtfnServerMutex.Unlock()
 			return err
 		}
 
@@ -268,6 +273,7 @@ func (w *Wallet) onBlockConnected(serializedBlockHeader []byte, transactions [][
 			return w.extendMainChain(dbtx, &block, transactions)
 		})
 		if err != nil {
+			w.NtfnServerMutex.Unlock()
 			return err
 		}
 		chainTipChanges = &MainTipChangedNotification{
@@ -294,7 +300,7 @@ func (w *Wallet) onBlockConnected(serializedBlockHeader []byte, transactions [][
 
 	w.NtfnServer.notifyMainChainTipChanged(chainTipChanges)
 	w.NtfnServer.sendAttachedBlockNotification()
-
+	w.NtfnServerMutex.Unlock()
 	if voteVersion(w.chainParams) < blockHeader.StakeVersion {
 		log.Warnf("Old vote version detected (v%v), please update your "+
 			"wallet to the latest version.", voteVersion(w.chainParams))
