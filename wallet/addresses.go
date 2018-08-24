@@ -9,9 +9,9 @@ import (
 	"fmt"
 
 	"github.com/HcashOrg/hcd/chaincfg"
-	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
+	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/wallet/txauthor"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
@@ -733,14 +733,21 @@ func (w *Wallet) AccountBranchAddressRange(account, branch, start, end uint32) (
 	return nil, fmt.Errorf("unknown pubkey type")
 }
 
-func (w *Wallet) changeSource(persist persistReturnedChildFunc, account uint32) txauthor.ChangeSource {
-	return func(dbtx walletdb.ReadWriteTx) ([]byte, uint16, error) {
-		changeAddress, err := w.newChangeAddress(persist, account, dbtx)
-		if err != nil {
-			return nil, 0, err
+func (w *Wallet) changeSource(persist persistReturnedChildFunc, account uint32, addr hcutil.Address) txauthor.ChangeSource {
+	if addr == nil {
+		return func(dbtx walletdb.ReadWriteTx) ([]byte, uint16, error) {
+			changeAddress, err := w.newChangeAddress(persist, account, dbtx)
+			if err != nil {
+				return nil, 0, err
+			}
+			script, err := txscript.PayToAddrScript(changeAddress)
+			return script, txscript.DefaultScriptVersion, err
 		}
-		script, err := txscript.PayToAddrScript(changeAddress)
-		return script, txscript.DefaultScriptVersion, err
+	} else {
+		return func(dbtx walletdb.ReadWriteTx) ([]byte, uint16, error) {
+			script, err := txscript.PayToAddrScript(addr)
+			return script, txscript.DefaultScriptVersion, err
+		}
 	}
 }
 
@@ -763,7 +770,7 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 	return addresses, nil
 }
 
-func deriveChildAddress(key *hdkeychain.ExtendedKey, child uint32, params *chaincfg.Params) (hcutil.Address, error) {
+func deriveChildAddress(key *hdkeychain.ExtendedKey, child uint32, params *chaincfg.Params) (*hcutil.AddressPubKeyHash, error) {
 	childKey, err := key.Child(child)
 	if err != nil {
 		return nil, err

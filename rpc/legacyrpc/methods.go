@@ -28,7 +28,7 @@ import (
 	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
-	hcrpcclient "github.com/HcashOrg/hcrpcclient"
+	"github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/wallet"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
@@ -125,6 +125,7 @@ var rpcHandlers = map[string]struct {
 	"revoketickets":           {handlerWithChain: revokeTickets},
 	"sendfrom":                {handlerWithChain: sendFrom},
 	"sendmany":                {handler: sendMany},
+	"sendmanyv2":              {handler: sendManyV2},
 	"sendtoaddress":           {handler: sendToAddress},
 	"getstraightpubkey":       {handlerWithChain: getStraightPubKey},
 	"sendtomultisig":          {handlerWithChain: sendToMultiSig},
@@ -595,7 +596,7 @@ func getAddressesByAccount(icmd interface{}, w *wallet.Wallet) (interface{}, err
 		return nil, err
 	}
 
-	if account == udb.ImportedAddrAccount{
+	if account == udb.ImportedAddrAccount {
 		return w.FetchImortedAccountAddress()
 	}
 	// Find the next child address indexes for the account.
@@ -1965,12 +1966,12 @@ func makeOutputs(pairs map[string]hcutil.Amount, chainParams *chaincfg.Params) (
 // It returns the transaction hash in string format upon success
 // All errors are returned in hcjson.RPCError format
 func sendPairs(w *wallet.Wallet, amounts map[string]hcutil.Amount,
-	account uint32, minconf int32) (string, error) {
+	account uint32, minconf int32, changeAddr string) (string, error) {
 	outputs, err := makeOutputs(amounts, w.ChainParams())
 	if err != nil {
 		return "", err
 	}
-	txSha, err := w.SendOutputs(outputs, account, minconf)
+	txSha, err := w.SendOutputs(outputs, account, minconf, changeAddr)
 	if err != nil {
 		if err == txrules.ErrAmountNegative {
 			return "", ErrNeedPositiveAmount
@@ -2282,7 +2283,7 @@ func sendFrom(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Clien
 		cmd.ToAddress: amt,
 	}
 
-	return sendPairs(w, pairs, account, minConf)
+	return sendPairs(w, pairs, account, minConf, "")
 }
 
 // sendMany handles a sendmany RPC request by creating a new transaction
@@ -2323,7 +2324,52 @@ func sendMany(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		pairs[k] = amt
 	}
 
-	return sendPairs(w, pairs, account, minConf)
+	return sendPairs(w, pairs, account, minConf, "")
+}
+
+// sendManyV2 handles a sendManyV2 RPC request by creating a new transaction
+// spending unspent transaction outputs for a wallet to any number of
+// payment addresses.  Leftover inputs not sent to the payment address
+// or a fee for the miner are sent back to a designated  address or first address of the default account
+// in the wallet. Upon success, the TxID for the created transaction is returned.
+func sendManyV2(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := icmd.(*hcjson.SendManyV2Cmd)
+	account, err := w.AccountNumber(cmd.FromAccount)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check that minconf is positive.
+	minConf := int32(*cmd.MinConf)
+	if minConf < 0 {
+		return nil, ErrNeedPositiveMinconf
+	}
+
+	// Recreate address/amount pairs, using hcutil.Amount.
+	pairs := make(map[string]hcutil.Amount, len(cmd.Amounts))
+	for k, v := range cmd.Amounts {
+		if v <= 0 {
+			return nil, fmt.Errorf("send to addr:%s %v coin", k, v)
+		}
+		amt, err := hcutil.NewAmount(v)
+		if err != nil {
+			return nil, err
+		}
+		pairs[k] = amt
+	}
+
+	var changeAddr string
+	if cmd.ChangeAddr == nil {
+		addr, err := w.FirstAddr(account)
+		if err != nil {
+			return nil, err
+		}
+		changeAddr = addr.String()
+	} else {
+		changeAddr = *cmd.ChangeAddr
+	}
+
+	return sendPairs(w, pairs, account, minConf, changeAddr)
 }
 
 // sendToAddress handles a sendtoaddress RPC request by creating a new
@@ -2360,7 +2406,7 @@ func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(w, pairs, account, 1)
+	return sendPairs(w, pairs, account, 1, "")
 }
 
 // getStraightPubKey handles a getStraightPubKey RPC request by getting a straight public key

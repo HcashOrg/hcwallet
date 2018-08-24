@@ -23,7 +23,7 @@ import (
 	"github.com/HcashOrg/hcd/mempool"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
-	hcrpcclient "github.com/HcashOrg/hcrpcclient"
+	"github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/wallet/internal/txsizes"
 	"github.com/HcashOrg/hcwallet/wallet/txauthor"
@@ -261,7 +261,7 @@ func (w *Wallet) NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcu
 
 		if changeSource == nil {
 			persist := w.deferPersistReturnedChild(&changeSourceUpdates)
-			changeSource = w.changeSource(persist, account)
+			changeSource = w.changeSource(persist, account, nil)
 		}
 
 		getScript := txscript.ScriptClosure(func(addr hcutil.Address) ([]byte, error) {
@@ -415,7 +415,7 @@ func (w *Wallet) insertMultisigOutIntoTxMgr(ns walletdb.ReadWriteBucket, msgTx *
 // with no less than minconf confirmations, and creates a signed transaction
 // that pays to each of the outputs.
 func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32, minconf int32,
-	randomizeChangeIdx bool) (*txauthor.AuthoredTx, error) {
+	randomizeChangeIdx bool, changeAddr string) (*txauthor.AuthoredTx, error) {
 
 	chainClient, err := w.requireChainClient()
 	if err != nil {
@@ -423,7 +423,7 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32, minconf int3
 	}
 
 	return w.txToOutputsInternal(outputs, account, minconf, chainClient,
-		randomizeChangeIdx, w.RelayFee())
+		randomizeChangeIdx, w.RelayFee(), changeAddr)
 }
 
 // txToOutputsInternal creates a signed transaction which includes each output
@@ -438,7 +438,8 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32, minconf int3
 // into the database, rather than delegating this work to the caller as
 // btcwallet does.
 func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minconf int32,
-	chainClient *hcrpcclient.Client, randomizeChangeIdx bool, txFee hcutil.Amount) (*txauthor.AuthoredTx, error) {
+	chainClient *hcrpcclient.Client, randomizeChangeIdx bool, txFee hcutil.Amount,
+	changeAddrStr string) (*txauthor.AuthoredTx, error) {
 
 	var doneFuncs []func()
 	defer func() {
@@ -465,7 +466,17 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		inputSource := w.TxStore.MakeInputSource(txmgrNs, addrmgrNs, account,
 			minconf, tipHeight)
 		persist := w.deferPersistReturnedChild(&changeSourceUpdates)
-		changeSource := w.changeSource(persist, account)
+
+		var changeAddr hcutil.Address
+		if changeAddrStr != ""{
+			changeAddr, err = hcutil.DecodeAddress(changeAddrStr)
+			if err != nil {
+				log.Errorf("decode addr:%s, err:%v ", changeAddrStr, err)
+				return err
+			}
+		}
+
+		changeSource := w.changeSource(persist, account, changeAddr)
 
 		getScript := txscript.ScriptClosure(func(addr hcutil.Address) ([]byte, error) {
 			// First check tx manager script store.
@@ -692,7 +703,7 @@ func (w *Wallet) txToMultisigInternal(dbtx walletdb.ReadWriteTx, account uint32,
 			"multisig address after accounting for fees"))
 	}
 	if totalInput > amount+feeEst {
-		pkScript, _, err := w.changeSource(w.persistReturnedChild(dbtx), account)(dbtx)
+		pkScript, _, err := w.changeSource(w.persistReturnedChild(dbtx), account, nil)(dbtx)
 		if err != nil {
 			return txToMultisigError(err)
 		}
@@ -1021,6 +1032,24 @@ func (w *Wallet) getTicketFeeAndNeededTicketPrice(account uint32, poolAddressExi
 	return ticketFee, neededPerTicket, nil
 }
 
+//get wallet first addr for reuse addr
+func (w *Wallet) FirstAddr(account uint32) (*hcutil.AddressPubKeyHash, error) {
+	var err error
+	var addr *hcutil.AddressPubKeyHash
+
+	if account == udb.DefaultAccountNum {
+		xpub := w.addressBuffers[udb.DefaultAccountNum].albExternal.branchXpub
+		addr, err = deriveChildAddress(xpub, 0, w.chainParams)
+	} else {
+		err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+			addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+			addr, err = w.Manager.LoadBlissAddr(addrmgrNs, account, udb.ExternalBranch, 0)
+			return err
+		})
+	}
+	return addr, err
+}
+
 // purchaseTickets indicates to the wallet that a ticket should be purchased
 // using all currently available funds.  The ticket address parameter in the
 // request can be nil in which case the ticket address associated with the
@@ -1132,7 +1161,7 @@ func (w *Wallet) purchaseTickets(req purchaseTicketRequest) ([]*chainhash.Hash, 
 		ticketFeeIncrement = w.TicketFeeIncrement()
 	}
 
-	ticketFee, neededPerTicket, err := w.getTicketFeeAndNeededTicketPrice(account, poolAddress != nil,ticketPrice, ticketFeeIncrement)
+	ticketFee, neededPerTicket, err := w.getTicketFeeAndNeededTicketPrice(account, poolAddress != nil, ticketPrice, ticketFeeIncrement)
 
 	// If we need to calculate the amount for a pool fee percentage,
 	// do so now.
@@ -1221,7 +1250,7 @@ func (w *Wallet) purchaseTickets(req purchaseTicketRequest) ([]*chainhash.Hash, 
 		txFeeIncrement = w.RelayFee()
 	}
 	splitTx, err := w.txToOutputsInternal(splitOuts, account, req.minConf,
-		chainClient, false, txFeeIncrement)
+		chainClient, false, txFeeIncrement, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to send split transaction: %v", err)
 	}
@@ -1764,7 +1793,7 @@ func (w *Wallet) findEligibleOutputsAmount(dbtx walletdb.ReadTx, account uint32,
 
 	if outTotal < amount {
 		return nil, nil
-	}		
+	}
 	return eligible, nil
 }
 
@@ -1915,7 +1944,7 @@ func createUnsignedVote(ticketHash *chainhash.Hash, ticketPurchase *wire.MsgTx,
 
 	// Parse the ticket purchase transaction to determine the required output
 	// destinations for vote rewards or revocations.
-	ticketPayKinds, ticketHash160s, ticketValues, _, _, _,sigTypes :=
+	ticketPayKinds, ticketHash160s, ticketValues, _, _, _, sigTypes :=
 		stake.TxSStxStakeOutputInfo(ticketPurchase)
 
 	// Calculate the subsidy for votes at this height.
