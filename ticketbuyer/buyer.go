@@ -719,14 +719,17 @@ func (t *TicketPurchaser) Purchase(height int64) (*PurchaseStats, error) {
 					toBuyForBlock++
 				}
 			} else {
+				toBuyForBlock = 1
 				// When buying less than one ticket per block
-				if rand.Float64() <= buyPerBlockAll {
-					log.Debugf("Buying one this round")
-					toBuyForBlock = 1
-				} else {
-					toBuyForBlock = 0
-					log.Debugf("Skipping this round")
-				}
+				/*
+					if rand.Float64() <= buyPerBlockAll {
+						log.Debugf("Buying one this round")
+						toBuyForBlock = 1
+					} else {
+						toBuyForBlock = 0
+						log.Debugf("Skipping this round")
+					}
+				*/
 			}
 			// This is for a possible rare case where there is not enough available funds to
 			// purchase a ticket because funds expected from redeemed tickets are overdue

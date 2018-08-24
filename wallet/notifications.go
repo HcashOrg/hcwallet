@@ -11,14 +11,15 @@ import (
 	"context"
 	"sync"
 
+	"fmt"
 	"github.com/HcashOrg/hcd/blockchain"
 	"github.com/HcashOrg/hcd/blockchain/stake"
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
+	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
-	"github.com/HcashOrg/hcd/hcutil"
 	hcrpcclient "github.com/HcashOrg/hcrpcclient"
-	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 	"github.com/HcashOrg/hcwallet/walletdb"
@@ -374,6 +375,9 @@ func (s *NotificationServer) sendAttachedBlockNotification() {
 		unminedHashes, err = w.TxStore.UnminedTxHashes(txmgrNs)
 		if err != nil {
 			return err
+		}
+		if s.currentTxNtfn == nil {
+			return fmt.Errorf("currentTxNtfn is nil")
 		}
 		for _, b := range s.currentTxNtfn.AttachedBlocks {
 			relevantAccounts(w, bals, b.Transactions)
