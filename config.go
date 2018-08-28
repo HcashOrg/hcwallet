@@ -61,7 +61,7 @@ const (
 	defaultFeeSource                               = ticketbuyer.TicketFeeMedian
 	defaultAvgPriceMode                            = ticketbuyer.PriceTargetVWAP
 	defaultMaxPriceAbsolute                        = 0
-	defaultMaxPriceRelative                        = 10
+	defaultMaxPriceRelative                        = 100
 	defaultPriceTarget                             = 0
 	defaultBalanceToMaintainAbsolute               = 0
 	defaultBalanceToMaintainRelative               = 0.3
