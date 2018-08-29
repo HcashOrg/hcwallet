@@ -60,6 +60,16 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 		if err != nil {
 			log.Errorf("Failed to process consensus server notification "+
 				"(name: `%s`, detail: `%v`)", notificationName, err)
+			//refresh wallet data
+			var height int32 = 0
+			err = walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+				ns := dbtx.ReadBucket(wtxmgrNamespaceKey)
+				_, height = w.TxStore.MainChainTip(ns)
+				return nil
+			})
+			if err == nil {
+				w.RescanFromHeight(w.chainClient.Client, height)
+			}
 		}
 	}
 }
