@@ -18,9 +18,9 @@ import (
 	"github.com/HcashOrg/hcd/blockchain/stake"
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
+	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
-	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/walletdb"
 	"golang.org/x/crypto/ripemd160"
@@ -1649,8 +1649,9 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.ReadBuc
 		// after removal from the db.
 		removedCredits := make(map[string][]byte)
 
+		length := len(b.transactions)
 		for i := range b.transactions {
-			txHash := &b.transactions[i]
+			txHash := &b.transactions[length-i-1]
 
 			recKey := keyTxRecord(txHash, &b.Block)
 			recVal := existsRawTxRecord(ns, recKey)
