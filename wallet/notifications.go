@@ -323,7 +323,7 @@ func (s *NotificationServer) notifyMinedTransaction(dbtx walletdb.ReadTx, detail
 		s.currentTxNtfn = &TransactionNotifications{}
 	}
 	n := len(s.currentTxNtfn.AttachedBlocks)
-	if n == 0 || *s.currentTxNtfn.AttachedBlocks[n-1].Hash != block.Hash {
+	if n == 0 || s.currentTxNtfn.AttachedBlocks[n-1].Header.BlockHash() != block.Hash {
 		return
 	}
 	txs := &s.currentTxNtfn.AttachedBlocks[n-1].Transactions
@@ -338,11 +338,9 @@ func (s *NotificationServer) notifyAttachedBlock(dbtx walletdb.ReadTx, block *wi
 	// Add block details if it wasn't already included for previously
 	// notified mined transactions.
 	n := len(s.currentTxNtfn.AttachedBlocks)
-	if n == 0 || *s.currentTxNtfn.AttachedBlocks[n-1].Hash != *blockHash {
+	if n == 0 || s.currentTxNtfn.AttachedBlocks[n-1].Header.BlockHash() != *blockHash {
 		s.currentTxNtfn.AttachedBlocks = append(s.currentTxNtfn.AttachedBlocks, Block{
-			Hash:      blockHash,
-			Height:    int32(block.Height),
-			Timestamp: block.Timestamp.Unix(),
+			Header: block,
 		})
 	}
 }
@@ -431,9 +429,7 @@ type TransactionNotifications struct {
 // Block contains the properties and all relevant transactions of an attached
 // block.
 type Block struct {
-	Hash         *chainhash.Hash
-	Height       int32
-	Timestamp    int64
+	Header       *wire.BlockHeader // Nil if referring to mempool
 	Transactions []TransactionSummary
 }
 
