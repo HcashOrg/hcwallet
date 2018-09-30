@@ -41,3 +41,9 @@ func OmniCommunicate(netName string) {
 	time.Sleep(time.Second * 2)
 
 }
+
+
+type Request struct {
+	Method string        `json:"method"`
+	Params []interface{} `json:"params"`
+}
