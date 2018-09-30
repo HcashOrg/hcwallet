@@ -20,7 +20,7 @@
   revision = "f5d53c2a9b7d05ffa1600cad036d3d51dd5423cc"
 
 [[projects]]
-  branch = "master"
+  branch = "omnibranch"
   name = "github.com/HcashOrg/hcd"
   packages = [
     "blockchain",
@@ -49,13 +49,13 @@
     "txscript",
     "wire"
   ]
-  revision = "b9d77d33d3487a1e2600c99616156653da7d9ff1"
+  revision = "bd0899b8b42bb1511b923e597e715b0ed3609f4f"
 
 [[projects]]
   branch = "master"
   name = "github.com/HcashOrg/hcrpcclient"
   packages = ["."]
-  revision = "48a5d652f2e17c8ac69e556fc18080e76e4b5c01"
+  revision = "024137433c1dc9ec0cb50102668b14ce0a19d646"
 
 [[projects]]
   branch = "master"
@@ -152,7 +152,7 @@
     "sha3",
     "ssh/terminal"
   ]
-  revision = "614d502a4dac94afa3a6ce146bd1736da82514c6"
+  revision = "5295e8364332db77d75fce11f1d19c053919a9c9"
 
 [[projects]]
   branch = "master"
@@ -166,7 +166,7 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "922f4815f713f213882e8ef45e0d315b164d705c"
+  revision = "4dfa2610cdf3b287375bbba5b8f2a14d3b01d8de"
 
 [[projects]]
   branch = "master"
@@ -181,7 +181,7 @@
     "unix",
     "windows"
   ]
-  revision = "11551d06cbcc94edc80a0facaccbda56473c19c1"
+  revision = "e4b3c5e9061176387e7cea65e4dc5853801f3fb7"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -208,7 +208,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "c66870c02cf823ceb633bcd05be3c7cda29976f4"
+  revision = "c7e5094acea1ca1b899e2259d80a6b0f882f81f8"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -240,12 +240,12 @@
     "status",
     "tap"
   ]
-  revision = "32fb0ac620c32ba40a4626ddf94d90d12cce3455"
-  version = "v1.14.0"
+  revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
+  version = "v1.15.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2ada5f848f768d19c93660f2262f977ed9f33d6deb39ba653dd99a7cdff582fd"
+  inputs-digest = "463c70c5734214d661b26758f518b252d8c3c7dc61ca218f924a8364dd566466"
   solver-name = "gps-cdcl"
   solver-version = 1
