@@ -24,7 +24,7 @@ import (
 	"github.com/btcsuite/websocket"
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/hcjson"
-	hcrpcclient "github.com/HcashOrg/hcrpcclient"
+	"github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcwallet/chain"
 	"github.com/HcashOrg/hcwallet/loader"
 )
@@ -579,6 +579,12 @@ func (s *Server) postClientRPC(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
+	//strReq:=string(rpcRequest);
+	//rsp,err:=s.JsonCmdReq(strReq);
+	//fmt.Println("rsp:",rsp);
+
+
 	// First check whether wallet has a handler for this request's method.
 	// If unfound, the request is sent to the chain server for further
 	// processing.  While checking the methods, disallow authenticate
@@ -639,6 +645,48 @@ func (s *Server) postClientRPC(w http.ResponseWriter, r *http.Request) {
 		s.requestProcessShutdown()
 	}
 }
+
+//add by ycj 20180910 for handle request,refer:func postClientRPC
+func (s *Server) JsonCmdReqOmToHc(strRequst string) (string,error){
+	// First check whether wallet has a handler for this request's method.
+	// If unfound, the request is sent to the chain server for further
+	// processing.  While checking the methods, disallow authenticate
+	// requests, as they are invalid for HTTP POST clients.
+	var req hcjson.Request
+	err:= json.Unmarshal( []byte(strRequst), &req)//err = json.Unmarshal(rpcRequest, &req)
+	if err != nil {
+		resp, err := hcjson.MarshalResponse(req.ID, nil, hcjson.ErrRPCInvalidRequest)
+		log.Errorf("Unable to marshal strRequst from %s","JsonCmdReq")
+		return string(resp[:]),err
+	}
+
+	// Create the response and error from the request.  Two special cases
+	// are handled for the authenticate and stop request methods.
+	var res interface{}
+	var jsonErr *hcjson.RPCError
+	//var stop bool
+	switch req.Method {
+	case "stop":
+		log.Infof("RPC method stop invoked by client %s", "JsonCmdReq")//r.RemoteAddr)
+		//stop = true
+		s.requestProcessShutdown()
+		return "hcwallet stopping",nil
+
+	default:
+		ctx:=context.Background();//add by ycj 20180910
+		res, jsonErr = s.handlerClosure(ctx, &req)()
+	}
+
+	// Marshal and send.
+	mresp, err := hcjson.MarshalResponse(req.ID, res, jsonErr)
+	if err != nil {
+		log.Errorf("Unable to marshal response to client  %v", err)
+		//http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return string(mresp[:]),err
+	}
+	return string(mresp[:]),nil;
+}
+
 
 func (s *Server) requestProcessShutdown() {
 	select {

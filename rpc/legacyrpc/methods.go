@@ -43,6 +43,10 @@ const (
 	jsonrpcSemverPatch  = 0
 )
 
+var (
+	rpcHandlers map[string]LegacyRpcHandler
+)
+
 // confirms returns the number of confirmations for a transaction in a block at
 // height txHeight (or -1 for an unconfirmed tx) given the chain height
 // curHeight.
@@ -65,7 +69,7 @@ type requestHandler func(interface{}, *wallet.Wallet) (interface{}, error)
 // requestHandlerChain is a requestHandler that also takes a parameter for
 type requestHandlerChainRequired func(interface{}, *wallet.Wallet, *hcrpcclient.Client) (interface{}, error)
 
-var rpcHandlers = map[string]struct {
+type LegacyRpcHandler struct {
 	handler          requestHandler
 	handlerWithChain requestHandlerChainRequired
 
@@ -78,103 +82,111 @@ var rpcHandlers = map[string]struct {
 	// for the unimplemented handlers so every method has exactly one
 	// handler function.
 	noHelp bool
-}{
-	// Reference implementation wallet methods (implemented)
-	"accountaddressindex":     {handler: accountAddressIndex},
-	"accountsyncaddressindex": {handler: accountSyncAddressIndex},
-	"addmultisigaddress":      {handlerWithChain: addMultiSigAddress},
-	"addticket":               {handler: addTicket},
-	"consolidate":             {handler: consolidate},
-	"createmultisig":          {handler: createMultiSig},
-	"dumpprivkey":             {handler: dumpPrivKey},
-	"generatevote":            {handler: generateVote},
-	"getaccount":              {handler: getAccount},
-	"getaccountaddress":       {handler: getAccountAddress},
-	"getaddressesbyaccount":   {handler: getAddressesByAccount},
-	"getbalance":              {handler: getBalance},
-	"getbestblockhash":        {handler: getBestBlockHash},
-	"getblockcount":           {handler: getBlockCount},
-	"getinfo":                 {handlerWithChain: getInfo},
-	"getmasterpubkey":         {handler: getMasterPubkey},
-	"getmultisigoutinfo":      {handlerWithChain: getMultisigOutInfo},
-	"getnewaddress":           {handler: getNewAddress},
-	"getrawchangeaddress":     {handler: getRawChangeAddress},
-	"getreceivedbyaccount":    {handler: getReceivedByAccount},
-	"getreceivedbyaddress":    {handler: getReceivedByAddress},
-	"getstakeinfo":            {handlerWithChain: getStakeInfo},
-	"getticketfee":            {handler: getTicketFee},
-	"gettickets":              {handlerWithChain: getTickets},
-	"gettransaction":          {handler: getTransaction},
-	"getvotechoices":          {handler: getVoteChoices},
-	"getwalletfee":            {handler: getWalletFee},
-	"help":                    {handler: helpNoChainRPC, handlerWithChain: helpWithChainRPC},
-	"importprivkey":           {handlerWithChain: importPrivKey},
-	"importscript":            {handlerWithChain: importScript},
-	"keypoolrefill":           {handler: keypoolRefill},
-	"listaccounts":            {handler: listAccounts},
-	"listlockunspent":         {handler: listLockUnspent},
-	"listreceivedbyaccount":   {handler: listReceivedByAccount},
-	"listreceivedbyaddress":   {handler: listReceivedByAddress},
-	"listsinceblock":          {handlerWithChain: listSinceBlock},
-	"listscripts":             {handler: listScripts},
-	"listtransactions":        {handler: listTransactions},
-	"listunspent":             {handler: listUnspent},
-	"lockunspent":             {handler: lockUnspent},
-	"purchaseticket":          {handler: purchaseTicket},
-	"rescanwallet":            {handlerWithChain: rescanWallet},
-	"revoketickets":           {handlerWithChain: revokeTickets},
-	"sendfrom":                {handlerWithChain: sendFrom},
-	"sendmany":                {handler: sendMany},
-	"sendmanyv2":              {handler: sendManyV2},
-	"sendtoaddress":           {handler: sendToAddress},
-	"getstraightpubkey":       {handlerWithChain: getStraightPubKey},
-	"sendtomultisig":          {handlerWithChain: sendToMultiSig},
-	"sendtosstx":              {handlerWithChain: sendToSStx},
-	"sendtossgen":             {handler: sendToSSGen},
-	"sendtossrtx":             {handlerWithChain: sendToSSRtx},
-	"setticketfee":            {handler: setTicketFee},
-	"settxfee":                {handler: setTxFee},
-	"setvotechoice":           {handler: setVoteChoice},
-	"signmessage":             {handler: signMessage},
-	"signrawtransaction":      {handler: signRawTransactionNoChainRPC, handlerWithChain: signRawTransaction},
-	"signrawtransactions":     {handlerWithChain: signRawTransactions},
-	"redeemmultisigout":       {handlerWithChain: redeemMultiSigOut},
-	"redeemmultisigouts":      {handlerWithChain: redeemMultiSigOuts},
-	"stakepooluserinfo":       {handler: stakePoolUserInfo},
-	"ticketsforaddress":       {handler: ticketsForAddress},
-	"validateaddress":         {handler: validateAddress},
-	"verifymessage":           {handler: verifyMessage},
-	"version":                 {handler: versionNoChainRPC, handlerWithChain: versionWithChainRPC},
-	"walletinfo":              {handlerWithChain: walletInfo},
-	"walletlock":              {handler: walletLock},
-	"walletpassphrase":        {handler: walletPassphrase},
-	"walletpassphrasechange":  {handler: walletPassphraseChange},
+}
 
-	// Reference implementation methods (still unimplemented)
-	"backupwallet":         {handler: unimplemented, noHelp: true},
-	"getwalletinfo":        {handler: unimplemented, noHelp: true},
-	"importwallet":         {handler: unimplemented, noHelp: true},
-	"listaddressgroupings": {handler: unimplemented, noHelp: true},
+func init() {
+	rpcHandlers = map[string]LegacyRpcHandler{
+		// Reference implementation wallet methods (implemented)
+		"accountaddressindex":     {handler: accountAddressIndex},
+		"accountsyncaddressindex": {handler: accountSyncAddressIndex},
+		"addmultisigaddress":      {handlerWithChain: addMultiSigAddress},
+		"addticket":               {handler: addTicket},
+		"consolidate":             {handler: consolidate},
+		"createmultisig":          {handler: createMultiSig},
+		"dumpprivkey":             {handler: dumpPrivKey},
+		"generatevote":            {handler: generateVote},
+		"getaccount":              {handler: getAccount},
+		"getaccountaddress":       {handler: getAccountAddress},
+		"getaddressesbyaccount":   {handler: getAddressesByAccount},
+		"getbalance":              {handler: getBalance},
+		"getbestblockhash":        {handler: getBestBlockHash},
+		"getblockcount":           {handler: getBlockCount},
+		"getinfo":                 {handlerWithChain: getInfo},
+		"getmasterpubkey":         {handler: getMasterPubkey},
+		"getmultisigoutinfo":      {handlerWithChain: getMultisigOutInfo},
+		"getnewaddress":           {handler: getNewAddress},
+		"getrawchangeaddress":     {handler: getRawChangeAddress},
+		"getreceivedbyaccount":    {handler: getReceivedByAccount},
+		"getreceivedbyaddress":    {handler: getReceivedByAddress},
+		"getstakeinfo":            {handlerWithChain: getStakeInfo},
+		"getticketfee":            {handler: getTicketFee},
+		"gettickets":              {handlerWithChain: getTickets},
+		"gettransaction":          {handler: getTransaction},
+		"getvotechoices":          {handler: getVoteChoices},
+		"getwalletfee":            {handler: getWalletFee},
+		"help":                    {handler: helpNoChainRPC, handlerWithChain: helpWithChainRPC},
+		"importprivkey":           {handlerWithChain: importPrivKey},
+		"importscript":            {handlerWithChain: importScript},
+		"keypoolrefill":           {handler: keypoolRefill},
+		"listaccounts":            {handler: listAccounts},
+		"listlockunspent":         {handler: listLockUnspent},
+		"listreceivedbyaccount":   {handler: listReceivedByAccount},
+		"listreceivedbyaddress":   {handler: listReceivedByAddress},
+		"listsinceblock":          {handlerWithChain: listSinceBlock},
+		"listscripts":             {handler: listScripts},
+		"listtransactions":        {handler: listTransactions},
+		"listunspent":             {handler: listUnspent},
+		"lockunspent":             {handler: lockUnspent},
+		"purchaseticket":          {handler: purchaseTicket},
+		"rescanwallet":            {handlerWithChain: rescanWallet},
+		"revoketickets":           {handlerWithChain: revokeTickets},
+		"sendfrom":                {handlerWithChain: sendFrom},
+		"sendmany":                {handler: sendMany},
+		"sendmanyv2":              {handler: sendManyV2},
+		"sendtoaddress":           {handler: sendToAddress},
+		"getstraightpubkey":       {handlerWithChain: getStraightPubKey},
+		"sendtomultisig":          {handlerWithChain: sendToMultiSig},
+		"sendtosstx":              {handlerWithChain: sendToSStx},
+		"sendtossgen":             {handler: sendToSSGen},
+		"sendtossrtx":             {handlerWithChain: sendToSSRtx},
+		"setticketfee":            {handler: setTicketFee},
+		"settxfee":                {handler: setTxFee},
+		"setvotechoice":           {handler: setVoteChoice},
+		"signmessage":             {handler: signMessage},
+		"signrawtransaction":      {handler: signRawTransactionNoChainRPC, handlerWithChain: signRawTransaction},
+		"signrawtransactions":     {handlerWithChain: signRawTransactions},
+		"redeemmultisigout":       {handlerWithChain: redeemMultiSigOut},
+		"redeemmultisigouts":      {handlerWithChain: redeemMultiSigOuts},
+		"stakepooluserinfo":       {handler: stakePoolUserInfo},
+		"ticketsforaddress":       {handler: ticketsForAddress},
+		"validateaddress":         {handler: validateAddress},
+		"verifymessage":           {handler: verifyMessage},
+		"version":                 {handler: versionNoChainRPC, handlerWithChain: versionWithChainRPC},
+		"walletinfo":              {handlerWithChain: walletInfo},
+		"walletlock":              {handler: walletLock},
+		"walletpassphrase":        {handler: walletPassphrase},
+		"walletpassphrasechange":  {handler: walletPassphraseChange},
 
-	// Reference methods which can't be implemented by hcwallet due to
-	// design decision differences
-	"dumpwallet":    {handler: unsupported, noHelp: true},
-	"encryptwallet": {handler: unsupported, noHelp: true},
-	"move":          {handler: unsupported, noHelp: true},
-	"setaccount":    {handler: unsupported, noHelp: true},
+		// Reference implementation methods (still unimplemented)
+		"backupwallet":         {handler: unimplemented, noHelp: true},
+		"getwalletinfo":        {handler: unimplemented, noHelp: true},
+		"importwallet":         {handler: unimplemented, noHelp: true},
+		"listaddressgroupings": {handler: unimplemented, noHelp: true},
 
-	// Extensions to the reference client JSON-RPC API
-	"createnewaccount": {handler: createNewAccount},
-	"getbestblock":     {handler: getBestBlock},
-	// This was an extension but the reference implementation added it as
-	// well, but with a different API (no account parameter).  It's listed
-	// here because it hasn't been update to use the reference
-	// implemenation's API.
-	"getunconfirmedbalance":   {handler: getUnconfirmedBalance},
-	"listaddresstransactions": {handler: listAddressTransactions},
-	"listalltransactions":     {handler: listAllTransactions},
-	"renameaccount":           {handler: renameAccount},
-	"walletislocked":          {handler: walletIsLocked},
+		// Reference methods which can't be implemented by hcwallet due to
+		// design decision differences
+		"dumpwallet":    {handler: unsupported, noHelp: true},
+		"encryptwallet": {handler: unsupported, noHelp: true},
+		"move":          {handler: unsupported, noHelp: true},
+		"setaccount":    {handler: unsupported, noHelp: true},
+
+		// Extensions to the reference client JSON-RPC API
+		"createnewaccount": {handler: createNewAccount},
+		"getbestblock":     {handler: getBestBlock},
+		// This was an extension but the reference implementation added it as
+		// well, but with a different API (no account parameter).  It's listed
+		// here because it hasn't been update to use the reference
+		// implemenation's API.
+		"getunconfirmedbalance":   {handler: getUnconfirmedBalance},
+		"listaddresstransactions": {handler: listAddressTransactions},
+		"listalltransactions":     {handler: listAllTransactions},
+		"renameaccount":           {handler: renameAccount},
+		"walletislocked":          {handler: walletIsLocked},
+	}
+
+	for k, v := range getOminiMethod() {
+		rpcHandlers[k] = v
+	}
 }
 
 // unimplemented handles an unimplemented RPC request with the
@@ -947,7 +959,7 @@ func importPrivKey(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.
 	}
 
 	if rescan {
-		w.RescanFromHeight(chainClient, scanFrom)
+		w.RescanFromHeight(chainClient, scanFrom, false)
 	}
 
 	return nil, err
@@ -981,7 +993,7 @@ func importScript(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.C
 	}
 
 	if rescan {
-		w.RescanFromHeight(chainClient, int32(scanFrom))
+		w.RescanFromHeight(chainClient, int32(scanFrom), false)
 	}
 
 	return nil, nil
@@ -1966,12 +1978,19 @@ func makeOutputs(pairs map[string]hcutil.Amount, chainParams *chaincfg.Params) (
 // It returns the transaction hash in string format upon success
 // All errors are returned in hcjson.RPCError format
 func sendPairs(w *wallet.Wallet, amounts map[string]hcutil.Amount,
-	account uint32, minconf int32, changeAddr string) (string, error) {
+	account uint32, minconf int32, changeAddr string, payLoad []byte, fromAddress string) (string, error) {
 	outputs, err := makeOutputs(amounts, w.ChainParams())
 	if err != nil {
 		return "", err
 	}
-	txSha, err := w.SendOutputs(outputs, account, minconf, changeAddr)
+
+	payloadOutput, err := w.MakeNulldataOutput(payLoad)
+	if err != nil {
+		return "", err
+	}
+	outputs = append(outputs, payloadOutput)
+
+	txSha, err := w.SendOutputs(outputs, account, minconf, changeAddr, fromAddress)
 	if err != nil {
 		if err == txrules.ErrAmountNegative {
 			return "", ErrNeedPositiveAmount
@@ -2157,7 +2176,10 @@ func redeemMultiSigOuts(icmd interface{}, w *wallet.Wallet, chainClient *hcrpccl
 // until the rescan completes or exits with an error.
 func rescanWallet(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
 	cmd := icmd.(*hcjson.RescanWalletCmd)
-	err := <-w.RescanFromHeight(chainClient, int32(*cmd.BeginHeight))
+	if *cmd.BeginHeight != 0 {
+		return nil, fmt.Errorf("not support sync from height != 0")
+	}
+	err := <-w.RescanFromHeight(chainClient, int32(*cmd.BeginHeight),true)
 	return nil, err
 }
 
@@ -2283,7 +2305,7 @@ func sendFrom(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Clien
 		cmd.ToAddress: amt,
 	}
 
-	return sendPairs(w, pairs, account, minConf, "")
+	return sendPairs(w, pairs, account, minConf, "", []byte{}, "")
 }
 
 // sendMany handles a sendmany RPC request by creating a new transaction
@@ -2324,7 +2346,7 @@ func sendMany(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		pairs[k] = amt
 	}
 
-	return sendPairs(w, pairs, account, minConf, "")
+	return sendPairs(w, pairs, account, minConf, "", []byte{}, "")
 }
 
 // sendManyV2 handles a sendManyV2 RPC request by creating a new transaction
@@ -2369,7 +2391,7 @@ func sendManyV2(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		changeAddr = *cmd.ChangeAddr
 	}
 
-	return sendPairs(w, pairs, account, minConf, changeAddr)
+	return sendPairs(w, pairs, account, minConf, changeAddr, []byte{}, "")
 }
 
 // sendToAddress handles a sendtoaddress RPC request by creating a new
@@ -2406,7 +2428,7 @@ func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(w, pairs, account, 1, "")
+	return sendPairs(w, pairs, account, 1, "", []byte{}, "")
 }
 
 // getStraightPubKey handles a getStraightPubKey RPC request by getting a straight public key

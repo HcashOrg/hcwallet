@@ -3059,7 +3059,7 @@ func (s *Store) unspentOutputsForAmount(ns, addrmgrNs walletdb.ReadBucket, neede
 // InputSource provides a method (SelectInputs) to incrementally select unspent
 // outputs to use as transaction inputs.
 type InputSource struct {
-	source func(hcutil.Amount) (hcutil.Amount, []*wire.TxIn, [][]byte, error)
+	source func(hcutil.Amount, string) (hcutil.Amount, []*wire.TxIn, [][]byte, error)
 }
 
 // SelectInputs selects transaction inputs to redeem unspent outputs stored in
@@ -3068,8 +3068,8 @@ type InputSource struct {
 // input amount referenced by the previous transaction outputs, a slice of
 // transaction inputs referencing these outputs, and a slice of previous output
 // scripts from each previous output referenced by the corresponding input.
-func (s *InputSource) SelectInputs(target hcutil.Amount) (hcutil.Amount, []*wire.TxIn, [][]byte, error) {
-	return s.source(target)
+func (s *InputSource) SelectInputs(target hcutil.Amount, fromAddress string) (hcutil.Amount, []*wire.TxIn, [][]byte, error) {
+	return s.source(target, fromAddress)
 }
 
 // MakeInputSource creates an InputSource to redeem unspent outputs from an
@@ -3096,7 +3096,7 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 		currentScripts [][]byte
 	)
 
-	f := func(target hcutil.Amount) (hcutil.Amount, []*wire.TxIn, [][]byte, error) {
+	f := func(target hcutil.Amount, fromAddress string) (hcutil.Amount, []*wire.TxIn, [][]byte, error) {
 		for currentTotal < target || target == 0 {
 			var k, v []byte
 			if bucketUnspentCursor == nil {
@@ -3202,9 +3202,26 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 
 			input := wire.NewTxIn(&op, nil)
 
-			currentTotal += amt
-			currentInputs = append(currentInputs, input)
-			currentScripts = append(currentScripts, pkScript)
+			var pubkeys []string
+			_, pubkeyAddrs, _, err := txscript.ExtractPkScriptAddrs(
+				txscript.DefaultScriptVersion, pkScript,
+				s.chainParams)
+
+			for _, pka := range pubkeyAddrs {
+				pubkeys = append(pubkeys, pka.String())
+			}
+
+			if len(fromAddress) >0 {//only fromAddress can pass
+				if len(pubkeys) == 1 && pubkeys[0] == fromAddress{
+					currentTotal += amt
+					currentInputs = append(currentInputs, input)
+					currentScripts = append(currentScripts, pkScript)
+				}
+			}else{
+				currentTotal += amt
+				currentInputs = append(currentInputs, input)
+				currentScripts = append(currentScripts, pkScript)
+			}
 		}
 
 		// Return the current results if the target amount was reached

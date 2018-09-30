@@ -8,21 +8,28 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"reflect"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/HcashOrg/hcd/chaincfg"
+	"github.com/HcashOrg/hcd/chaincfg/chainhash"
+
+	"github.com/HcashOrg/hcd/hcjson"
 	"github.com/HcashOrg/hcwallet/chain"
 	"github.com/HcashOrg/hcwallet/internal/prompt"
 	"github.com/HcashOrg/hcwallet/internal/zero"
 	ldr "github.com/HcashOrg/hcwallet/loader"
+	"github.com/HcashOrg/hcwallet/omnilib"
 	"github.com/HcashOrg/hcwallet/rpc/legacyrpc"
 	"github.com/HcashOrg/hcwallet/rpc/rpcserver"
 	"github.com/HcashOrg/hcwallet/wallet"
@@ -117,8 +124,9 @@ func walletMain() error {
 		StakePoolColdExtKey: cfg.StakePoolColdExtKey,
 		TicketFee:           cfg.TicketFee.ToCoin(),
 	}
+
 	loader := ldr.NewLoader(activeNet.Params, dbDir, stakeOptions,
-		cfg.AddrIdxScanLen, cfg.AllowHighFees, cfg.RelayFee.ToCoin())
+		cfg.AddrIdxScanLen, cfg.AllowHighFees, cfg.RelayFee.ToCoin(), cfg.EnableOmni)
 
 	passphrase := []byte{}
 	if !cfg.NoInitialLoad {
@@ -152,8 +160,6 @@ func walletMain() error {
 		} else {
 			passphrase = []byte(cfg.Pass)
 		}
-
-		//passphrase := []byte("111111")
 
 		// Load the wallet database.  It must have been created already
 		// or this will return an appropriate error.
@@ -194,6 +200,18 @@ func walletMain() error {
 		go serviceControlPipeRx(uintptr(*cfg.PipeRx))
 	}
 
+	_, b := loader.LoadedWallet()
+	if b == false {
+		return fmt.Errorf("failed to load wallet")
+	}
+
+	netName := "main"
+	if cfg.TestNet {
+		netName = "test"
+	} else if cfg.SimNet {
+		netName = "regtest"
+	}
+
 	// Add interrupt handlers to shutdown the various process components
 	// before exiting.  Interrupt handlers run in LIFO order, so the wallet
 	// (which should be closed last) is added first.
@@ -225,12 +243,34 @@ func walletMain() error {
 			<-legacyRPCServer.RequestProcessShutdown()
 			simulateInterrupt()
 		}()
+
+		PtrLegacyRPCServer = legacyRPCServer
+		go func() {
+			for {
+				strReq := <-omnilib.ChanReqOmToHc
+				fmt.Println("Get Req:", strReq)
+				strRsp, _ := PtrLegacyRPCServer.JsonCmdReqOmToHc(strReq)
+				omnilib.ChanRspOmToHc <- strRsp
+			}
+		}()
+	}
+
+	if cfg.EnableOmni {
+		omnilib.OmniCommunicate(netName)
+		//err = recoverOmniData(w)
+		//if err != nil {
+		//	log.Errorf("Failed to recoverOmniData: %v", err)
+		//	return err
+		//}
 	}
 
 	<-interruptHandlersDone
 	log.Info("Shutdown complete")
+
 	return nil
 }
+
+var PtrLegacyRPCServer *legacyrpc.Server = nil
 
 // startPromptPass prompts the user for a password to unlock their wallet in
 // the event that it was restored from seed or --promptpass flag is set.
@@ -408,4 +448,55 @@ func startChainRPC(certs []byte) (*chain.RPCClient, error) {
 	}
 	err = rpcc.Start()
 	return rpcc, err
+}
+
+func recoverOmniData(w *wallet.Wallet) error {
+	// 1 read hash
+	var cmd hcjson.OmniReadAllTxHashCmd
+
+	strResponse, err := legacyrpc.OmniReadAllTxHash(&cmd, w)
+	if err != nil {
+		return err
+	}
+
+	rv := reflect.ValueOf(strResponse)
+	buf := rv.Bytes()
+	buf = buf[1 : len(buf)-1]
+	if len(buf) == 0 {
+		log.Infof("recoverOmniData omni no data")
+		return nil
+	}
+
+	strBuf := string(buf)
+	strBuf = strings.Replace(strBuf, `\`, ``, -1)
+
+	var Hashs []string
+	err = json.Unmarshal([]byte(strBuf), &Hashs)
+	if err != nil {
+		return err
+	}
+	for _, txHash := range Hashs {
+		txSha, err := chainhash.NewHashFromStr(txHash)
+		if err != nil {
+			return err
+		}
+
+		//2 read tx
+		txd, err := wallet.UnstableAPI(w).TxDetails(txSha)
+		if err != nil {
+			return err
+		}
+		if txd == nil {
+			return legacyrpc.ErrNoTransactionInfo
+		}
+
+		// 3 process tx
+		err = w.ProcessOminiTransaction(&txd.TxRecord, &txd.Block)
+		if err != nil {
+			log.Error("recover omni data err:%s", err.Error())
+			return err
+		}
+	}
+
+	return nil
 }

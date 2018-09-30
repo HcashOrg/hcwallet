@@ -35,6 +35,7 @@ const (
 	defaultRPCMaxClients       = 10
 	defaultRPCMaxWebsockets    = 25
 	defaultEnableTicketBuyer   = false
+	defaultEnableOmni          = true
 	defaultEnableVoting        = false
 	defaultReuseAddresses      = false
 	defaultRollbackTest        = false
@@ -103,6 +104,7 @@ type config struct {
 	PromptPublicPass    bool                 `long:"promptpublicpass" description:"The public wallet password is prompted for at start up"`
 	DisallowFree        bool                 `long:"disallowfree" description:"Force transactions to always include a fee"`
 	EnableTicketBuyer   bool                 `long:"enableticketbuyer" description:"Enable the automatic ticket buyer"`
+	EnableOmni          bool                 `long:"enableomni" description:"Enable the automatic ticket buyer"`
 	EnableVoting        bool                 `long:"enablevoting" description:"Enable creation of votes and revocations for owned tickets"`
 	ReuseAddresses      bool                 `long:"reuseaddresses" description:"Reuse addresses for ticket purchase to cut down on address overuse"`
 	PurchaseAccount     string               `long:"purchaseaccount" description:"Name of the account to buy tickets from"`
@@ -344,6 +346,7 @@ func loadConfig() (*config, []string, error) {
 		LegacyRPCMaxClients:    defaultRPCMaxClients,
 		LegacyRPCMaxWebsockets: defaultRPCMaxWebsockets,
 		EnableTicketBuyer:      defaultEnableTicketBuyer,
+		EnableOmni:             defaultEnableOmni,
 		EnableVoting:           defaultEnableVoting,
 		ReuseAddresses:         defaultReuseAddresses,
 		RollbackTest:           defaultRollbackTest,

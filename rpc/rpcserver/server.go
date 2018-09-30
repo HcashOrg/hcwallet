@@ -35,11 +35,11 @@ import (
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/chaincfg/chainec"
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
-	"github.com/HcashOrg/hcd/hcutil"
-	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
 	hcrpcclient "github.com/HcashOrg/hcrpcclient"
+	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/chain"
 	"github.com/HcashOrg/hcwallet/internal/cfgutil"
@@ -559,7 +559,7 @@ func (s *walletServer) ImportPrivateKey(ctx context.Context, req *pb.ImportPriva
 	}
 
 	if req.Rescan {
-		s.wallet.RescanFromHeight(chainClient, req.ScanFrom)
+		s.wallet.RescanFromHeight(chainClient, req.ScanFrom, false)
 	}
 
 	return &pb.ImportPrivateKeyResponse{}, nil
@@ -624,7 +624,7 @@ func (s *walletServer) ImportScript(ctx context.Context,
 	}
 
 	if req.Rescan {
-		s.wallet.RescanFromHeight(chainClient, req.ScanFrom)
+		s.wallet.RescanFromHeight(chainClient, req.ScanFrom, false)
 	}
 
 	p2sh, err := hcutil.NewAddressScriptHash(req.Script, s.wallet.ChainParams())
@@ -957,44 +957,31 @@ func (s *walletServer) GetTransactions(req *pb.GetTransactionsRequest,
 				"minimum number of recent transactions may not be negative")
 		}
 	}
+
 	_ = minRecentTxs
 
-	targetTxCount := int(req.TargetTransactionCount)
-	if targetTxCount < 0 {
-		return status.Errorf(codes.InvalidArgument,
-			"maximum transaction count may not be negative")
-	}
-
-	ctx := server.Context()
-	txCount := 0
-
-	rangeFn := func(block *wallet.Block) (bool, error) {
-		var resp *pb.GetTransactionsResponse
-		if block.Header != nil {
-			resp = &pb.GetTransactionsResponse{
-				MinedTransactions: marshalBlock(block),
-			}
-		} else {
-			resp = &pb.GetTransactionsResponse{
-				UnminedTransactions: marshalTransactionDetailsSlice(block.Transactions),
-			}
-		}
-		txCount += len(block.Transactions)
-
-		select {
-		case <-ctx.Done():
-			return true, ctx.Err()
-		default:
-			err := server.Send(resp)
-			return (err != nil) || ((targetTxCount > 0) && (txCount >= targetTxCount)), err
-		}
-	}
-
-	err := s.wallet.GetTransactions(rangeFn, startBlock, endBlock)
+	gtr, err := s.wallet.GetTransactions(startBlock, endBlock, server.Context().Done())
 	if err != nil {
 		return translateError(err)
 	}
-
+	for i := range gtr.MinedTransactions {
+		resp := &pb.GetTransactionsResponse{
+			MinedTransactions: marshalBlock(&gtr.MinedTransactions[i]),
+		}
+		err = server.Send(resp)
+		if err != nil {
+			return err
+		}
+	}
+	if len(gtr.UnminedTransactions) > 0 {
+		resp := &pb.GetTransactionsResponse{
+			UnminedTransactions: marshalTransactionDetailsSlice(gtr.UnminedTransactions),
+		}
+		err = server.Send(resp)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -1269,7 +1256,7 @@ func (s *walletServer) PurchaseTickets(ctx context.Context,
 	expiry := int32(req.Expiry)
 	txFee := hcutil.Amount(req.TxFee)
 	ticketFee := s.wallet.TicketFeeIncrement()
-	// Set the ticket fee if specified
+ 	// Set the ticket fee if specified
 	if req.TicketFee > 0 {
 		ticketFee = hcutil.Amount(req.TicketFee)
 	}
@@ -1571,11 +1558,10 @@ func marshalTicketDetails(ticket *wallet.TicketSummary) *pb.GetTicketsResponse_T
 }
 
 func marshalBlock(v *wallet.Block) *pb.BlockDetails {
-	blockHash := v.Header.BlockHash()
 	return &pb.BlockDetails{
-		Hash:         blockHash.CloneBytes(),
-		Height:       int32(v.Header.Height),
-		Timestamp:    v.Header.Timestamp.Unix(),
+		Hash:         v.Hash[:],
+		Height:       v.Height,
+		Timestamp:    v.Timestamp,
 		Transactions: marshalTransactionDetailsSlice(v.Transactions),
 	}
 }
@@ -2490,13 +2476,13 @@ func marshalDecodedTxInputs(mtx *wire.MsgTx) []*pb.DecodedTransaction_Input {
 		inputs[i] = &pb.DecodedTransaction_Input{
 			PreviousTransactionHash:  txIn.PreviousOutPoint.Hash[:],
 			PreviousTransactionIndex: txIn.PreviousOutPoint.Index,
-			Tree:                     pb.DecodedTransaction_Input_TreeType(txIn.PreviousOutPoint.Tree),
-			Sequence:                 txIn.Sequence,
-			AmountIn:                 txIn.ValueIn,
-			BlockHeight:              txIn.BlockHeight,
-			BlockIndex:               txIn.BlockIndex,
-			SignatureScript:          txIn.SignatureScript,
-			SignatureScriptAsm:       disbuf,
+			Tree:               pb.DecodedTransaction_Input_TreeType(txIn.PreviousOutPoint.Tree),
+			Sequence:           txIn.Sequence,
+			AmountIn:           txIn.ValueIn,
+			BlockHeight:        txIn.BlockHeight,
+			BlockIndex:         txIn.BlockIndex,
+			SignatureScript:    txIn.SignatureScript,
+			SignatureScriptAsm: disbuf,
 		}
 	}
 

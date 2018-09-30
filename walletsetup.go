@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"github.com/HcashOrg/hcd/chaincfg"
-	"github.com/HcashOrg/hcd/wire"
 	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
+	"github.com/HcashOrg/hcd/wire"
 	"github.com/HcashOrg/hcwallet/internal/prompt"
 	"github.com/HcashOrg/hcwallet/loader"
 	"github.com/HcashOrg/hcwallet/wallet"
@@ -57,7 +57,7 @@ func createWallet(cfg *config) error {
 		TicketFee:     cfg.TicketFee.ToCoin(),
 	}
 	loader := loader.NewLoader(activeNet.Params, dbDir, stakeOptions,
-		cfg.AddrIdxScanLen, cfg.AllowHighFees, cfg.RelayFee.ToCoin())
+		cfg.AddrIdxScanLen, cfg.AllowHighFees, cfg.RelayFee.ToCoin(), cfg.EnableOmni)
 
 	reader := bufio.NewReader(os.Stdin)
 	privPass, pubPass, seed, err := prompt.Setup(reader,

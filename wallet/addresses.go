@@ -733,6 +733,37 @@ func (w *Wallet) AccountBranchAddressRange(account, branch, start, end uint32) (
 	return nil, fmt.Errorf("unknown pubkey type")
 }
 
+func (w *Wallet) FetchAddressesByAccount(account uint32) ([]string, error) {
+	// Find the next child address indexes for the account.
+	endExt, endInt, err := w.BIP0044BranchNextIndexes(account)
+	if err != nil {
+		return nil, err
+	}
+
+	// Nothing to do if we have no addresses.
+	if endExt+endInt == 0 {
+		return nil, nil
+	}
+
+	// Derive the addresses.
+	addrsStr := make([]string, endInt+endExt)
+	addrsExt, err := w.AccountBranchAddressRange(account, udb.ExternalBranch, 0, endExt)
+	if err != nil {
+		return nil, err
+	}
+	for i := range addrsExt {
+		addrsStr[i] = addrsExt[i].EncodeAddress()
+	}
+	addrsInt, err := w.AccountBranchAddressRange(account, udb.InternalBranch, 0, endInt)
+	if err != nil {
+		return nil, err
+	}
+	for i := range addrsInt {
+		addrsStr[i+int(endExt)] = addrsInt[i].EncodeAddress()
+	}
+	return addrsStr, nil
+}
+
 func (w *Wallet) changeSource(persist persistReturnedChildFunc, account uint32, addr hcutil.Address) txauthor.ChangeSource {
 	if addr == nil {
 		return func(dbtx walletdb.ReadWriteTx) ([]byte, uint16, error) {

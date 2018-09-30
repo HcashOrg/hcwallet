@@ -150,6 +150,12 @@ type Wallet struct {
 	started bool
 	quit    chan struct{}
 	quitMu  sync.Mutex
+
+	//Dll
+	MsgReceiver chan string
+
+	//Omini  enable omini function
+	enableOmni bool
 }
 
 // newWallet creates a new Wallet structure with the provided address manager
@@ -158,7 +164,7 @@ func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Addre
 	poolAddress hcutil.Address, pf float64, relayFee, ticketFee hcutil.Amount,
 	gapLimit int, stakePoolColdAddrs map[string]struct{}, AllowHighFees bool,
 	mgr *udb.Manager, txs *udb.Store, smgr *udb.StakeStore, db *walletdb.DB,
-	params *chaincfg.Params, privpass []byte) (*Wallet, error) {
+	params *chaincfg.Params, privpass []byte, enableOmni bool) (*Wallet, error) {
 
 	w := &Wallet{
 		db:                       *db,
@@ -193,6 +199,7 @@ func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Addre
 		lockState:                make(chan bool),
 		changePassphrase:         make(chan changePassphraseRequest),
 		chainParams:              params,
+		enableOmni:             enableOmni,
 		quit:                     make(chan struct{}),
 	}
 
@@ -537,6 +544,11 @@ func (w *Wallet) PoolFees() float64 {
 // are accessible. It is not safe for concurrent access.
 func (w *Wallet) SetInitiallyUnlocked(set bool) {
 	w.initiallyUnlocked = set
+}
+
+// EnableOmni
+func (w *Wallet) EnableOmni() bool {
+	return w.enableOmni
 }
 
 // Start starts the goroutines necessary to manage a wallet.
@@ -1081,10 +1093,9 @@ func (w *Wallet) FetchHeaders(chainClient *hcrpcclient.Client) (count int, resca
 		commonAncestor       chainhash.Hash
 		commonAncestorHeight int32
 	)
+	hashs := make([]chainhash.Hash, 0)
 	err = walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
-		addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
 		txmgrNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
-
 		commonAncestor, commonAncestorHeight = w.TxStore.MainChainTip(txmgrNs)
 		hash, height := commonAncestor, commonAncestorHeight
 
@@ -1094,6 +1105,8 @@ func (w *Wallet) FetchHeaders(chainClient *hcrpcclient.Client) (count int, resca
 				// found it
 				break
 			}
+
+			hashs = append(hashs, hash)
 
 			height--
 			hash, err = w.TxStore.GetMainChainBlockHashForHeight(txmgrNs, height)
@@ -1111,7 +1124,7 @@ func (w *Wallet) FetchHeaders(chainClient *hcrpcclient.Client) (count int, resca
 		// now begin here, avoiding any issues with calling getheaders with
 		// side chain hashes.
 		log.Infof("rollback from current height %n to height %n", commonAncestorHeight, height+1)
-		return w.TxStore.Rollback(txmgrNs, addrmgrNs, height+1)
+		return w.RollBack(tx, height+1, hashs)
 	})
 	if err != nil {
 		return
@@ -1192,12 +1205,26 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 	if err != nil {
 		return err
 	}
-
-	// Fetch headers for unseen blocks in the main chain, determine whether a
-	// rescan is necessary, and when to begin it.
-	fetchedHeaderCount, rescanStart, _, _, _, err := w.FetchHeaders(chainClient)
+	err = chainClient.SetParams(w.EnableOmni())
 	if err != nil {
 		return err
+	}
+	// Fetch headers for unseen blocks in the main chain, determine whether a
+	// rescan is necessary, and when to begin it.
+	fetchedHeaderCount := 0
+	rescanStart := chainhash.Hash{}
+	if w.EnableOmni() {
+		_, _, _, _, height, err := w.FetchHeaders(chainClient)
+		if err != nil {
+			return err
+		}
+		fetchedHeaderCount = int(height)
+		rescanStart = *w.chainParams.GenesisHash
+	} else {
+		fetchedHeaderCount, rescanStart, _, _, _, err = w.FetchHeaders(chainClient)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Rescan when necessary.
@@ -1238,11 +1265,12 @@ type (
 		resp    chan consolidateResponse
 	}
 	createTxRequest struct {
-		account    uint32
-		outputs    []*wire.TxOut
-		minconf    int32
-		changeAddr string
-		resp       chan createTxResponse
+		account     uint32
+		outputs     []*wire.TxOut
+		minconf     int32
+		changeAddr  string
+		resp        chan createTxResponse
+		fromAddress string
 	}
 	createMultisigTxRequest struct {
 		account   uint32
@@ -1349,8 +1377,9 @@ out:
 				txr.resp <- createTxResponse{nil, err}
 				continue
 			}
+			isRandom := len(txr.fromAddress) == 0
 			tx, err := w.txToOutputs(txr.outputs, txr.account,
-				txr.minconf, true, txr.changeAddr)
+				txr.minconf, isRandom, txr.changeAddr, txr.fromAddress)
 			heldUnlock.release()
 			txr.resp <- createTxResponse{tx, err}
 
@@ -1443,14 +1472,15 @@ func (w *Wallet) Consolidate(inputs int, account uint32,
 // function is serialized to prevent the creation of many transactions which
 // spend the same outputs.
 func (w *Wallet) CreateSimpleTx(account uint32, outputs []*wire.TxOut,
-	minconf int32, changeAddr string) (*txauthor.AuthoredTx, error) {
+	minconf int32, changeAddr string, fromAddress string) (*txauthor.AuthoredTx, error) {
 
 	req := createTxRequest{
-		account:    account,
-		outputs:    outputs,
-		minconf:    minconf,
-		changeAddr: changeAddr,
-		resp:       make(chan createTxResponse),
+		account:     account,
+		outputs:     outputs,
+		minconf:     minconf,
+		changeAddr:  changeAddr,
+		resp:        make(chan createTxResponse),
+		fromAddress: fromAddress,
 	}
 	w.createTxRequests <- req
 	resp := <-req.resp
@@ -2760,7 +2790,7 @@ type GetTransactionsResult struct {
 // Transaction results are organized by blocks in ascending order and unmined
 // transactions in an unspecified order.  Mined transactions are saved in a
 // Block structure which records properties about the block.
-func (w *Wallet) GetTransactions(f func(*Block) (bool, error), startBlock, endBlock *BlockIdentifier) error {
+func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <-chan struct{}) (*GetTransactionsResult, error) {
 	var start, end int32 = 0, -1
 
 	if startBlock != nil {
@@ -2782,7 +2812,7 @@ func (w *Wallet) GetTransactions(f func(*Block) (bool, error), startBlock, endBl
 				return nil
 			})
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
@@ -2805,11 +2835,12 @@ func (w *Wallet) GetTransactions(f func(*Block) (bool, error), startBlock, endBl
 				return nil
 			})
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
+	var res GetTransactionsResult
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
 		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
@@ -2825,38 +2856,29 @@ func (w *Wallet) GetTransactions(f func(*Block) (bool, error), startBlock, endBl
 				txs = append(txs, makeTxSummary(dbtx, w, &details[i]))
 			}
 
-			var block *Block
 			if details[0].Block.Height != -1 {
-				serHeader, err := w.TxStore.GetSerializedBlockHeader(txmgrNs,
-					&details[0].Block.Hash)
-				if err != nil {
-					return false, err
-				}
-				header := new(wire.BlockHeader)
-				err = header.Deserialize(bytes.NewReader(serHeader))
-				if err != nil {
-					return false, err
-				}
-				block = &Block{
-					Header:       header,
+				blockHash := details[0].Block.Hash
+				res.MinedTransactions = append(res.MinedTransactions, Block{
+					Hash:         &blockHash,
+					Height:       details[0].Block.Height,
+					Timestamp:    details[0].Block.Time.Unix(),
 					Transactions: txs,
-				}
+				})
 			} else {
-				block = &Block{
-					Header:       nil,
-					Transactions: txs,
-				}
+				res.UnminedTransactions = txs
 			}
 
-			return f(block)
+			select {
+			case <-cancel:
+				return true, nil
+			default:
+				return false, nil
+			}
 		}
 
 		return w.TxStore.RangeTransactions(txmgrNs, start, end, rangeFn)
 	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return &res, err
 }
 
 // AccountResult is a single account result for the AccountsResult type.
@@ -3776,7 +3798,7 @@ func (w *Wallet) TotalReceivedForAddr(addr hcutil.Address, minConf int32) (hcuti
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction hash upon success
 func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
-	minconf int32, changeAddr string) (*chainhash.Hash, error) {
+	minconf int32, changeAddr string, fromAddress string) (*chainhash.Hash, error) {
 
 	relayFee := w.RelayFee()
 	for _, output := range outputs {
@@ -3788,7 +3810,7 @@ func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
 
 	// Create transaction, replying with an error if the creation
 	// was not successful.
-	createdTx, err := w.CreateSimpleTx(account, outputs, minconf, changeAddr)
+	createdTx, err := w.CreateSimpleTx(account, outputs, minconf, changeAddr, fromAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -3797,6 +3819,19 @@ func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
 	// serialize it again.
 	hash := createdTx.Tx.TxHash()
 	return &hash, nil
+}
+
+func (w *Wallet) MakeNulldataOutput(payLoad []byte) (*wire.TxOut, error) {
+	payLoadScript, err := txscript.GenerateProvablyPruneableOut(payLoad)
+	if err == nil {
+		payLoadTx := &wire.TxOut{
+			Value:    int64(0),
+			PkScript: payLoadScript,
+		}
+		return payLoadTx, nil
+	} else {
+		return nil, err
+	}
 }
 
 // SignatureError records the underlying error when validating a transaction
@@ -4238,7 +4273,7 @@ func decodeStakePoolColdExtKey(encStr string, params *chaincfg.Params) (map[stri
 func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, addressReuse bool,
 	ticketAddress hcutil.Address, poolAddress hcutil.Address, poolFees float64, ticketFee float64,
 	gapLimit int, stakePoolColdExtKey string, allowHighFees bool,
-	relayFee float64, params *chaincfg.Params) (*Wallet, error) {
+	relayFee float64, enableOmni bool, params *chaincfg.Params) (*Wallet, error) {
 
 	// Migrate to the unified DB if necessary.
 	needsMigration, err := udb.NeedsMigration(db)
@@ -4298,6 +4333,7 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 		&db,
 		params,
 		privPass,
+		enableOmni,
 	)
 	if err != nil {
 		return nil, err

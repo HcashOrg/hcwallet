@@ -1,3 +1,10 @@
 config.toml
 vendor
 .vscode/
+hcwallet.exe
+omnicored.*
+omnicored.exp
+omnicored.ilk
+omnicored.lib
+omnicored.pdb
+omnicored.dll

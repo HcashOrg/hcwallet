@@ -10,7 +10,7 @@ import (
 	"encoding/hex"
 
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
-	hcrpcclient "github.com/HcashOrg/hcrpcclient"
+	"github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 	"github.com/HcashOrg/hcwallet/walletdb"
 )
@@ -25,7 +25,10 @@ const maxBlocksPerRescan = 2000
 // progress channel, if non-nil, is sent non-error progress notifications with
 // the heights the rescan has completed through, starting with the start height.
 func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Hash, height int32,
-	p chan<- RescanProgress, cancel <-chan struct{}) error {
+	p chan<- RescanProgress, cancel <-chan struct{}, clearOmni bool) error {
+	if clearOmni {
+		w.OmniClear()
+	}
 
 	blockHashStorage := make([]chainhash.Hash, maxBlocksPerRescan)
 	rescanFrom := *startHash
@@ -86,8 +89,7 @@ func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 					if err != nil {
 						return err
 					}
-					err = w.processSerializedTransaction(dbtx, serTx,
-						&rawBlockHeader, &blockMeta)
+					err = w.processSerializedTransaction(dbtx, serTx, &rawBlockHeader, &blockMeta)
 					if err != nil {
 						return err
 					}
@@ -115,7 +117,6 @@ func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 // returned channel, the error will be logged and the channel will be closed.
 func (w *Wallet) Rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Hash) <-chan error {
 	errc := make(chan error)
-
 	go func() (err error) {
 		defer func() {
 			select {
@@ -142,7 +143,7 @@ func (w *Wallet) Rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 			return err
 		}
 
-		return w.rescan(chainClient, startHash, startHeight, nil, nil)
+		return w.rescan(chainClient, startHash, startHeight, nil, nil, true)
 	}()
 
 	return errc
@@ -150,7 +151,7 @@ func (w *Wallet) Rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 
 // RescanFromHeight is an alternative to Rescan that takes a block height
 // instead of a hash.  See Rescan for more details.
-func (w *Wallet) RescanFromHeight(chainClient *hcrpcclient.Client, startHeight int32) <-chan error {
+func (w *Wallet) RescanFromHeight(chainClient *hcrpcclient.Client, startHeight int32, clearOmni bool) <-chan error {
 	errc := make(chan error)
 
 	go func() (err error) {
@@ -177,7 +178,7 @@ func (w *Wallet) RescanFromHeight(chainClient *hcrpcclient.Client, startHeight i
 			return err
 		}
 
-		return w.rescan(chainClient, &startHash, startHeight, nil, nil)
+		return w.rescan(chainClient, &startHash, startHeight, nil, nil, clearOmni)
 	}()
 
 	return errc
@@ -210,7 +211,7 @@ func (w *Wallet) RescanProgressFromHeight(chainClient *hcrpcclient.Client, start
 		return
 	}
 
-	err = w.rescan(chainClient, &startHash, startHeight, p, cancel)
+	err = w.rescan(chainClient, &startHash, startHeight, p, cancel, false)
 	if err != nil {
 		p <- RescanProgress{Err: err}
 	}

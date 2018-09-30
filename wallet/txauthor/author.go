@@ -38,7 +38,7 @@ const (
 // can not be satisified, this can be signaled by returning a total amount less
 // than the target or by returning a more detailed error implementing
 // InputSourceError.
-type InputSource func(target hcutil.Amount) (total hcutil.Amount,
+type InputSource func(target hcutil.Amount, fromAddress string) (total hcutil.Amount,
 	inputs []*wire.TxIn, scripts [][]byte, err error)
 
 // InputSourceError describes the failure to provide enough input value from
@@ -98,7 +98,7 @@ type ChangeSource func(dbtx walletdb.ReadWriteTx) ([]byte, uint16, error)
 //
 // BUGS: Fee estimation may be off when redeeming non-compressed P2PKH outputs.
 func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcutil.Amount,
-	fetchInputs InputSource, fetchChange ChangeSource, accType uint8, params *chaincfg.Params, sdb txscript.ScriptDB) (*AuthoredTx, error) {
+	fetchInputs InputSource, fetchChange ChangeSource, accType uint8, params *chaincfg.Params, sdb txscript.ScriptDB, fromAddress string) (*AuthoredTx, error) {
 
 	targetAmount := h.SumOutputValues(outputs)
 	if accType != udb.AcctypeBliss && accType != udb.AcctypeEc {
@@ -110,7 +110,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcutil.Amount,
 	targetFee := txrules.FeeForSerializeSize(relayFeePerKb, estimatedSize)
 
 	for {
-		inputAmount, inputs, scripts, err := fetchInputs(targetAmount + targetFee)
+		inputAmount, inputs, scripts, err := fetchInputs(targetAmount+targetFee, fromAddress)
 		if err != nil {
 			return nil, err
 		}

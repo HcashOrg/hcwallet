@@ -124,7 +124,7 @@ func (w *Wallet) SelectInputs(targetAmount hcutil.Amount, policy OutputSelection
 		sourceImpl := w.TxStore.MakeInputSource(txmgrNs, addrmgrNs, policy.Account,
 			policy.RequiredConfirmations, tipHeight)
 		var err error
-		total, inputs, prevScripts, err = sourceImpl.SelectInputs(targetAmount)
+		total, inputs, prevScripts, err = sourceImpl.SelectInputs(targetAmount, "")
 		return err
 	})
 	return
@@ -160,4 +160,24 @@ func (w *Wallet) OutputInfo(op *wire.OutPoint) (OutputInfo, error) {
 		return nil
 	})
 	return info, err
+}
+
+// OutputInfo queries the wallet for additional transaction output info
+// regarding an outpoint.
+func (w *Wallet) GetTxDetails(op *wire.OutPoint) (*udb.TxDetails, error) {
+	var txDetails2 *udb.TxDetails
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
+
+		txDetails, err := w.TxStore.TxDetails(txmgrNs, &op.Hash)
+		if err != nil {
+			return err
+		}
+		txDetails2 = txDetails
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return txDetails2, nil
 }
