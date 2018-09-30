@@ -49,8 +49,6 @@ const char* CJsonCmdReq(char *pcReq)
     if(funJsonCmdReq==NULL)
         return NULL;
     const char* ret = funJsonCmdReq(pcReq);
-    printf("88888888888888888888888888888\n");
-    printf(ret);
     return ret;
 };
 
@@ -62,6 +60,8 @@ int CSetCallback(int iIndex,void* pCallback)
 };
 
 #else //for linux etc
+extern int OmniStart(char *pcArgs);
+extern const char* JsonCmdReq(char *pcReq);
 void CLoadLibAndInit()
 {
     return;

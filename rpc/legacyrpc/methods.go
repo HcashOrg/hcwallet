@@ -87,75 +87,76 @@ type LegacyRpcHandler struct {
 func init() {
 	rpcHandlers = map[string]LegacyRpcHandler{
 		// Reference implementation wallet methods (implemented)
-		"accountaddressindex":     {handler: accountAddressIndex},
-		"accountsyncaddressindex": {handler: accountSyncAddressIndex},
-		"addmultisigaddress":      {handlerWithChain: addMultiSigAddress},
-		"addticket":               {handler: addTicket},
-		"consolidate":             {handler: consolidate},
-		"createmultisig":          {handler: createMultiSig},
-		"dumpprivkey":             {handler: dumpPrivKey},
-		"generatevote":            {handler: generateVote},
-		"getaccount":              {handler: getAccount},
-		"getaccountaddress":       {handler: getAccountAddress},
-		"getaddressesbyaccount":   {handler: getAddressesByAccount},
-		"getbalance":              {handler: getBalance},
-		"getbestblockhash":        {handler: getBestBlockHash},
-		"getblockcount":           {handler: getBlockCount},
-		"getinfo":                 {handlerWithChain: getInfo},
-		"getmasterpubkey":         {handler: getMasterPubkey},
-		"getmultisigoutinfo":      {handlerWithChain: getMultisigOutInfo},
-		"getnewaddress":           {handler: getNewAddress},
-		"getrawchangeaddress":     {handler: getRawChangeAddress},
-		"getreceivedbyaccount":    {handler: getReceivedByAccount},
-		"getreceivedbyaddress":    {handler: getReceivedByAddress},
-		"getstakeinfo":            {handlerWithChain: getStakeInfo},
-		"getticketfee":            {handler: getTicketFee},
-		"gettickets":              {handlerWithChain: getTickets},
-		"gettransaction":          {handler: getTransaction},
-		"getvotechoices":          {handler: getVoteChoices},
-		"getwalletfee":            {handler: getWalletFee},
-		"help":                    {handler: helpNoChainRPC, handlerWithChain: helpWithChainRPC},
-		"importprivkey":           {handlerWithChain: importPrivKey},
-		"importscript":            {handlerWithChain: importScript},
-		"keypoolrefill":           {handler: keypoolRefill},
-		"listaccounts":            {handler: listAccounts},
-		"listlockunspent":         {handler: listLockUnspent},
-		"listreceivedbyaccount":   {handler: listReceivedByAccount},
-		"listreceivedbyaddress":   {handler: listReceivedByAddress},
-		"listsinceblock":          {handlerWithChain: listSinceBlock},
-		"listscripts":             {handler: listScripts},
-		"listtransactions":        {handler: listTransactions},
-		"listunspent":             {handler: listUnspent},
-		"lockunspent":             {handler: lockUnspent},
-		"purchaseticket":          {handler: purchaseTicket},
-		"rescanwallet":            {handlerWithChain: rescanWallet},
-		"revoketickets":           {handlerWithChain: revokeTickets},
-		"sendfrom":                {handlerWithChain: sendFrom},
-		"sendmany":                {handler: sendMany},
-		"sendmanyv2":              {handler: sendManyV2},
-		"sendtoaddress":           {handler: sendToAddress},
-		"getstraightpubkey":       {handlerWithChain: getStraightPubKey},
-		"sendtomultisig":          {handlerWithChain: sendToMultiSig},
-		"sendtosstx":              {handlerWithChain: sendToSStx},
-		"sendtossgen":             {handler: sendToSSGen},
-		"sendtossrtx":             {handlerWithChain: sendToSSRtx},
-		"setticketfee":            {handler: setTicketFee},
-		"settxfee":                {handler: setTxFee},
-		"setvotechoice":           {handler: setVoteChoice},
-		"signmessage":             {handler: signMessage},
-		"signrawtransaction":      {handler: signRawTransactionNoChainRPC, handlerWithChain: signRawTransaction},
-		"signrawtransactions":     {handlerWithChain: signRawTransactions},
-		"redeemmultisigout":       {handlerWithChain: redeemMultiSigOut},
-		"redeemmultisigouts":      {handlerWithChain: redeemMultiSigOuts},
-		"stakepooluserinfo":       {handler: stakePoolUserInfo},
-		"ticketsforaddress":       {handler: ticketsForAddress},
-		"validateaddress":         {handler: validateAddress},
-		"verifymessage":           {handler: verifyMessage},
-		"version":                 {handler: versionNoChainRPC, handlerWithChain: versionWithChainRPC},
-		"walletinfo":              {handlerWithChain: walletInfo},
-		"walletlock":              {handler: walletLock},
-		"walletpassphrase":        {handler: walletPassphrase},
-		"walletpassphrasechange":  {handler: walletPassphraseChange},
+		"accountaddressindex":      {handler: accountAddressIndex},
+		"accountsyncaddressindex":  {handler: accountSyncAddressIndex},
+		"addmultisigaddress":       {handlerWithChain: addMultiSigAddress},
+		"addticket":                {handler: addTicket},
+		"consolidate":              {handler: consolidate},
+		"createmultisig":           {handler: createMultiSig},
+		"dumpprivkey":              {handler: dumpPrivKey},
+		"generatevote":             {handler: generateVote},
+		"getaccount":               {handler: getAccount},
+		"getaccountaddress":        {handler: getAccountAddress},
+		"getaddressesbyaccount":    {handler: getAddressesByAccount},
+		"getbalance":               {handler: getBalance},
+		"getbestblockhash":         {handler: getBestBlockHash},
+		"getblockcount":            {handler: getBlockCount},
+		"getinfo":                  {handlerWithChain: getInfo},
+		"getmasterpubkey":          {handler: getMasterPubkey},
+		"getmultisigoutinfo":       {handlerWithChain: getMultisigOutInfo},
+		"getnewaddress":            {handler: getNewAddress},
+		"getrawchangeaddress":      {handler: getRawChangeAddress},
+		"getreceivedbyaccount":     {handler: getReceivedByAccount},
+		"getreceivedbyaddress":     {handler: getReceivedByAddress},
+		"getstakeinfo":             {handlerWithChain: getStakeInfo},
+		"getticketfee":             {handler: getTicketFee},
+		"gettickets":               {handlerWithChain: getTickets},
+		"gettransaction":           {handler: getTransaction},
+		"getvotechoices":           {handler: getVoteChoices},
+		"getwalletfee":             {handler: getWalletFee},
+		"help":                     {handler: helpNoChainRPC, handlerWithChain: helpWithChainRPC},
+		"importprivkey":            {handlerWithChain: importPrivKey},
+		"importscript":             {handlerWithChain: importScript},
+		"keypoolrefill":            {handler: keypoolRefill},
+		"listaccounts":             {handler: listAccounts},
+		"listlockunspent":          {handler: listLockUnspent},
+		"listreceivedbyaccount":    {handler: listReceivedByAccount},
+		"listreceivedbyaddress":    {handler: listReceivedByAddress},
+		"listsinceblock":           {handlerWithChain: listSinceBlock},
+		"listscripts":              {handler: listScripts},
+		"listtransactions":         {handler: listTransactions},
+		"listunspent":              {handler: listUnspent},
+		"lockunspent":              {handler: lockUnspent},
+		"purchaseticket":           {handler: purchaseTicket},
+		"rescanwallet":             {handlerWithChain: rescanWallet},
+		"revoketickets":            {handlerWithChain: revokeTickets},
+		"sendfrom":                 {handlerWithChain: sendFrom},
+		"sendmany":                 {handler: sendMany},
+		"sendmanyv2":               {handler: sendManyV2},
+		"sendtoaddress":            {handler: sendToAddress},
+		"sendfromaddresstoaddress": {handler: sendFromAddressToAddress},
+		"getstraightpubkey":        {handlerWithChain: getStraightPubKey},
+		"sendtomultisig":           {handlerWithChain: sendToMultiSig},
+		"sendtosstx":               {handlerWithChain: sendToSStx},
+		"sendtossgen":              {handler: sendToSSGen},
+		"sendtossrtx":              {handlerWithChain: sendToSSRtx},
+		"setticketfee":             {handler: setTicketFee},
+		"settxfee":                 {handler: setTxFee},
+		"setvotechoice":            {handler: setVoteChoice},
+		"signmessage":              {handler: signMessage},
+		"signrawtransaction":       {handler: signRawTransactionNoChainRPC, handlerWithChain: signRawTransaction},
+		"signrawtransactions":      {handlerWithChain: signRawTransactions},
+		"redeemmultisigout":        {handlerWithChain: redeemMultiSigOut},
+		"redeemmultisigouts":       {handlerWithChain: redeemMultiSigOuts},
+		"stakepooluserinfo":        {handler: stakePoolUserInfo},
+		"ticketsforaddress":        {handler: ticketsForAddress},
+		"validateaddress":          {handler: validateAddress},
+		"verifymessage":            {handler: verifyMessage},
+		"version":                  {handler: versionNoChainRPC, handlerWithChain: versionWithChainRPC},
+		"walletinfo":               {handlerWithChain: walletInfo},
+		"walletlock":               {handler: walletLock},
+		"walletpassphrase":         {handler: walletPassphrase},
+		"walletpassphrasechange":   {handler: walletPassphraseChange},
 
 		// Reference implementation methods (still unimplemented)
 		"backupwallet":         {handler: unimplemented, noHelp: true},
@@ -959,7 +960,7 @@ func importPrivKey(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.
 	}
 
 	if rescan {
-		w.RescanFromHeight(chainClient, scanFrom, false)
+		w.RescanFromHeight(chainClient, scanFrom)
 	}
 
 	return nil, err
@@ -993,7 +994,7 @@ func importScript(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.C
 	}
 
 	if rescan {
-		w.RescanFromHeight(chainClient, int32(scanFrom), false)
+		w.RescanFromHeight(chainClient, int32(scanFrom))
 	}
 
 	return nil, nil
@@ -1984,11 +1985,13 @@ func sendPairs(w *wallet.Wallet, amounts map[string]hcutil.Amount,
 		return "", err
 	}
 
-	payloadOutput, err := w.MakeNulldataOutput(payLoad)
-	if err != nil {
-		return "", err
+	if len(payLoad) > 0 {
+		payloadOutput, err := w.MakeNulldataOutput(payLoad)
+		if err != nil {
+			return "", err
+		}
+		outputs = append(outputs, payloadOutput)
 	}
-	outputs = append(outputs, payloadOutput)
 
 	txSha, err := w.SendOutputs(outputs, account, minconf, changeAddr, fromAddress)
 	if err != nil {
@@ -2179,7 +2182,7 @@ func rescanWallet(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.C
 	if *cmd.BeginHeight != 0 {
 		return nil, fmt.Errorf("not support sync from height != 0")
 	}
-	err := <-w.RescanFromHeight(chainClient, int32(*cmd.BeginHeight),true)
+	err := <-w.RescanFromHeight(chainClient, int32(*cmd.BeginHeight))
 	return nil, err
 }
 
@@ -2399,11 +2402,39 @@ func sendManyV2(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // payment address.  Leftover inputs not sent to the payment address or a fee
 // for the miner are sent back to a new address in the wallet.  Upon success,
 // the TxID for the created transaction is returned.
+func sendFromAddressToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := icmd.(*hcjson.SendFromAddressToAddressCmd)
+	account := uint32(udb.DefaultAccountNum)
+	amt, err := hcutil.NewAmount(cmd.Amount)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check that signed integer parameters are positive.
+	if amt < 0 {
+		return nil, ErrNeedPositiveAmount
+	}
+
+	// Mock up map of address and amount pairs.
+	pairs := map[string]hcutil.Amount{
+		cmd.Address: amt,
+	}
+
+	// sendtoaddress always spends from the default account, this matches bitcoind
+	return sendPairsWithPayLoad(w, pairs, account, 1, cmd.FromAddress, []byte("omnipayment"), cmd.FromAddress)
+}
+
+// sendToAddress handles a sendtoaddress RPC request by creating a new
+// transaction spending unspent transaction outputs for a wallet to another
+// payment address.  Leftover inputs not sent to the payment address or a fee
+// for the miner are sent back to a new address in the wallet.  Upon success,
+// the TxID for the created transaction is returned.
 func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*hcjson.SendToAddressCmd)
 
 	// Transaction comments are not yet supported.  Error instead of
 	// pretending to save them.
+
 	if !isNilOrEmpty(cmd.Comment) || !isNilOrEmpty(cmd.CommentTo) {
 		return nil, &hcjson.RPCError{
 			Code:    hcjson.ErrRPCUnimplemented,

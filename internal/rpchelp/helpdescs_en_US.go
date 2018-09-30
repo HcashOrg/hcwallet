@@ -388,7 +388,6 @@ var helpDescsEnUS = map[string]string{
 	"sendmany-comment":        "Unused",
 	"sendmany--result0":       "The transaction hash of the sent transaction",
 
-
 	// SendManyV2Cmd help.
 	"sendmanyv2--synopsis": "Authors, signs, and sends a transaction that outputs to many payment addresses.\n" +
 		"A change addr is set or automatically included to send extra output value back to the original account first addr.",
@@ -410,7 +409,14 @@ var helpDescsEnUS = map[string]string{
 	"sendtoaddress-comment":   "Unused",
 	"sendtoaddress-commentto": "Unused",
 	"sendtoaddress--result0":  "The transaction hash of the sent transaction",
-
+	// SendFromaddressToAddressCmd help.
+	"sendfromaddresstoaddress--synopsis": "Authors, signs, and sends a transaction that outputs some amount to a payment address.\n" +
+		"Unlike sendfrom, outputs are always chosen from the default account.\n" +
+		"A change output is automatically included to send extra output value back to the original account.",
+	"sendfromaddresstoaddress-fromaddress": "Address to send",
+	"sendfromaddresstoaddress-address":     "Address to pay",
+	"sendfromaddresstoaddress-amount":      "Amount to send to the payment address valued in HC",
+	"sendfromaddresstoaddress--result0":    "The transaction hash of the sent transaction",
 	// SendToMultisigCmd help.
 	"sendtomultisig--synopsis": "Authors, signs, and sends a transaction that outputs some amount to a multisig address.\n" +
 		"Unlike sendfrom, outputs are always chosen from the default account.\n" +

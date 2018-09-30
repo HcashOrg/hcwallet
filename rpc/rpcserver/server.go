@@ -35,11 +35,11 @@ import (
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/chaincfg/chainec"
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
+	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
 	hcrpcclient "github.com/HcashOrg/hcrpcclient"
-	"github.com/HcashOrg/hcd/hcutil"
-	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/chain"
 	"github.com/HcashOrg/hcwallet/internal/cfgutil"
@@ -559,7 +559,7 @@ func (s *walletServer) ImportPrivateKey(ctx context.Context, req *pb.ImportPriva
 	}
 
 	if req.Rescan {
-		s.wallet.RescanFromHeight(chainClient, req.ScanFrom, false)
+		s.wallet.RescanFromHeight(chainClient, req.ScanFrom)
 	}
 
 	return &pb.ImportPrivateKeyResponse{}, nil
@@ -624,7 +624,7 @@ func (s *walletServer) ImportScript(ctx context.Context,
 	}
 
 	if req.Rescan {
-		s.wallet.RescanFromHeight(chainClient, req.ScanFrom, false)
+		s.wallet.RescanFromHeight(chainClient, req.ScanFrom)
 	}
 
 	p2sh, err := hcutil.NewAddressScriptHash(req.Script, s.wallet.ChainParams())
@@ -1256,7 +1256,7 @@ func (s *walletServer) PurchaseTickets(ctx context.Context,
 	expiry := int32(req.Expiry)
 	txFee := hcutil.Amount(req.TxFee)
 	ticketFee := s.wallet.TicketFeeIncrement()
- 	// Set the ticket fee if specified
+	// Set the ticket fee if specified
 	if req.TicketFee > 0 {
 		ticketFee = hcutil.Amount(req.TicketFee)
 	}
@@ -2476,13 +2476,13 @@ func marshalDecodedTxInputs(mtx *wire.MsgTx) []*pb.DecodedTransaction_Input {
 		inputs[i] = &pb.DecodedTransaction_Input{
 			PreviousTransactionHash:  txIn.PreviousOutPoint.Hash[:],
 			PreviousTransactionIndex: txIn.PreviousOutPoint.Index,
-			Tree:               pb.DecodedTransaction_Input_TreeType(txIn.PreviousOutPoint.Tree),
-			Sequence:           txIn.Sequence,
-			AmountIn:           txIn.ValueIn,
-			BlockHeight:        txIn.BlockHeight,
-			BlockIndex:         txIn.BlockIndex,
-			SignatureScript:    txIn.SignatureScript,
-			SignatureScriptAsm: disbuf,
+			Tree:                     pb.DecodedTransaction_Input_TreeType(txIn.PreviousOutPoint.Tree),
+			Sequence:                 txIn.Sequence,
+			AmountIn:                 txIn.ValueIn,
+			BlockHeight:              txIn.BlockHeight,
+			BlockIndex:               txIn.BlockIndex,
+			SignatureScript:          txIn.SignatureScript,
+			SignatureScriptAsm:       disbuf,
 		}
 	}
 

@@ -25,9 +25,10 @@ const maxBlocksPerRescan = 2000
 // progress channel, if non-nil, is sent non-error progress notifications with
 // the heights the rescan has completed through, starting with the start height.
 func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Hash, height int32,
-	p chan<- RescanProgress, cancel <-chan struct{}, clearOmni bool) error {
-	if clearOmni {
+	p chan<- RescanProgress, cancel <-chan struct{}) error {
+	if w.EnableOmni() {
 		w.OmniClear()
+		startHash = w.ChainParams().GenesisHash
 	}
 
 	blockHashStorage := make([]chainhash.Hash, maxBlocksPerRescan)
@@ -94,7 +95,12 @@ func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 						return err
 					}
 				}
+
+				if w.EnableOmni() {
+					w.BlockConnectEnd(&blockMeta)
+				}
 			}
+
 			return nil
 		})
 		if err != nil {
@@ -143,7 +149,7 @@ func (w *Wallet) Rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 			return err
 		}
 
-		return w.rescan(chainClient, startHash, startHeight, nil, nil, true)
+		return w.rescan(chainClient, startHash, startHeight, nil, nil)
 	}()
 
 	return errc
@@ -151,7 +157,7 @@ func (w *Wallet) Rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 
 // RescanFromHeight is an alternative to Rescan that takes a block height
 // instead of a hash.  See Rescan for more details.
-func (w *Wallet) RescanFromHeight(chainClient *hcrpcclient.Client, startHeight int32, clearOmni bool) <-chan error {
+func (w *Wallet) RescanFromHeight(chainClient *hcrpcclient.Client, startHeight int32) <-chan error {
 	errc := make(chan error)
 
 	go func() (err error) {
@@ -178,7 +184,7 @@ func (w *Wallet) RescanFromHeight(chainClient *hcrpcclient.Client, startHeight i
 			return err
 		}
 
-		return w.rescan(chainClient, &startHash, startHeight, nil, nil, clearOmni)
+		return w.rescan(chainClient, &startHash, startHeight, nil, nil)
 	}()
 
 	return errc
@@ -211,7 +217,7 @@ func (w *Wallet) RescanProgressFromHeight(chainClient *hcrpcclient.Client, start
 		return
 	}
 
-	err = w.rescan(chainClient, &startHash, startHeight, p, cancel, false)
+	err = w.rescan(chainClient, &startHash, startHeight, p, cancel)
 	if err != nil {
 		p <- RescanProgress{Err: err}
 	}
