@@ -30,7 +30,7 @@
   name = "github.com/HcashOrg/bitset"
 
 [[constraint]]
-  branch = "master"
+  branch = "omnibranch"
   name = "github.com/HcashOrg/hcd"
 
 [[constraint]]
