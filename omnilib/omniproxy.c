@@ -19,7 +19,12 @@ void CLoadLibAndInit()
 {
 	printf("in LoadDllStart\n");
 
-	HINSTANCE hDllInst = LoadLibrary("omnicored.dll");
+    char szFilePath[MAX_PATH + 1]={0};
+    GetModuleFileNameA(NULL, szFilePath, MAX_PATH);
+    (strchr(szFilePath, '\\'))[1] = 0;
+    strcpy(szFilePath, "omnicored.dll");
+
+	HINSTANCE hDllInst = LoadLibrary(szFilePath);
     if(!hDllInst)
     {
         //FreeLibrary(hDllInst);

@@ -200,11 +200,6 @@ func walletMain() error {
 		go serviceControlPipeRx(uintptr(*cfg.PipeRx))
 	}
 
-	_, b := loader.LoadedWallet()
-	if b == false {
-		return fmt.Errorf("failed to load wallet")
-	}
-
 	netName := "main"
 	if cfg.TestNet {
 		netName = "test"
@@ -257,11 +252,6 @@ func walletMain() error {
 
 	if cfg.EnableOmni {
 		omnilib.OmniCommunicate(netName)
-		//err = recoverOmniData(w)
-		//if err != nil {
-		//	log.Errorf("Failed to recoverOmniData: %v", err)
-		//	return err
-		//}
 	}
 
 	<-interruptHandlersDone
