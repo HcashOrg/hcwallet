@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -38,6 +39,7 @@ import (
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 	"github.com/HcashOrg/hcwallet/walletdb"
+	"github.com/HcashOrg/hcwallet/omnilib"
 )
 
 const (
@@ -1214,12 +1216,35 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 	fetchedHeaderCount := 0
 	rescanStart := chainhash.Hash{}
 	if w.EnableOmni() {
-		_, _, _, _, height, err := w.FetchHeaders(chainClient)
+		_, startHash, _, _, height, err := w.FetchHeaders(chainClient)
 		if err != nil {
 			return err
 		}
 		fetchedHeaderCount = int(height)
-		rescanStart = *w.chainParams.GenesisHash
+		//rescanStart = *w.chainParams.GenesisHash
+
+		req := omnilib.Request{
+			Method: "omni_getblockcount",
+		}
+		bytes, err := json.Marshal(req)
+		if err != nil {
+			return err
+		}
+		strRsp := omnilib.JsonCmdReqHcToOm(string(bytes))
+		var response hcjson.Response
+		err = json.Unmarshal([]byte(strRsp), &response)
+		if err != nil {
+			return err
+		}
+		if response.Error != nil {
+			return fmt.Errorf(response.Error.Message)
+		}
+		omni_height, err := strconv.Atoi(string(response.Result))
+		if(omni_height > 0){
+			rescanStart = startHash
+		}else {
+			rescanStart = *w.chainParams.GenesisHash
+		}
 	} else {
 		fetchedHeaderCount, rescanStart, _, _, _, err = w.FetchHeaders(chainClient)
 		if err != nil {

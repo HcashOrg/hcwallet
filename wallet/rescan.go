@@ -26,11 +26,11 @@ const maxBlocksPerRescan = 2000
 // the heights the rescan has completed through, starting with the start height.
 func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Hash, height int32,
 	p chan<- RescanProgress, cancel <-chan struct{}) error {
-	if w.EnableOmni() {
+/*	if w.EnableOmni() {
 		w.OmniClear()
 		startHash = w.ChainParams().GenesisHash
 	}
-
+*/
 	blockHashStorage := make([]chainhash.Hash, maxBlocksPerRescan)
 	rescanFrom := *startHash
 	inclusive := true
