@@ -8,11 +8,16 @@ package wallet
 
 import (
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"strconv"
 
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
 	"github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 	"github.com/HcashOrg/hcwallet/walletdb"
+	"github.com/HcashOrg/hcwallet/omnilib"
+	"github.com/HcashOrg/hcd/hcjson"
 )
 
 const maxBlocksPerRescan = 2000
@@ -26,11 +31,7 @@ const maxBlocksPerRescan = 2000
 // the heights the rescan has completed through, starting with the start height.
 func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Hash, height int32,
 	p chan<- RescanProgress, cancel <-chan struct{}) error {
-/*	if w.EnableOmni() {
-		w.OmniClear()
-		startHash = w.ChainParams().GenesisHash
-	}
-*/
+
 	blockHashStorage := make([]chainhash.Hash, maxBlocksPerRescan)
 	rescanFrom := *startHash
 	inclusive := true
@@ -172,6 +173,31 @@ func (w *Wallet) RescanFromHeight(chainClient *hcrpcclient.Client, startHeight i
 			}
 		}()
 
+		if w.EnableOmni() {
+			w.RollBackOminiTransaction(uint32(startHeight), nil)
+
+			req := omnilib.Request{
+				Method: "omni_getblockcount",
+			}
+			bytes, err := json.Marshal(req)
+			if err != nil {
+				return err
+			}
+			strRsp := omnilib.JsonCmdReqHcToOm(string(bytes))
+			var response hcjson.Response
+			err = json.Unmarshal([]byte(strRsp), &response)
+			if err != nil {
+				return err
+			}
+			if response.Error != nil {
+				return fmt.Errorf(response.Error.Message)
+			}
+			omni_height, err := strconv.Atoi(string(response.Result))
+			if(omni_height <= 0){//need scanwallet from 0
+				startHeight = 0
+			}
+		}
+
 		var startHash chainhash.Hash
 		err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 			txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
@@ -183,6 +209,8 @@ func (w *Wallet) RescanFromHeight(chainClient *hcrpcclient.Client, startHeight i
 		if err != nil {
 			return err
 		}
+
+
 
 		return w.rescan(chainClient, &startHash, startHeight, nil, nil)
 	}()
