@@ -1,7 +1,5 @@
 package omnilib
 
-import "time"
-
 
 
 func OmniCommunicate(netName string) {
@@ -9,7 +7,7 @@ func OmniCommunicate(netName string) {
 	LoadLibAndInit()
 	OmniStart(netName)
 
-	time.Sleep(time.Second * 2)
+	//time.Sleep(time.Second * 2)
 	/*
 		strReq := "{\"method\":\"omni_getinfo\",\"params\":[],\"id\":1}\n"
 		strRsp := JsonCmdReqHcToOm(strReq)

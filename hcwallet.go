@@ -172,6 +172,17 @@ func walletMain() error {
 
 	}
 
+	netName := "main"
+	if cfg.TestNet {
+		netName = "test"
+	} else if cfg.SimNet {
+		netName = "regtest"
+	}
+
+	if cfg.EnableOmni {
+		omnilib.OmniCommunicate(netName)
+	}
+
 	// Create and start HTTP server to serve wallet client connections.
 	// This will be updated with the wallet and chain server RPC client
 	// created below after each is created.
@@ -198,13 +209,6 @@ func walletMain() error {
 
 	if cfg.PipeRx != nil {
 		go serviceControlPipeRx(uintptr(*cfg.PipeRx))
-	}
-
-	netName := "main"
-	if cfg.TestNet {
-		netName = "test"
-	} else if cfg.SimNet {
-		netName = "regtest"
 	}
 
 	// Add interrupt handlers to shutdown the various process components
@@ -248,10 +252,6 @@ func walletMain() error {
 				omnilib.ChanRspOmToHc <- strRsp
 			}
 		}()
-	}
-
-	if cfg.EnableOmni {
-		omnilib.OmniCommunicate(netName)
 	}
 
 	<-interruptHandlersDone
