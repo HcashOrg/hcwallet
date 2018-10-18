@@ -166,6 +166,7 @@ type loaderServer struct {
 	ready     uint32 // atomic
 	loader    *loader.Loader
 	activeNet *netparams.Params
+	server *legacyrpc.Server
 	rpcClient *chain.RPCClient
 	mu        sync.Mutex
 }
@@ -1705,8 +1706,9 @@ func (s *walletServer) ConfirmationNotifications(svr pb.WalletService_Confirmati
 }
 
 // StartWalletLoaderService starts the WalletLoaderService.
-func StartWalletLoaderService(server *grpc.Server, loader *loader.Loader, activeNet *netparams.Params) {
+func StartWalletLoaderService(server *grpc.Server, legacyrpcserver *legacyrpc.Server, loader *loader.Loader, activeNet *netparams.Params) {
 	loaderService.loader = loader
+	loaderService.server = legacyrpcserver
 	loaderService.activeNet = activeNet
 	if atomic.SwapUint32(&loaderService.ready, 1) != 0 {
 		panic("service already started")
@@ -1952,6 +1954,9 @@ func (s *loaderServer) StartConsensusRpc(ctx context.Context, req *pb.StartConse
 
 	s.rpcClient = rpcClient
 	s.loader.SetChainClient(rpcClient.Client)
+	if s.server != nil {
+		s.server.SetChainServer(rpcClient)
+	}
 	wallet.SynchronizeRPC(rpcClient)
 	return &pb.StartConsensusRpcResponse{}, nil
 }
