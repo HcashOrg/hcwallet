@@ -483,6 +483,8 @@ func getPayLoadData(PkScript []byte) (bool, []byte) {
 
 // for temp test
 func (w *Wallet) RollBackOminiTransaction(height uint32, hashs []chainhash.Hash) error {
+
+	/*
 	if len(hashs) == 0 {
 		_, h := w.MainChainTip()
 		height := height
@@ -506,7 +508,8 @@ func (w *Wallet) RollBackOminiTransaction(height uint32, hashs []chainhash.Hash)
 		log.Infof("RollBackOminiTransaction: %s", hash.String())
 		strHashs = append(strHashs, hash.String())
 	}
-
+	*/
+	strHashs := make([]string, 0)
 	cmd := hcjson.OmniRollBackCmd{
 		Height: height,
 		Hashs:  &strHashs,
