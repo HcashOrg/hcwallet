@@ -125,9 +125,7 @@ func startRPCServers(walletLoader *loader.Loader) (*grpc.Server, *legacyrpc.Serv
 		keyPair      tls.Certificate
 		err          error
 	)
-	if cfg.DisableServerTLS {
-		log.Info("Server TLS is disabled.  Only legacy RPC may be used")
-	} else {
+	if !cfg.DisableServerTLS {
 		keyPair, err = openRPCKeyPair()
 		if err != nil {
 			return nil, nil, err
@@ -142,7 +140,54 @@ func startRPCServers(walletLoader *loader.Loader) (*grpc.Server, *legacyrpc.Serv
 		legacyListen = func(net string, laddr string) (net.Listener, error) {
 			return tls.Listen(net, laddr, tlsConfig)
 		}
+	}
 
+<<<<<<< .mine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=======
+	if cfg.Username == "" || cfg.Password == "" {
+		log.Info("Legacy RPC server disabled (requires username and password)")
+	} else if len(cfg.LegacyRPCListeners) != 0 {
+		listeners := makeListeners(cfg.LegacyRPCListeners, legacyListen)
+		if len(listeners) == 0 {
+			err := errors.New("failed to create listeners for legacy RPC server")
+			return nil, nil, err
+		}
+		opts := legacyrpc.Options{
+			Username:            cfg.Username,
+			Password:            cfg.Password,
+			MaxPOSTClients:      cfg.LegacyRPCMaxClients,
+			MaxWebsocketClients: cfg.LegacyRPCMaxWebsockets,
+		}
+		legacyServer = legacyrpc.NewServer(&opts, activeNet.Params, walletLoader, listeners)
+		for _, lis := range listeners {
+			jsonrpcAddrNotifier.notify(lis.Addr().String())
+		}
+	}
+
+>>>>>>> .theirs
+	if cfg.DisableServerTLS {
+		log.Info("Server TLS is disabled.  Only legacy RPC may be used")
+	} else {
 		if len(cfg.GRPCListeners) != 0 {
 			listeners := makeListeners(cfg.GRPCListeners, net.Listen)
 			if len(listeners) == 0 {
