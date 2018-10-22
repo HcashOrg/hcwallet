@@ -7,13 +7,16 @@
 package legacyrpc
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/HcashOrg/hcd/hcjson"
 	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/wire"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/omnilib"
 	"github.com/HcashOrg/hcwallet/wallet"
@@ -1335,8 +1338,40 @@ func OmniDecodetransaction(icmd interface{}, w *wallet.Wallet) (interface{}, err
 // OmniCreaterawtxOpreturn Adds a payload with class C (op-return) encoding to the transaction.,If no raw transaction is provided, a new transaction is created.,If the data encoding fails, then the transaction is not modified.
 // $ omnicore-cli "omni_createrawtx_opreturn" "01000000000000000000" "00000000000000020000000006dac2c0"
 func OmniCreaterawtxOpreturn(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	_ = icmd.(*hcjson.OmniCreaterawtxOpreturnCmd)
-	return omni_cmdReq(icmd, w)
+	cmd := icmd.(*hcjson.OmniCreaterawtxOpreturnCmd)
+	fmt.Printf("cmd:%#v", cmd)
+
+	omniResult, err := omni_cmdReq(icmd, w)
+	if err != nil {
+		return nil, err
+	}
+	hexStr := strings.Trim(string(omniResult), "\"")
+	omniPayload, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return nil, err
+	}
+	serializedTx, err := decodeHexStr(cmd.Rawtx)
+	if err != nil {
+		return nil, err
+	}
+	tx := wire.NewMsgTx()
+	err = tx.Deserialize(bytes.NewBuffer(serializedTx))
+	if err != nil {
+		e := errors.New("TX decode failed")
+		return nil, DeserializationError{e}
+	}
+
+	payloadNullDataOutput, err := w.MakeNulldataOutput(omniPayload)
+	if err != nil {
+		return "", err
+	}
+	tx.TxOut = append(tx.TxOut, payloadNullDataOutput)
+	var buf bytes.Buffer
+	if err := tx.BtcEncode(&buf, wire.MaxBlockSizeVersion); err != nil {
+		context := fmt.Sprintf("Failed to encode msg of type %T", tx)
+		return nil, fmt.Errorf("%s, %s", err.Error(), context)
+	}
+	return hex.EncodeToString(buf.Bytes()), nil
 }
 
 // OmniCreaterawtxMultisig Adds a payload with class B (bare-multisig) encoding to the transaction.,If no raw transaction is provided, a new transaction is created.,If the data encoding fails, then the transaction is not modified.

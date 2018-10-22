@@ -469,16 +469,8 @@ func (w *Wallet) processSerializedTransaction(dbtx walletdb.ReadWriteTx, seriali
 	return w.processTransactionRecord(dbtx, rec, serializedHeader, blockMeta)
 }
 
-func getPayLoadData(PkScript []byte) (bool, []byte) {
-	if len(PkScript) > 6 &&
-		PkScript[0] == 106 &&
-		PkScript[2] == 111 &&
-		PkScript[3] == 109 &&
-		PkScript[4] == 110 &&
-		PkScript[5] == 105 {
-		return true, PkScript[6:]
-	}
-	return false, nil
+func getPayLoadData(pkScript []byte) (bool, []byte) {
+	return txscript.GetPayLoadData(pkScript)
 }
 
 // for temp test

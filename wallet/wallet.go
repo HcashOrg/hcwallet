@@ -1224,7 +1224,7 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 		//rescanStart = *w.chainParams.GenesisHash
 
 		req := omnilib.Request{
-			Method: "omni_getblockcount",
+			Method: "omni_getwaterline",
 		}
 		bytes, err := json.Marshal(req)
 		if err != nil {

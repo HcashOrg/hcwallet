@@ -177,7 +177,7 @@ func (w *Wallet) RescanFromHeight(chainClient *hcrpcclient.Client, startHeight i
 			w.RollBackOminiTransaction(uint32(startHeight), nil)
 
 			req := omnilib.Request{
-				Method: "omni_getblockcount",
+				Method: "omni_getwaterline",
 			}
 			bytes, err := json.Marshal(req)
 			if err != nil {
