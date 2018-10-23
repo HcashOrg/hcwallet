@@ -22,6 +22,8 @@ import (
 	"github.com/HcashOrg/hcwallet/wallet"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
+	"github.com/HcashOrg/hcd/chaincfg/chainhash"
+	"github.com/HcashOrg/hcd/txscript"
 )
 
 const (
@@ -1384,22 +1386,129 @@ func OmniCreaterawtxMultisig(icmd interface{}, w *wallet.Wallet) (interface{}, e
 // OmniCreaterawtxInput Adds a transaction input to the transaction.,If no raw transaction is provided, a new transaction is created.
 // $ omnicore-cli "omni_createrawtx_input" \     "01000000000000000000" "b006729017df05eda586df9ad3f8ccfee5be340aadf88155b784d1fc0e8342ee" 0
 func OmniCreaterawtxInput(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	_ = icmd.(*hcjson.OmniCreaterawtxInputCmd)
-	return omni_cmdReq(icmd, w)
+	cmd := icmd.(*hcjson.OmniCreaterawtxInputCmd)
+	tx := wire.NewMsgTx()
+	serializedTx, err := decodeHexStr(cmd.Rawtx)
+	if err != nil {
+		return nil, err
+	}
+	if len(serializedTx) >0{
+		err = tx.Deserialize(bytes.NewBuffer(serializedTx))
+		if err != nil {
+			e := errors.New("TX decode failed")
+			return nil, DeserializationError{e}
+		}
+	}
+
+	// Add all transaction inputs to a new transaction after performing
+	// some validity checks.
+	txHash, err := chainhash.NewHashFromStr(cmd.Txid)
+	if err != nil {
+		return nil, fmt.Errorf("DecodeHexError %d", cmd.Txid)
+	}
+	prevOut := wire.NewOutPoint(txHash, uint32(cmd.N), 0)
+	txIn := wire.NewTxIn(prevOut, []byte{})
+	tx.AddTxIn(txIn)
+
+	var buf bytes.Buffer
+	if err := tx.BtcEncode(&buf, wire.MaxBlockSizeVersion); err != nil {
+		context := fmt.Sprintf("Failed to encode msg of type %T", tx)
+		return nil, fmt.Errorf("%s, %s", err.Error(), context)
+	}
+	return hex.EncodeToString(buf.Bytes()), nil
 }
 
 // OmniCreaterawtxReference Adds a reference output to the transaction.,If no raw transaction is provided, a new transaction is created.,The output value is set to at least the dust threshold.
 // $ omnicore-cli "omni_createrawtx_reference" \     "0100000001a7a9402ecd77f3c9f745793c9ec805bfa2e14b89877581c734c774864247e6f50400000000ffffffff03aa0a00000     00000001976a9146d18edfe073d53f84dd491dae1379f8fb0dfe5d488ac5c0d0000000000004751210252ce4bdd3ce38b4ebbc5a     6e1343608230da508ff12d23d85b58c964204c4cef3210294cc195fc096f87d0f813a337ae7e5f961b1c8a18f1f8604a909b3a51     21f065b52aeaa0a0000000000001976a914946cb2e08075bcbaf157e47bcb67eb2b2339d24288ac00000000" \     "1CE8bBr1dYZRMnpmyYsFEoexa1YoPz2mfB" \     0.005
 func OmniCreaterawtxReference(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	_ = icmd.(*hcjson.OmniCreaterawtxReferenceCmd)
-	return omni_cmdReq(icmd, w)
+	cmd := icmd.(*hcjson.OmniCreaterawtxReferenceCmd)
+	fmt.Printf("cmd:%#v", cmd)
+
+	tx := wire.NewMsgTx()
+	serializedTx, err := decodeHexStr(cmd.Rawtx)
+	if err != nil {
+		return nil, err
+	}
+	if len(serializedTx) >0{
+		err = tx.Deserialize(bytes.NewBuffer(serializedTx))
+		if err != nil {
+			e := errors.New("TX decode failed")
+			return nil, DeserializationError{e}
+		}
+	}
+
+	addr, err := decodeAddress(cmd.Destination, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
+	pkScript, err := txscript.PayToAddrScript(addr)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create txout script: %s", err)
+	}
+	var amount int64 = MininumAmount
+	if cmd.Amount != nil{
+		amount = *cmd.Amount
+	}
+	tx.AddTxOut(wire.NewTxOut(amount, pkScript))
+	var buf bytes.Buffer
+	if err := tx.BtcEncode(&buf, wire.MaxBlockSizeVersion); err != nil {
+		context := fmt.Sprintf("Failed to encode msg of type %T", tx)
+		return nil, fmt.Errorf("%s, %s", err.Error(), context)
+	}
+	return hex.EncodeToString(buf.Bytes()), nil
 }
 
 // OmniCreaterawtxChange Adds a change output to the transaction.,The provided inputs are not added to the transaction, but only used to determine the change. It is assumed that the inputs were previously added, for example via `"createrawtransaction"`.,Optionally a position can be provided, where the change output should be inserted, starting with `0`. If the number of outputs is smaller than the position, then the change output is added to the end. Change outputs should be inserted before reference outputs, and as per default, the change output is added to the`first position.,If the change amount would be considered as dust, then no change output is added.
 // $ omnicore-cli "omni_createrawtx_change" \     "0100000001b15ee60431ef57ec682790dec5a3c0d83a0c360633ea8308fbf6d5fc10a779670400000000ffffffff025c0d00000 \     000000047512102f3e471222bb57a7d416c82bf81c627bfcd2bdc47f36e763ae69935bba4601ece21021580b888ff56feb27f17f \     08802ebed26258c23697d6a462d43fc13b565fda2dd52aeaa0a0000000000001976a914946cb2e08075bcbaf157e47bcb67eb2b2 \     339d24288ac00000000" \     "[{\"txid\":\"6779a710fcd5f6fb0883ea3306360c3ad8c0a3c5de902768ec57ef3104e65eb1\",\"vout\":4, \     \"scriptPubKey\":\"76a9147b25205fd98d462880a3e5b0541235831ae959e588ac\",\"value\":0.00068257}]" \     "1CE8bBr1dYZRMnpmyYsFEoexa1YoPz2mfB" 0.000035 1
 func OmniCreaterawtxChange(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	_ = icmd.(*hcjson.OmniCreaterawtxChangeCmd)
-	return omni_cmdReq(icmd, w)
+	cmd := icmd.(*hcjson.OmniCreaterawtxChangeCmd)
+	fmt.Printf("cmd:%#v", cmd)
+
+	tx := wire.NewMsgTx()
+	serializedTx, err := decodeHexStr(cmd.Rawtx)
+	if err != nil {
+		return nil, err
+	}
+	if len(serializedTx) >0{
+		err = tx.Deserialize(bytes.NewBuffer(serializedTx))
+		if err != nil {
+			e := errors.New("TX decode failed")
+			return nil, DeserializationError{e}
+		}
+	}
+
+	var prevTxs hcjson.OmniPrevtxs
+	err = json.Unmarshal([]byte(cmd.Prevtxs), &prevTxs)
+	fmt.Printf("prevTxs:%#v", prevTxs)
+	for _, item := range prevTxs.Prevtxs{
+		// Add all transaction inputs to a new transaction after performing
+		// some validity checks.
+		txHash, err := chainhash.NewHashFromStr(item.Txid)
+		if err != nil {
+			return nil, fmt.Errorf("DecodeHexError %d", item.Txid)
+		}
+		prevOut := wire.NewOutPoint(txHash, uint32(item.Vout), 0)
+		txIn := wire.NewTxIn(prevOut, []byte{})
+		tx.AddTxIn(txIn)
+	}
+
+	addr, err := decodeAddress(cmd.Destination, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
+	pkScript, err := txscript.PayToAddrScript(addr)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create txout script: %s", err)
+	}
+
+	//MininumAmount
+	tx.AddTxOut(wire.NewTxOut(cmd.Fee, pkScript))
+	var buf bytes.Buffer
+	if err := tx.BtcEncode(&buf, wire.MaxBlockSizeVersion); err != nil {
+		context := fmt.Sprintf("Failed to encode msg of type %T", tx)
+		return nil, fmt.Errorf("%s, %s", err.Error(), context)
+	}
+	return hex.EncodeToString(buf.Bytes()), nil
 }
 
 // OmniCreatepayloadSimplesend Create the payload for a simple send transaction.,Note: if the server is not synchronized, amounts are considered as divisible, even if the token may have indivisible units!
