@@ -211,6 +211,24 @@ func walletMain() error {
 		go serviceControlPipeRx(uintptr(*cfg.PipeRx))
 	}
 
+	if cfg.EnableOmni {
+		addInterruptHandler(func() {
+			req := omnilib.Request{
+				Method: "omni_stop",
+			}
+			bytes, err := json.Marshal(req)
+			if err == nil {
+				strRsp := omnilib.JsonCmdReqHcToOm(string(bytes))
+				var response hcjson.Response
+				err = json.Unmarshal([]byte(strRsp), &response)
+				if err != nil {
+					log.Errorf("Failed to close omni core: %v", err)
+				}
+				log.Warn("Stopping omni core...")
+			}
+
+		})
+	}
 	// Add interrupt handlers to shutdown the various process components
 	// before exiting.  Interrupt handlers run in LIFO order, so the wallet
 	// (which should be closed last) is added first.
