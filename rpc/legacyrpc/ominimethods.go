@@ -116,6 +116,8 @@ func getOminiMethod() map[string]LegacyRpcHandler {
 		"omni_getfeedistributions":               {handler: OmniGetfeedistributions},
 		"omni_setautocommit":                     {handler: OmniSetautocommit},
 		"omni_rollback":                          {handler: OmniRollBack},
+		"omni_getblockinfo":                     {handler: OmniGetBlockInfo},
+
 	}
 }
 
@@ -124,6 +126,11 @@ func OmniRollBack(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	err := w.RollBackOminiTransaction(cmd.Height, nil)
 
 	return "", err
+}
+
+func OmniGetBlockInfo(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	//cmd := icmd.(*hcjson.OmniGetBlockInfoCmd)
+	return omni_cmdReq(icmd, w)
 }
 
 //add by ycj 20180915
