@@ -245,7 +245,14 @@ func OmniSendchangeissuer(icmd interface{}, w *wallet.Wallet) (interface{}, erro
 	}
 	hexStr := strings.Trim(string(ret), "\"")
 	payLoad, err := hex.DecodeString(hexStr)
-
+	_, err = decodeAddress(omniSendchangeissuerCmd.Fromaddress, w.ChainParams())
+	if err != nil {
+		return nil, err
+	}
+	_, err = decodeAddress(omniSendchangeissuerCmd.Toaddress, w.ChainParams())
+	if err != nil {
+		return nil, err
+	}
 	pairs := map[string]hcutil.Amount{
 		omniSendchangeissuerCmd.Toaddress: MininumAmount,
 	}
@@ -261,6 +268,11 @@ func OmniSendenablefreezing(icmd interface{}, w *wallet.Wallet) (interface{}, er
 	if err != nil {
 		return nil, err
 	}
+	_, err = decodeAddress(omniSendenablefreezingCmd.Fromaddress, w.ChainParams())
+	if err != nil {
+		return nil, err
+	}
+
 	hexStr := strings.Trim(string(ret), "\"")
 	payLoad, err := hex.DecodeString(hexStr)
 	pairs := map[string]hcutil.Amount{
@@ -275,6 +287,10 @@ func OmniSenddisablefreezing(icmd interface{}, w *wallet.Wallet) (interface{}, e
 	account := uint32(udb.DefaultAccountNum)
 	omniSenddisablefreezingCmd := icmd.(*hcjson.OmniSenddisablefreezingCmd)
 	ret, err := omni_cmdReq(icmd, w)
+	if err != nil {
+		return nil, err
+	}
+	_, err = decodeAddress(omniSenddisablefreezingCmd.Fromaddress, w.ChainParams())
 	if err != nil {
 		return nil, err
 	}
@@ -295,6 +311,14 @@ func OmniSendfreeze(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	_, err = decodeAddress(omniSendfreezeCmd.Fromaddress, w.ChainParams())
+	if err != nil {
+		return nil, err
+	}
+	_, err = decodeAddress(omniSendfreezeCmd.Toaddress, w.ChainParams())
+	if err != nil {
+		return nil, err
+	}
 	hexStr := strings.Trim(string(ret), "\"")
 	payLoad, err := hex.DecodeString(hexStr)
 	pairs := map[string]hcutil.Amount{
@@ -309,6 +333,14 @@ func OmniSendunfreeze(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	account := uint32(udb.DefaultAccountNum)
 	omniSendunfreezeCmd := icmd.(*hcjson.OmniSendunfreezeCmd)
 	ret, err := omni_cmdReq(icmd, w)
+	if err != nil {
+		return nil, err
+	}
+	_, err = decodeAddress(omniSendunfreezeCmd.Fromaddress, w.ChainParams())
+	if err != nil {
+		return nil, err
+	}
+	_, err = decodeAddress(omniSendunfreezeCmd.Toaddress, w.ChainParams())
 	if err != nil {
 		return nil, err
 	}
@@ -329,6 +361,18 @@ func OmniFundedSend(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	_, err = decodeAddress(omniFundedSendCmd.Fromaddress, w.ChainParams())
+	if err != nil {
+		return nil, err
+	}
+	_, err = decodeAddress(omniFundedSendCmd.Toaddress, w.ChainParams())
+	if err != nil {
+		return nil, err
+	}
+	_, err = decodeAddress(omniFundedSendCmd.Feeaddress, w.ChainParams())
+	if err != nil {
+		return nil, err
+	}
 	hexStr := strings.Trim(string(ret), "\"")
 	payLoad, err := hex.DecodeString(hexStr)
 	pairs := map[string]hcutil.Amount{
@@ -343,6 +387,18 @@ func OmniFundedSendall(icmd interface{}, w *wallet.Wallet) (interface{}, error) 
 	account := uint32(udb.DefaultAccountNum)
 	omniFundedSendallCmd := icmd.(*hcjson.OmniFundedSendallCmd)
 	ret, err := omni_cmdReq(icmd, w)
+	if err != nil {
+		return nil, err
+	}
+	_, err = decodeAddress(omniFundedSendallCmd.Fromaddress, w.ChainParams())
+	if err != nil {
+		return nil, err
+	}
+	_, err = decodeAddress(omniFundedSendallCmd.Toaddress, w.ChainParams())
+	if err != nil {
+		return nil, err
+	}
+	_, err = decodeAddress(omniFundedSendallCmd.Feeaddress, w.ChainParams())
 	if err != nil {
 		return nil, err
 	}
@@ -366,15 +422,6 @@ func omniSend(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 	hexStr := strings.Trim(string(ret), "\"")
 	payLoad, err := hex.DecodeString(hexStr)
-	if err != nil {
-		return nil, err
-	}
-	_, err = decodeAddress(omniSendCmd.Fromaddress, w.ChainParams())
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = decodeAddress(omniSendCmd.Toaddress, w.ChainParams())
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +478,18 @@ func omniSendToAddress(cmd *SendFromAddressToAddress, w *wallet.Wallet, payLoad 
 	}
 
 	account := uint32(udb.DefaultAccountNum)
-
+	_, err := decodeAddress(cmd.FromAddress, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
+	_, err = decodeAddress(cmd.ToAddress, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
+	_, err = decodeAddress(cmd.ChangeAddress, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
 	// Mock up map of address and amount pairs.
 	pairs := map[string]hcutil.Amount{
 		cmd.ToAddress: MininumAmount,
@@ -622,7 +680,15 @@ func OmniReadAllTxHash(icmd interface{}, w *wallet.Wallet) (interface{}, error) 
 // OmniSend Create and broadcast a simple send transaction.
 // $ omnicore-cli "omni_send" "3M9qvHKtgARhqcMtM5cRT9VaiDJ5PSfQGY" "37FaKponF7zqoMLUjEiko25pDiuVH5YLEa" 1 "100.0"
 func OmniSend(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	_ = icmd.(*hcjson.OmniSendCmd)
+	cmd := icmd.(*hcjson.OmniSendCmd)
+	_, err := decodeAddress(cmd.Fromaddress, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
+	_, err = decodeAddress(cmd.Toaddress, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
 	return omni_cmdReq(icmd, w)
 }
 
@@ -694,11 +760,6 @@ func OmniSenddexaccept(icmd interface{}, w *wallet.Wallet) (interface{}, error) 
 	if err != nil {
 		return nil, err
 	}
-	_, err = decodeAddress(omniSenddexacceptCmd.Fromaddress, w.ChainParams())
-	if err != nil {
-		return nil, err
-	}
-
 	cmd := &SendFromAddressToAddress{
 		FromAddress:   omniSenddexacceptCmd.Fromaddress,
 		ChangeAddress: omniSenddexacceptCmd.Fromaddress,
@@ -750,7 +811,12 @@ func OmniSendissuancecrowdsale(icmd interface{}, w *wallet.Wallet) (interface{},
 // OmniSendissuancefixed Create new tokens with fixed supply.
 // $ omnicore-cli "omni_sendissuancefixed" \     "3Ck2kEGLJtZw9ENj2tameMCtS3HB7uRar3" 2 1 0 "Companies" "Bitcoin Mining" \     "Quantum Miner" "" "" "1000000"
 func OmniSendissuancefixed(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	_ = icmd.(*hcjson.OmniSendissuancefixedCmd)
+	cmd := icmd.(*hcjson.OmniSendissuancefixedCmd)
+	_, err := decodeAddress(cmd.Fromaddress, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
+
 	return omni_cmdReq(icmd, w)
 }
 
@@ -799,15 +865,6 @@ func OmniSendsto(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = decodeAddress(omniSendCmd.Fromaddress, w.ChainParams())
-	if err != nil {
-		return nil, err
-	}
-
-	//	_, err = decodeAddress(omniSendCmd.Toaddress, w.ChainParams())
-	//	if err != nil {
-	//		return nil, err
-	//	}
 
 	cmd := &SendFromAddressToAddress{
 		FromAddress:   omniSendCmd.Fromaddress,
@@ -855,15 +912,6 @@ func OmniSendgrant(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = decodeAddress(omniSendGrantCmd.Fromaddress, w.ChainParams())
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = decodeAddress(omniSendGrantCmd.Toaddress, w.ChainParams())
-	if err != nil {
-		return nil, err
-	}
 
 	cmd := &SendFromAddressToAddress{
 		FromAddress:   omniSendGrantCmd.Fromaddress,
@@ -872,32 +920,6 @@ func OmniSendgrant(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		Amount:        1,
 	}
 	return omniSendToAddress(cmd, w, payLoad)
-	/*
-		final, err := omniSendToAddress(cmd, w, payLoad)
-		if err != nil{
-			return nil, err
-		}
-		//
-		params := make([]interface{}, 0, 10)
-		params = append(params, omniSendCmd.Fromaddress)
-		params = append(params, omniSendCmd.Propertyid)
-		params = append(params, omniSendCmd.Amount)
-		params = append(params, final)
-		params = append(params, 3)
-
-		newCmd, err := hcjson.NewCmd("omni_padding_add", params...)
-		if err != nil {
-			return nil, err
-		}
-		marshalledJSON, err := hcjson.MarshalCmd(1, newCmd)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Println(string(marshalledJSON))
-		//construct omni variables
-		omnilib.JsonCmdReqHcToOm(string(marshalledJSON))
-		return final, err
-	*/
 }
 
 // OmniSendrevoke Revoke units of managed tokens.
@@ -910,10 +932,6 @@ func OmniSendrevoke(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 	hexStr := strings.Trim(string(ret), "\"")
 	payLoad, err := hex.DecodeString(hexStr)
-	if err != nil {
-		return nil, err
-	}
-	_, err = decodeAddress(omniSendrevokeCmd.Fromaddress, w.ChainParams())
 	if err != nil {
 		return nil, err
 	}
@@ -1171,16 +1189,6 @@ func OmniSendall(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = decodeAddress(omniSendallCmd.Fromaddress, w.ChainParams())
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = decodeAddress(omniSendallCmd.Toaddress, w.ChainParams())
-	if err != nil {
-		return nil, err
-	}
-
 	cmd := &SendFromAddressToAddress{
 		FromAddress:   omniSendallCmd.Fromaddress,
 		ChangeAddress: omniSendallCmd.Fromaddress,
