@@ -1223,6 +1223,7 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 		fetchedHeaderCount = int(height)
 		//rescanStart = *w.chainParams.GenesisHash
 
+		w.RollBackOminiTransaction(uint32(fetchedHeaderCount), nil)
 		req := omnilib.Request{
 			Method: "omni_getwaterline",
 		}
@@ -1241,6 +1242,18 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 		}
 		omni_height, err := strconv.Atoi(string(response.Result))
 		if(omni_height > 0){
+//			var startHash chainhash.Hash
+			err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+				txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
+				var err error
+				startHash, err = w.TxStore.GetMainChainBlockHashForHeight(
+					txmgrNs, int32(omni_height))
+				return err
+			})
+			if err != nil {
+				return err
+			}
+
 			rescanStart = startHash
 		}else {
 			rescanStart = *w.chainParams.GenesisHash
