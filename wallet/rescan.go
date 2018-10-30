@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
 	"github.com/HcashOrg/hcrpcclient"
@@ -21,6 +22,10 @@ import (
 )
 
 const maxBlocksPerRescan = 2000
+
+var indexScanning int  = 0
+var mutexOnlyOneChan sync.Mutex
+
 
 // TODO: track whether a rescan is already in progress, and cancel either it or
 // this new rescan, keeping the one that still has the most blocks to scan.
@@ -35,12 +40,25 @@ func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 	blockHashStorage := make([]chainhash.Hash, maxBlocksPerRescan)
 	rescanFrom := *startHash
 	inclusive := true
+
+	mutexOnlyOneChan.Lock()
+	indexScanning++
+	index := indexScanning
+	mutexOnlyOneChan.Unlock()
+
 	for {
 		select {
 		case <-cancel:
 			return nil
 		default:
 		}
+
+		mutexOnlyOneChan.Lock()
+		if indexScanning != index{
+			mutexOnlyOneChan.Unlock()
+			return nil
+		}
+		mutexOnlyOneChan.Unlock()
 
 		var rescanBlocks []chainhash.Hash
 		err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
@@ -107,9 +125,11 @@ func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 		if err != nil {
 			return err
 		}
+		mutexOnlyOneChan.Lock()
 		if p != nil {
 			p <- RescanProgress{ScannedThrough: scanningThrough}
 		}
+		mutexOnlyOneChan.Unlock()
 		rescanFrom = rescanBlocks[len(rescanBlocks)-1]
 		height += int32(len(rescanBlocks))
 		inclusive = false
