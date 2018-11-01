@@ -911,7 +911,6 @@ func (s *walletServer) GetTransaction(ctx context.Context, req *pb.GetTransactio
 	}
 	return resp, nil
 }
-
 // BUGS:
 // - MinimumRecentTransactions is ignored.
 // - Wrong error codes when a block height or hash is not recognized
@@ -958,31 +957,44 @@ func (s *walletServer) GetTransactions(req *pb.GetTransactionsRequest,
 				"minimum number of recent transactions may not be negative")
 		}
 	}
-
 	_ = minRecentTxs
 
-	gtr, err := s.wallet.GetTransactions(startBlock, endBlock, server.Context().Done())
+	targetTxCount := int(req.TargetTransactionCount)
+	if targetTxCount < 0 {
+		return status.Errorf(codes.InvalidArgument,
+			"maximum transaction count may not be negative")
+	}
+
+	ctx := server.Context()
+	txCount := 0
+
+	rangeFn := func(block *wallet.Block) (bool, error) {
+		var resp *pb.GetTransactionsResponse
+		if block.Header != nil {
+			resp = &pb.GetTransactionsResponse{
+				MinedTransactions: marshalBlock(block),
+			}
+		} else {
+			resp = &pb.GetTransactionsResponse{
+				UnminedTransactions: marshalTransactionDetailsSlice(block.Transactions),
+			}
+		}
+		txCount += len(block.Transactions)
+
+		select {
+		case <-ctx.Done():
+			return true, ctx.Err()
+		default:
+			err := server.Send(resp)
+			return (err != nil) || ((targetTxCount > 0) && (txCount >= targetTxCount)), err
+		}
+	}
+
+	err := s.wallet.GetTransactions(rangeFn, startBlock, endBlock)
 	if err != nil {
 		return translateError(err)
 	}
-	for i := range gtr.MinedTransactions {
-		resp := &pb.GetTransactionsResponse{
-			MinedTransactions: marshalBlock(&gtr.MinedTransactions[i]),
-		}
-		err = server.Send(resp)
-		if err != nil {
-			return err
-		}
-	}
-	if len(gtr.UnminedTransactions) > 0 {
-		resp := &pb.GetTransactionsResponse{
-			UnminedTransactions: marshalTransactionDetailsSlice(gtr.UnminedTransactions),
-		}
-		err = server.Send(resp)
-		if err != nil {
-			return err
-		}
-	}
+
 	return nil
 }
 
@@ -1559,10 +1571,11 @@ func marshalTicketDetails(ticket *wallet.TicketSummary) *pb.GetTicketsResponse_T
 }
 
 func marshalBlock(v *wallet.Block) *pb.BlockDetails {
+	blockHash := v.Header.BlockHash()
 	return &pb.BlockDetails{
-		Hash:         v.Hash[:],
-		Height:       v.Height,
-		Timestamp:    v.Timestamp,
+		Hash:         blockHash.CloneBytes(),
+		Height:       int32(v.Header.Height),
+		Timestamp:    v.Header.Timestamp.Unix(),
 		Transactions: marshalTransactionDetailsSlice(v.Transactions),
 	}
 }

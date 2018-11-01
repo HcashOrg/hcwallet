@@ -24,9 +24,15 @@ import (
 const maxBlocksPerRescan = 2000
 
 var indexScanning int  = 0
+var isScanning bool  = false
 var mutexOnlyOneChan sync.Mutex
 
-
+func (w *Wallet) IsScanning() bool{
+	mutexOnlyOneChan.Lock()
+	ret := isScanning
+	mutexOnlyOneChan.Unlock()
+	return ret
+}
 // TODO: track whether a rescan is already in progress, and cancel either it or
 // this new rescan, keeping the one that still has the most blocks to scan.
 
@@ -44,8 +50,16 @@ func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 	mutexOnlyOneChan.Lock()
 	indexScanning++
 	index := indexScanning
+	isScanning = true
 	mutexOnlyOneChan.Unlock()
 
+	defer func() {
+		mutexOnlyOneChan.Lock()
+		if indexScanning == index{
+			isScanning = false
+		}
+		mutexOnlyOneChan.Unlock()
+	}()
 	for {
 		select {
 		case <-cancel:

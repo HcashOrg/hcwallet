@@ -2828,7 +2828,7 @@ type GetTransactionsResult struct {
 // Transaction results are organized by blocks in ascending order and unmined
 // transactions in an unspecified order.  Mined transactions are saved in a
 // Block structure which records properties about the block.
-func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <-chan struct{}) (*GetTransactionsResult, error) {
+func (w *Wallet) GetTransactions(f func(*Block) (bool, error), startBlock, endBlock *BlockIdentifier) error {
 	var start, end int32 = 0, -1
 
 	if startBlock != nil {
@@ -2850,7 +2850,7 @@ func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <
 				return nil
 			})
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
@@ -2873,12 +2873,11 @@ func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <
 				return nil
 			})
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
 
-	var res GetTransactionsResult
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
 		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
@@ -2894,29 +2893,38 @@ func (w *Wallet) GetTransactions(startBlock, endBlock *BlockIdentifier, cancel <
 				txs = append(txs, makeTxSummary(dbtx, w, &details[i]))
 			}
 
+			var block *Block
 			if details[0].Block.Height != -1 {
-				blockHash := details[0].Block.Hash
-				res.MinedTransactions = append(res.MinedTransactions, Block{
-					Hash:         &blockHash,
-					Height:       details[0].Block.Height,
-					Timestamp:    details[0].Block.Time.Unix(),
+				serHeader, err := w.TxStore.GetSerializedBlockHeader(txmgrNs,
+					&details[0].Block.Hash)
+				if err != nil {
+					return false, err
+				}
+				header := new(wire.BlockHeader)
+				err = header.Deserialize(bytes.NewReader(serHeader))
+				if err != nil {
+					return false, err
+				}
+				block = &Block{
+					Header:       header,
 					Transactions: txs,
-				})
+				}
 			} else {
-				res.UnminedTransactions = txs
+				block = &Block{
+					Header:       nil,
+					Transactions: txs,
+				}
 			}
 
-			select {
-			case <-cancel:
-				return true, nil
-			default:
-				return false, nil
-			}
+			return f(block)
 		}
 
 		return w.TxStore.RangeTransactions(txmgrNs, start, end, rangeFn)
 	})
-	return &res, err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // AccountResult is a single account result for the AccountsResult type.

@@ -1416,6 +1416,9 @@ type GetTransactionsRequest struct {
 	//
 	// TODO: remove until spec adds it back in some way.
 	MinimumRecentTransactions int32 `protobuf:"varint,5,opt,name=minimum_recent_transactions,json=minimumRecentTransactions" json:"minimum_recent_transactions,omitempty"`
+
+	// Try to include at most this many transactions in the reply
+	TargetTransactionCount int32 `protobuf:"varint,6,opt,name=target_transaction_count,json=targetTransactionCount" json:"target_transaction_count,omitempty"`
 }
 
 func (m *GetTransactionsRequest) Reset()                    { *m = GetTransactionsRequest{} }
