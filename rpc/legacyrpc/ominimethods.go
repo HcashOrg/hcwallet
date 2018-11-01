@@ -478,9 +478,14 @@ func omniSendToAddress(cmd *SendFromAddressToAddress, w *wallet.Wallet, payLoad 
 	}
 
 	account := uint32(udb.DefaultAccountNum)
-	_, err := decodeAddress(cmd.FromAddress, w.ChainParams())
+
+	addr, err := decodeAddress(cmd.FromAddress, w.ChainParams())
 	if err != nil {
 		return "", err
+	}
+	acc_type := addr.DSA(w.ChainParams())
+	if acc_type == 4{
+		account = 1
 	}
 	_, err = decodeAddress(cmd.ToAddress, w.ChainParams())
 	if err != nil {
