@@ -245,9 +245,13 @@ func OmniSendchangeissuer(icmd interface{}, w *wallet.Wallet) (interface{}, erro
 	}
 	hexStr := strings.Trim(string(ret), "\"")
 	payLoad, err := hex.DecodeString(hexStr)
-	_, err = decodeAddress(omniSendchangeissuerCmd.Fromaddress, w.ChainParams())
+	addr, err := decodeAddress(omniSendchangeissuerCmd.Fromaddress, w.ChainParams())
 	if err != nil {
 		return nil, err
+	}
+	acc_type := addr.DSA(w.ChainParams())
+	if acc_type == 4{
+		account = 1
 	}
 	_, err = decodeAddress(omniSendchangeissuerCmd.Toaddress, w.ChainParams())
 	if err != nil {
