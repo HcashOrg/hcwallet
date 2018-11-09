@@ -1,4 +1,4 @@
-// +build linux aix darwin dragonfly freebsd  netbsd openbsd solaris
+// +build linux aix dragonfly freebsd  netbsd openbsd solaris
 
 package omnilib
 
