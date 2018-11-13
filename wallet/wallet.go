@@ -1241,22 +1241,27 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 			return fmt.Errorf(response.Error.Message)
 		}
 		omni_height, err := strconv.Atoi(string(response.Result))
-		if(omni_height > 0){
-//			var startHash chainhash.Hash
-			err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
-				txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
-				var err error
-				startHash, err = w.TxStore.GetMainChainBlockHashForHeight(
-					txmgrNs, int32(omni_height))
-				return err
-			})
-			if err != nil {
-				return err
+		if uint64(height) > w.chainParams.OmniStartHeight {
+			if(omni_height > 0) {
+			}else {
+				omni_height = int(w.chainParams.OmniStartHeight)
 			}
+	//			var startHash chainhash.Hash
+				err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+					txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
+					var err error
+					startHash, err = w.TxStore.GetMainChainBlockHashForHeight(
+						txmgrNs, int32(omni_height))
+					return err
+				})
+				if err != nil {
+					return err
+				}
+				rescanStart = startHash
 
+				//rescanStart = *w.chainParams.GenesisHash
+		}else{
 			rescanStart = startHash
-		}else {
-			rescanStart = *w.chainParams.GenesisHash
 		}
 	} else {
 		fetchedHeaderCount, rescanStart, _, _, _, err = w.FetchHeaders(chainClient)
