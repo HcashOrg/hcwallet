@@ -1299,6 +1299,30 @@ func (m *BalanceRequest) GetRequiredConfirmations() int32 {
 	return 0
 }
 
+type RescanPointRequest struct {
+}
+
+func (m *RescanPointRequest) Reset()                    { *m = RescanPointRequest{} }
+func (m *RescanPointRequest) String() string            { return proto.CompactTextString(m) }
+func (*RescanPointRequest) ProtoMessage()               {}
+func (*RescanPointRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{99} }
+
+type RescanPointResponse struct {
+	RescanPointHash []byte `protobuf:"bytes,1,opt,name=rescan_point_hash,json=rescanPointHash,proto3" json:"rescan_point_hash,omitempty"`
+}
+
+func (m *RescanPointResponse) Reset()                    { *m = RescanPointResponse{} }
+func (m *RescanPointResponse) String() string            { return proto.CompactTextString(m) }
+func (*RescanPointResponse) ProtoMessage()               {}
+func (*RescanPointResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{100} }
+
+func (m *RescanPointResponse) GetRescanPointHash() []byte {
+	if m != nil {
+		return m.RescanPointHash
+	}
+	return nil
+}
+
 type BalanceResponse struct {
 	Total                   int64 `protobuf:"varint,1,opt,name=total" json:"total,omitempty"`
 	Spendable               int64 `protobuf:"varint,2,opt,name=spendable" json:"spendable,omitempty"`

@@ -153,6 +153,7 @@ var (
 	rootVersion      = []byte("vers")
 	rootMinedBalance = []byte("bal")
 	rootTipBlock     = []byte("tip")
+	rootLastTxsBlock = []byte("lasttxsblock")
 )
 
 // The root bucket's mined balance k/v pair records the total balance for all

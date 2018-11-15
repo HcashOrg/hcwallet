@@ -128,6 +128,10 @@ func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 						return err
 					}
 				}
+				err = w.TxStore.UpdateProcessedTxsBlockMarker(dbtx, blockHash)
+				if err != nil {
+					return err
+				}
 
 				if w.EnableOmni() {
 					w.BlockConnectEnd(&blockMeta)
@@ -140,6 +144,12 @@ func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 			return err
 		}
 		mutexOnlyOneChan.Lock()
+		err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
+			return w.TxStore.UpdateProcessedTxsBlockMarker(dbtx, &rescanBlocks[len(rescanBlocks)-1])
+		})
+		if err != nil {
+			return err
+		}
 		if p != nil {
 			p <- RescanProgress{ScannedThrough: scanningThrough}
 		}

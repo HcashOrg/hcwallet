@@ -3714,3 +3714,67 @@ func (s *Store) storedTxScripts(ns walletdb.ReadBucket) ([][]byte, error) {
 	}
 	return scripts, err
 }
+
+// ProcessedTxsBlockMarker returns the hash of the block which records the last
+// block after the genesis block which has been recorded as being processed for
+// relevant transactions.
+func (s *Store) ProcessedTxsBlockMarker(dbtx walletdb.ReadTx) *chainhash.Hash {
+	ns := dbtx.ReadBucket(wtxmgrBucketKey)
+	var h chainhash.Hash
+	copy(h[:], ns.Get(rootLastTxsBlock))
+	return &h
+}
+
+// UpdateProcessedTxsBlockMarker updates the hash of the block recording the
+// final block since the genesis block for which all transactions have been
+// processed.  Hash must describe a main chain block.  This does not modify the
+// database if hash has a lower block height than the main chain fork point of
+// the existing marker.
+func (s *Store) UpdateProcessedTxsBlockMarker(dbtx walletdb.ReadWriteTx, hash *chainhash.Hash) error {
+	ns := dbtx.ReadWriteBucket(wtxmgrBucketKey)
+	prev := s.ProcessedTxsBlockMarker(dbtx)
+	for {
+		mainChain, _ := s.BlockInMainChain(dbtx, prev)
+		if mainChain {
+			break
+		}
+		h, err := s.GetBlockHeader(dbtx, prev)
+		if err != nil {
+			return err
+		}
+		prev = &h.PrevBlock
+	}
+	prevHeader, err := s.GetBlockHeader(dbtx, prev)
+	if err != nil {
+		return err
+	}
+	if mainChain, _ := s.BlockInMainChain(dbtx, hash); !mainChain {
+		return errors.New(fmt.Sprintf("%v is not a main chain block", hash))
+	}
+	header, err := s.GetBlockHeader(dbtx, hash)
+	if err != nil {
+		return err
+	}
+	if header.Height > prevHeader.Height {
+		err := ns.Put(rootLastTxsBlock, hash[:])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetBlockHeader returns the block header for the block specified by its hash.
+func (s *Store) GetBlockHeader(dbtx walletdb.ReadTx, blockHash *chainhash.Hash) (*wire.BlockHeader, error) {
+	ns := dbtx.ReadBucket(wtxmgrBucketKey)
+	serialized, err := fetchRawBlockHeader(ns, keyBlockHeader(blockHash))
+	if err != nil {
+		return nil, err
+	}
+	header := new(wire.BlockHeader)
+	err = header.Deserialize(bytes.NewReader(serialized))
+	if err != nil {
+		return nil, err
+	}
+	return header, nil
+}

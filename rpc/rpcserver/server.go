@@ -2601,3 +2601,20 @@ func (s *decodeMessageServer) DecodeRawTransaction(ctx context.Context, req *pb.
 
 	return resp, nil
 }
+
+func (s *loaderServer) RescanPoint(ctx context.Context, req *pb.RescanPointRequest) (*pb.RescanPointResponse, error) {
+	wallet, ok := s.loader.LoadedWallet()
+	if !ok {
+		return nil, status.Errorf(codes.FailedPrecondition, "Wallet has not been loaded")
+	}
+	rescanPoint, err := wallet.RescanPoint()
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, "Rescan point failed to be requested %v", err)
+	}
+	if rescanPoint != nil {
+		return &pb.RescanPointResponse{
+			RescanPointHash: rescanPoint[:],
+		}, nil
+	}
+	return &pb.RescanPointResponse{RescanPointHash: nil}, nil
+}

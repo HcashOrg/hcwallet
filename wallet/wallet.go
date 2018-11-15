@@ -35,11 +35,11 @@ import (
 	"github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/chain"
+	"github.com/HcashOrg/hcwallet/omnilib"
 	"github.com/HcashOrg/hcwallet/wallet/txauthor"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 	"github.com/HcashOrg/hcwallet/walletdb"
-	"github.com/HcashOrg/hcwallet/omnilib"
 )
 
 const (
@@ -201,7 +201,7 @@ func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Addre
 		lockState:                make(chan bool),
 		changePassphrase:         make(chan changePassphraseRequest),
 		chainParams:              params,
-		enableOmni:             enableOmni,
+		enableOmni:               enableOmni,
 		quit:                     make(chan struct{}),
 	}
 
@@ -613,6 +613,26 @@ func (w *Wallet) SynchronizeRPC(chainClient *chain.RPCClient) {
 	}
 	w.quitMu.Unlock()
 
+	tipHash, tipHeight := w.MainChainTip()
+	rescanPoint, err := w.RescanPoint()
+	if err != nil {
+		log.Error("" + err.Error())
+
+		return
+	}
+	log.Infof("Headers synced through block %v height %d", &tipHash, tipHeight)
+	if rescanPoint != nil {
+		h, err := w.BlockHeader(rescanPoint)
+		if err != nil {
+			log.Error("" + err.Error())
+			return
+		}
+		// The rescan point is the first block that does not have synced
+		// transactions, so we are synced with the parent.
+		log.Infof("Transactions synced through block %v height %d", &h.PrevBlock, h.Height-1)
+	} else {
+		log.Infof("Transactions synced through block %v height %d", &tipHash, tipHeight)
+	}
 	// TODO: Ignoring the new client when one is already set breaks callers
 	// who are replacing the client, perhaps after a disconnect.
 	w.chainClientLock.Lock()
@@ -632,7 +652,7 @@ func (w *Wallet) SynchronizeRPC(chainClient *chain.RPCClient) {
 	go w.handleChainVotingNotifications(chainClient)
 
 	// Request notifications for winning tickets.
-	err := chainClient.NotifyWinningTickets()
+	err = chainClient.NotifyWinningTickets()
 	if err != nil {
 		log.Error("Unable to request transaction updates for "+
 			"winning tickets. Error: ", err.Error())
@@ -796,6 +816,33 @@ func (w *Wallet) MainChainTip() (hash chainhash.Hash, height int32) {
 		return nil
 	})
 	return
+}
+
+// BlockInMainChain returns whether hash is a block hash of any block in the
+// wallet's main chain.  If the block is in the main chain, invalidated reports
+// whether a child block in the main chain stake invalidates the queried block.
+func (w *Wallet) BlockInMainChain(hash *chainhash.Hash) (haveBlock, invalidated bool, err error) {
+	err = walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		haveBlock, invalidated = w.TxStore.BlockInMainChain(dbtx, hash)
+		return nil
+	})
+	if err != nil {
+		return false, false, err
+	}
+	return haveBlock, invalidated, nil
+}
+
+// BlockHeader returns the block header for a block by it's identifying hash, if
+// it is recorded by the wallet.
+func (w *Wallet) BlockHeader(blockHash *chainhash.Hash) (*wire.BlockHeader, error) {
+	var header *wire.BlockHeader
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		var err error
+		header, err = w.TxStore.GetBlockHeader(dbtx, blockHash)
+		return err
+	})
+	return header, err
+
 }
 
 // loadActiveAddrs loads the consensus RPC server with active addresses for
@@ -1182,6 +1229,18 @@ func (w *Wallet) FetchHeaders(chainClient *hcrpcclient.Client) (count int, resca
 		mainChainTipBlockHeight = commonAncestorHeight
 	}
 
+	err = walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		if rescanStart != (chainhash.Hash{}) {
+			firstHeader, err := w.TxStore.GetBlockHeader(dbtx, &rescanStart)
+			if err != nil {
+				return err
+			}
+			rescanFromHeight = int32(firstHeader.Height)
+			fetchedHeaderCount = int(mainChainTipBlockHeight - rescanFromHeight + 1)
+		}
+		return nil
+	})
+
 	return fetchedHeaderCount, rescanStart, rescanStartHeight, mainChainTipBlockHash,
 		mainChainTipBlockHeight, nil
 }
@@ -1208,71 +1267,75 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 		return err
 	}
 	err = chainClient.SetParams(w.EnableOmni())
+	_, err = w.fetchHeaders(chainClient)
 	if err != nil {
 		return err
 	}
 	// Fetch headers for unseen blocks in the main chain, determine whether a
 	// rescan is necessary, and when to begin it.
-	fetchedHeaderCount := 0
-	rescanStart := chainhash.Hash{}
-	if w.EnableOmni() {
-		_, startHash, _, _, height, err := w.FetchHeaders(chainClient)
-		if err != nil {
-			return err
-		}
-		fetchedHeaderCount = int(height)
-		//rescanStart = *w.chainParams.GenesisHash
-
-		w.RollBackOminiTransaction(uint32(fetchedHeaderCount), nil)
-		req := omnilib.Request{
-			Method: "omni_getwaterline",
-		}
-		bytes, err := json.Marshal(req)
-		if err != nil {
-			return err
-		}
-		strRsp := omnilib.JsonCmdReqHcToOm(string(bytes))
-		var response hcjson.Response
-		err = json.Unmarshal([]byte(strRsp), &response)
-		if err != nil {
-			return err
-		}
-		if response.Error != nil {
-			return fmt.Errorf(response.Error.Message)
-		}
-		omni_height, err := strconv.Atoi(string(response.Result))
-		if uint64(height) > w.chainParams.OmniStartHeight {
-			if(omni_height > 0) {
-			}else {
-				omni_height = int(w.chainParams.OmniStartHeight)
-			}
-	//			var startHash chainhash.Hash
-				err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
-					txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
-					var err error
-					startHash, err = w.TxStore.GetMainChainBlockHashForHeight(
-						txmgrNs, int32(omni_height))
-					return err
-				})
-				if err != nil {
-					return err
-				}
-				rescanStart = startHash
-
-				//rescanStart = *w.chainParams.GenesisHash
-		}else{
-			rescanStart = startHash
-		}
-	} else {
-		fetchedHeaderCount, rescanStart, _, _, _, err = w.FetchHeaders(chainClient)
-		if err != nil {
-			return err
-		}
+	rescanPoint, err := w.RescanPoint()
+	if err != nil {
+		return err
+	}
+	rescanHeight := uint32(0)
+	err = walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		rescanHeader, err := w.TxStore.GetBlockHeader(dbtx, rescanPoint)
+		rescanHeight = rescanHeader.Height
+		return err
+	})
+	if err != nil {
+		return err
 	}
 
-	// Rescan when necessary.
-	if fetchedHeaderCount != 0 {
-		err = <-w.Rescan(chainClient, &rescanStart)
+	if rescanPoint != nil {
+		if w.EnableOmni() {
+			req := omnilib.Request{
+				Method: "omni_getwaterline",
+			}
+			bytes, err := json.Marshal(req)
+			if err != nil {
+				return err
+			}
+			strRsp := omnilib.JsonCmdReqHcToOm(string(bytes))
+			var response hcjson.Response
+			err = json.Unmarshal([]byte(strRsp), &response)
+			if err != nil {
+				return err
+			}
+			if response.Error != nil {
+				return fmt.Errorf(response.Error.Message)
+			}
+			omniRollbackHeight, err := strconv.Atoi(string(response.Result))
+			// omniRollbackHeight  omni rollback height
+			// rescanHeight rescan height
+			// omniRollbackHeight <= rescanHeight
+			if uint64(rescanHeight) > w.chainParams.OmniStartHeight {
+				if uint64(omniRollbackHeight) < w.chainParams.OmniStartHeight {
+					// OmniStartHeight|omniRollbackHeight|rescanHeight
+					// rollback from w.chainParams.OmniStartHeight
+					rescanHeight = uint32(w.chainParams.OmniStartHeight)
+				} else {
+					// omniRollbackHeight|OmniStartHeight|rescanHeight
+					// rollback from omniRollbackHeight
+					rescanHeight = uint32(omniRollbackHeight)
+				}
+			} else {
+				// omniRollbackHeight|rescanHeight|OmniStartHeight
+				// rollback from rescanHeight
+			}
+
+			err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+				txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
+				hash, err := w.TxStore.GetMainChainBlockHashForHeight(txmgrNs, int32(rescanHeight))
+				rescanPoint = &hash
+				return err
+			})
+			if err != nil {
+				return err
+			}
+			w.RollBackOminiTransaction(uint32(rescanHeight), nil)
+		}
+		err = <-w.Rescan(chainClient, rescanPoint)
 		if err != nil {
 			return err
 		}
@@ -4339,7 +4402,7 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 	}
 
 	// Perform upgrades as necessary.
-	err = udb.Upgrade(db, pubPass, privPass)
+	err = udb.Upgrade(db, pubPass, privPass, params)
 	if err != nil {
 		return nil, err
 	}
@@ -4484,4 +4547,58 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 		return nil, err
 	}
 	return w, nil
+}
+
+func (w *Wallet) mainChainAncestor(dbtx walletdb.ReadTx, hash *chainhash.Hash) (*chainhash.Hash, error) {
+	for {
+		mainChain, _ := w.TxStore.BlockInMainChain(dbtx, hash)
+		if mainChain {
+			break
+		}
+		h, err := w.TxStore.GetBlockHeader(dbtx, hash)
+		if err != nil {
+			return nil, err
+		}
+		hash = &h.PrevBlock
+	}
+	return hash, nil
+}
+
+// RescanPoint returns the block hash at which a rescan should begin
+// (inclusive), or nil when no rescan is necessary.
+func (w *Wallet) RescanPoint() (*chainhash.Hash, error) {
+	var rp *chainhash.Hash
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		var err error
+		rp, err = w.rescanPoint(dbtx)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return rp, nil
+}
+
+func (w *Wallet) rescanPoint(dbtx walletdb.ReadTx) (*chainhash.Hash, error) {
+	ns := dbtx.ReadBucket(wtxmgrNamespaceKey)
+	r := w.TxStore.ProcessedTxsBlockMarker(dbtx)
+	r, err := w.mainChainAncestor(dbtx, r) // Walk back to the main chain ancestor
+	if err != nil {
+		return nil, err
+	}
+	if tipHash, _ := w.TxStore.MainChainTip(ns); *r == tipHash {
+		return nil, nil
+	}
+	// r is not the tip, so a child block must exist in the main chain.
+	h, err := w.TxStore.GetBlockHeader(dbtx, r)
+	if err != nil {
+		log.Info(err)
+		return nil, err
+	}
+	rescanPoint, err := w.TxStore.GetMainChainBlockHashForHeight(ns, int32(h.Height)+1)
+	if err != nil {
+		log.Info(err)
+		return nil, err
+	}
+	return &rescanPoint, nil
 }

@@ -63,6 +63,7 @@ service WalletLoaderService {
 	rpc StartConsensusRpc (StartConsensusRpcRequest) returns (StartConsensusRpcResponse);
 	rpc DiscoverAddresses (DiscoverAddressesRequest) returns (DiscoverAddressesResponse);
 	rpc SubscribeToBlockNotifications (SubscribeToBlockNotificationsRequest) returns (SubscribeToBlockNotificationsResponse);
+	rpc RescanPoint(RescanPointRequest) returns (RescanPointResponse);
 	rpc FetchHeaders(FetchHeadersRequest) returns (FetchHeadersResponse);
 }
 
@@ -596,6 +597,11 @@ message FetchHeadersResponse {
 	int32 first_new_block_height = 3;
 	bytes main_chain_tip_block_hash = 4;
 	int32 main_chain_tip_block_height = 5;
+}
+
+message RescanPointRequest {}
+message RescanPointResponse {
+	bytes rescan_point_hash = 1;
 }
 
 message GenerateRandomSeedRequest {

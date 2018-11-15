@@ -50,6 +50,11 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 			err = w.handleReorganizing(n.OldHash, n.NewHash, n.OldHeight, n.NewHeight)
 		case chain.RelevantTxAccepted:
 			notificationName = "relevanttxaccepted"
+			var rpt *chainhash.Hash
+			rpt, err = w.RescanPoint()
+			if err != nil || rpt != nil {
+				break
+			}
 			err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
 				return w.processSerializedTransaction(dbtx, n.Transaction, nil, nil)
 			})
@@ -72,7 +77,7 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 				_, height = w.TxStore.MainChainTip(ns)
 				return nil
 			})
-			if err == nil && !w.IsScanning(){
+			if err == nil && !w.IsScanning() {
 				w.RescanFromHeight(w.chainClient.Client, height)
 			}
 		}
@@ -229,6 +234,28 @@ func (w *Wallet) switchToSideChain(dbtx walletdb.ReadWriteTx) (*MainTipChangedNo
 		chainTipChanges.AttachedBlocks[i] = &scBlock.headerData.BlockHash
 	}
 
+	if sideChain != nil {
+		// To avoid skipped blocks, the marker is not advanced if there is a
+		// gap between the existing rescan point (main chain fork point of
+		// the current marker) and the first block attached in this chain
+		// switch.
+		r, err := w.rescanPoint(dbtx)
+		if err != nil {
+			return nil, err
+		}
+		rHeader, err := w.TxStore.GetBlockHeader(dbtx, r)
+		if err != nil {
+			return nil, err
+		}
+		if !(rHeader.Height+1 < uint32(sideChain[0].headerData.SerializedHeader.Height())) {
+			marker := sideChain[len(sideChain)-1].headerData.BlockHash
+			log.Debugf("Updating processed txs block marker to %v", marker)
+			err := w.TxStore.UpdateProcessedTxsBlockMarker(dbtx, &marker)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
 	return chainTipChanges, nil
 }
 
@@ -477,29 +504,29 @@ func getPayLoadData(pkScript []byte) (bool, []byte) {
 func (w *Wallet) RollBackOminiTransaction(height uint32, hashs []chainhash.Hash) error {
 
 	/*
-	if len(hashs) == 0 {
-		_, h := w.MainChainTip()
-		height := height
-		for ; height <= uint32(h); height++ {
-			//if hashs len = 0, for test
-			err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
-				txmgrNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
-				hash, err := w.TxStore.GetMainChainBlockHashForHeight(txmgrNs, int32(height))
-				hashs = append(hashs, hash)
-				return err
-			})
+		if len(hashs) == 0 {
+			_, h := w.MainChainTip()
+			height := height
+			for ; height <= uint32(h); height++ {
+				//if hashs len = 0, for test
+				err := walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {
+					txmgrNs := tx.ReadWriteBucket(wtxmgrNamespaceKey)
+					hash, err := w.TxStore.GetMainChainBlockHashForHeight(txmgrNs, int32(height))
+					hashs = append(hashs, hash)
+					return err
+				})
 
-			if err != nil {
-				return err
+				if err != nil {
+					return err
+				}
 			}
 		}
-	}
 
-	strHashs := make([]string, 0)
-	for _, hash := range hashs {
-		log.Infof("RollBackOminiTransaction: %s", hash.String())
-		strHashs = append(strHashs, hash.String())
-	}
+		strHashs := make([]string, 0)
+		for _, hash := range hashs {
+			log.Infof("RollBackOminiTransaction: %s", hash.String())
+			strHashs = append(strHashs, hash.String())
+		}
 	*/
 	strHashs := make([]string, 0)
 	cmd := hcjson.OmniRollBackCmd{
