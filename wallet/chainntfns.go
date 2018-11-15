@@ -704,10 +704,221 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 	txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
 
 	height := int32(-1)
+	isMineTx := false
 	if serializedHeader != nil {
 		height = serializedHeader.Height()
 	}
+	// Handle input scripts that contain P2PKs that we care about.
+	for i, input := range rec.MsgTx.TxIn {
+		if txscript.IsMultisigSigScript(input.SignatureScript) {
+			rs, err := txscript.MultisigRedeemScriptFromScriptSig(input.SignatureScript)
+			if err != nil {
+				return err
+			}
 
+			class, addrs, _, err := txscript.ExtractPkScriptAddrs(
+				txscript.DefaultScriptVersion, rs, w.chainParams)
+			if err != nil {
+				// Non-standard outputs are skipped.
+				continue
+			}
+			if class != txscript.MultiSigTy {
+				// This should never happen, but be paranoid.
+				continue
+			}
+
+			isRelevant := false
+			for _, addr := range addrs {
+				ma, err := w.Manager.Address(addrmgrNs, addr)
+				if err == nil {
+					isMineTx = true
+					isRelevant = true
+					err = w.markUsedAddress(dbtx, ma)
+					if err != nil {
+						return err
+					}
+					log.Debugf("Marked address %v used", addr)
+				} else {
+					// Missing addresses are skipped.  Other errors should
+					// be propagated.
+					if !apperrors.IsError(err, apperrors.ErrAddressNotFound) {
+						return err
+					}
+				}
+			}
+
+			// Add the script to the script databases.
+			// TODO Markused script address? cj
+			if isRelevant {
+				err = w.TxStore.InsertTxScript(txmgrNs, rs)
+				if err != nil {
+					return err
+				}
+				mscriptaddr, err := w.Manager.ImportScript(addrmgrNs, rs)
+				if err != nil {
+					switch {
+					// Don't care if it's already there.
+					case apperrors.IsError(err, apperrors.ErrDuplicateAddress):
+					case apperrors.IsError(err, apperrors.ErrLocked):
+						log.Warnf("failed to attempt script importation "+
+							"of incoming tx script %x because addrmgr "+
+							"was locked", rs)
+					default:
+						return err
+					}
+				} else {
+					chainClient := w.ChainClient()
+					if chainClient != nil {
+						err := chainClient.LoadTxFilter(false,
+							[]hcutil.Address{mscriptaddr.Address()}, nil)
+						if err != nil {
+							return err
+						}
+					}
+				}
+			}
+
+			// If we're spending a multisig outpoint we know about,
+			// update the outpoint. Inefficient because you deserialize
+			// the entire multisig output info. Consider a specific
+			// exists function in udb. The error here is skipped
+			// because the absence of an multisignature output for
+			// some script can not always be considered an error. For
+			// example, the wallet might be rescanning as called from
+			// the above function and so does not have the output
+			// included yet.
+			mso, err := w.TxStore.GetMultisigOutput(txmgrNs, &input.PreviousOutPoint)
+			if mso != nil && err == nil {
+				err = w.TxStore.SpendMultisigOut(txmgrNs, &input.PreviousOutPoint,
+					rec.Hash,
+					uint32(i))
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// Check every output to determine whether it is controlled by a wallet
+	// key.  If so, mark the output as a credit.
+	for i, output := range rec.MsgTx.TxOut {
+		// Ignore unspendable outputs.
+		if output.Value == 0 {
+			continue
+		}
+
+		class, addrs, _, err := txscript.ExtractPkScriptAddrs(output.Version,
+			output.PkScript, w.chainParams)
+		if err != nil {
+			// Non-standard outputs are skipped.
+			continue
+		}
+		isStakeType := class == txscript.StakeSubmissionTy ||
+			class == txscript.StakeSubChangeTy ||
+			class == txscript.StakeGenTy ||
+			class == txscript.StakeRevocationTy
+		if isStakeType {
+			class, err = txscript.GetStakeOutSubclass(output.PkScript)
+			if err != nil {
+				log.Errorf("Unknown stake output subclass parse error "+
+					"encountered: %v", err)
+				continue
+			}
+		}
+
+		for _, addr := range addrs {
+			ma, err := w.Manager.Address(addrmgrNs, addr)
+			if err == nil {
+				isMineTx = true
+				err = w.TxStore.AddCredit(txmgrNs, rec, blockMeta,
+					uint32(i), ma.Internal(), ma.Account())
+				if err != nil {
+					return err
+				}
+				err = w.markUsedAddress(dbtx, ma)
+				if err != nil {
+					return err
+				}
+				log.Debugf("Marked address %v used", addr)
+				continue
+			}
+
+			// Missing addresses are skipped.  Other errors should
+			// be propagated.
+			if !apperrors.IsError(err, apperrors.ErrAddressNotFound) {
+				return err
+			}
+		}
+
+		// Handle P2SH addresses that are multisignature scripts
+		// with keys that we own.
+		if class == txscript.ScriptHashTy {
+			var expandedScript []byte
+			for _, addr := range addrs {
+				// Search both the script store in the tx store
+				// and the address manager for the redeem script.
+				var err error
+				expandedScript, err = w.TxStore.GetTxScript(txmgrNs,
+					addr.ScriptAddress())
+				if err != nil {
+					return err
+				}
+
+				if expandedScript == nil {
+					script, done, err := w.Manager.RedeemScript(addrmgrNs, addr)
+					if err != nil {
+						log.Debugf("failed to find redeemscript for "+
+							"address %v in address manager: %v",
+							addr.EncodeAddress(), err)
+						continue
+					}
+					defer done()
+					expandedScript = script
+				}
+			}
+
+			// Otherwise, extract the actual addresses and
+			// see if any belong to us.
+			expClass, multisigAddrs, _, err := txscript.ExtractPkScriptAddrs(
+				txscript.DefaultScriptVersion,
+				expandedScript,
+				w.chainParams)
+			if err != nil {
+				return err
+			}
+
+			// Skip non-multisig scripts.
+			if expClass != txscript.MultiSigTy {
+				continue
+			}
+
+			for _, maddr := range multisigAddrs {
+				_, err := w.Manager.Address(addrmgrNs, maddr)
+				// An address we own; handle accordingly.
+				if err == nil {
+					errStore := w.TxStore.AddMultisigOut(
+						txmgrNs, rec, blockMeta, uint32(i))
+					if errStore != nil {
+						// This will throw if there are multiple private keys
+						// for this multisignature output owned by the wallet,
+						// so it's routed to debug.
+						log.Debugf("unable to add multisignature output: %v",
+							errStore.Error())
+					}
+				}
+			}
+		}
+	}
+	if w.EnableOmni() {
+		err := w.ProcessOminiTransaction(rec, blockMeta)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !isMineTx {
+		return nil
+	}
 	// At the moment all notified transactions are assumed to actually be
 	// relevant.  This assumption will not hold true when SPV support is
 	// added, but until then, simply insert the transaction because there
@@ -726,13 +937,6 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 			return err
 		}
 		// If a transaction record for this tx hash and block already exist, there is nothing left to do.
-
-		if w.EnableOmni() {
-			err = w.ProcessOminiTransaction(rec, blockMeta)
-			if err != nil {
-				return err
-			}
-		}
 	}
 
 	// Handle incoming SStx; store them in the stake manager if we own
@@ -899,206 +1103,6 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 					log.Debugf("Updated missed stake pool ticket %v "+
 						"for user %v into the stake store database ("+
 						"revocation hash: %v)", txInHash, poolUser, &rec.Hash)
-				}
-			}
-		}
-	}
-
-	// Handle input scripts that contain P2PKs that we care about.
-	for i, input := range rec.MsgTx.TxIn {
-		if txscript.IsMultisigSigScript(input.SignatureScript) {
-			rs, err := txscript.MultisigRedeemScriptFromScriptSig(input.SignatureScript)
-			if err != nil {
-				return err
-			}
-
-			class, addrs, _, err := txscript.ExtractPkScriptAddrs(
-				txscript.DefaultScriptVersion, rs, w.chainParams)
-			if err != nil {
-				// Non-standard outputs are skipped.
-				continue
-			}
-			if class != txscript.MultiSigTy {
-				// This should never happen, but be paranoid.
-				continue
-			}
-
-			isRelevant := false
-			for _, addr := range addrs {
-				ma, err := w.Manager.Address(addrmgrNs, addr)
-				if err == nil {
-					isRelevant = true
-					err = w.markUsedAddress(dbtx, ma)
-					if err != nil {
-						return err
-					}
-					log.Debugf("Marked address %v used", addr)
-				} else {
-					// Missing addresses are skipped.  Other errors should
-					// be propagated.
-					if !apperrors.IsError(err, apperrors.ErrAddressNotFound) {
-						return err
-					}
-				}
-			}
-
-			// Add the script to the script databases.
-			// TODO Markused script address? cj
-			if isRelevant {
-				err = w.TxStore.InsertTxScript(txmgrNs, rs)
-				if err != nil {
-					return err
-				}
-				mscriptaddr, err := w.Manager.ImportScript(addrmgrNs, rs)
-				if err != nil {
-					switch {
-					// Don't care if it's already there.
-					case apperrors.IsError(err, apperrors.ErrDuplicateAddress):
-					case apperrors.IsError(err, apperrors.ErrLocked):
-						log.Warnf("failed to attempt script importation "+
-							"of incoming tx script %x because addrmgr "+
-							"was locked", rs)
-					default:
-						return err
-					}
-				} else {
-					chainClient := w.ChainClient()
-					if chainClient != nil {
-						err := chainClient.LoadTxFilter(false,
-							[]hcutil.Address{mscriptaddr.Address()}, nil)
-						if err != nil {
-							return err
-						}
-					}
-				}
-			}
-
-			// If we're spending a multisig outpoint we know about,
-			// update the outpoint. Inefficient because you deserialize
-			// the entire multisig output info. Consider a specific
-			// exists function in udb. The error here is skipped
-			// because the absence of an multisignature output for
-			// some script can not always be considered an error. For
-			// example, the wallet might be rescanning as called from
-			// the above function and so does not have the output
-			// included yet.
-			mso, err := w.TxStore.GetMultisigOutput(txmgrNs, &input.PreviousOutPoint)
-			if mso != nil && err == nil {
-				err = w.TxStore.SpendMultisigOut(txmgrNs, &input.PreviousOutPoint,
-					rec.Hash,
-					uint32(i))
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	// Check every output to determine whether it is controlled by a wallet
-	// key.  If so, mark the output as a credit.
-	for i, output := range rec.MsgTx.TxOut {
-		// Ignore unspendable outputs.
-		if output.Value == 0 {
-			continue
-		}
-
-		class, addrs, _, err := txscript.ExtractPkScriptAddrs(output.Version,
-			output.PkScript, w.chainParams)
-		if err != nil {
-			// Non-standard outputs are skipped.
-			continue
-		}
-		isStakeType := class == txscript.StakeSubmissionTy ||
-			class == txscript.StakeSubChangeTy ||
-			class == txscript.StakeGenTy ||
-			class == txscript.StakeRevocationTy
-		if isStakeType {
-			class, err = txscript.GetStakeOutSubclass(output.PkScript)
-			if err != nil {
-				log.Errorf("Unknown stake output subclass parse error "+
-					"encountered: %v", err)
-				continue
-			}
-		}
-
-		for _, addr := range addrs {
-			ma, err := w.Manager.Address(addrmgrNs, addr)
-			if err == nil {
-				err = w.TxStore.AddCredit(txmgrNs, rec, blockMeta,
-					uint32(i), ma.Internal(), ma.Account())
-				if err != nil {
-					return err
-				}
-				err = w.markUsedAddress(dbtx, ma)
-				if err != nil {
-					return err
-				}
-				log.Debugf("Marked address %v used", addr)
-				continue
-			}
-
-			// Missing addresses are skipped.  Other errors should
-			// be propagated.
-			if !apperrors.IsError(err, apperrors.ErrAddressNotFound) {
-				return err
-			}
-		}
-
-		// Handle P2SH addresses that are multisignature scripts
-		// with keys that we own.
-		if class == txscript.ScriptHashTy {
-			var expandedScript []byte
-			for _, addr := range addrs {
-				// Search both the script store in the tx store
-				// and the address manager for the redeem script.
-				var err error
-				expandedScript, err = w.TxStore.GetTxScript(txmgrNs,
-					addr.ScriptAddress())
-				if err != nil {
-					return err
-				}
-
-				if expandedScript == nil {
-					script, done, err := w.Manager.RedeemScript(addrmgrNs, addr)
-					if err != nil {
-						log.Debugf("failed to find redeemscript for "+
-							"address %v in address manager: %v",
-							addr.EncodeAddress(), err)
-						continue
-					}
-					defer done()
-					expandedScript = script
-				}
-			}
-
-			// Otherwise, extract the actual addresses and
-			// see if any belong to us.
-			expClass, multisigAddrs, _, err := txscript.ExtractPkScriptAddrs(
-				txscript.DefaultScriptVersion,
-				expandedScript,
-				w.chainParams)
-			if err != nil {
-				return err
-			}
-
-			// Skip non-multisig scripts.
-			if expClass != txscript.MultiSigTy {
-				continue
-			}
-
-			for _, maddr := range multisigAddrs {
-				_, err := w.Manager.Address(addrmgrNs, maddr)
-				// An address we own; handle accordingly.
-				if err == nil {
-					errStore := w.TxStore.AddMultisigOut(
-						txmgrNs, rec, blockMeta, uint32(i))
-					if errStore != nil {
-						// This will throw if there are multiple private keys
-						// for this multisignature output owned by the wallet,
-						// so it's routed to debug.
-						log.Debugf("unable to add multisignature output: %v",
-							errStore.Error())
-					}
 				}
 			}
 		}
