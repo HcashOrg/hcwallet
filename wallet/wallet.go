@@ -1308,6 +1308,9 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 	}
 	omniRollbackHeight, err := strconv.Atoi(string(response.Result))
 
+	if omniRollbackHeight > int(rescanHeight) {
+		omniRollbackHeight = int(rescanHeight)
+	}
 	//mini scan height
 	// omniRollbackHeight  omni rollback height
 	// rescanHeight rescan height
