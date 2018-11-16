@@ -1229,17 +1229,21 @@ func (w *Wallet) FetchHeaders(chainClient *hcrpcclient.Client) (count int, resca
 		mainChainTipBlockHeight = commonAncestorHeight
 	}
 
+	walletRescanHeight, walletRescanPoint, err := w.GetWalletSyncHeight()
 	err = walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
-		if rescanStart != (chainhash.Hash{}) {
-			firstHeader, err := w.TxStore.GetBlockHeader(dbtx, &rescanStart)
-			if err != nil {
-				return err
+
+		if rescanFromHeight == 0 || rescanStartHeight > int32(walletRescanHeight) {
+			if walletRescanHeight > 0 {
+				rescanStartHeight = int32(walletRescanHeight)
+				rescanStart = *walletRescanPoint
+				fetchedHeaderCount = int(mainChainTipBlockHeight - rescanStartHeight + 1)
 			}
-			rescanFromHeight = int32(firstHeader.Height)
-			fetchedHeaderCount = int(mainChainTipBlockHeight - rescanFromHeight + 1)
 		}
 		return nil
 	})
+	if err != nil {
+		return
+	}
 
 	return fetchedHeaderCount, rescanStart, rescanStartHeight, mainChainTipBlockHash,
 		mainChainTipBlockHeight, nil
@@ -1271,18 +1275,52 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 	if err != nil {
 		return err
 	}
+
+	rescanHeight, rescanPoint, err := w.GetWalletSyncHeight()
+	if err != nil {
+		return err
+	}
+	w.RollBackOminiTransaction(rescanHeight, nil)
+	err = <-w.Rescan(chainClient, rescanPoint)
+	if err != nil {
+		return err
+	}
+
+	w.resendUnminedTxs(chainClient)
+
+	// Send winning and missed ticket notifications out so that the wallet
+	// can immediately vote and redeem any tickets it may have missed on
+	// startup.
+	// TODO A proper pass through for hcrpcclient for these cmds.
+	if w.initiallyUnlocked {
+		_, err = chainClient.RawRequest("rebroadcastwinners", nil)
+		if err != nil {
+			return err
+		}
+		_, err = chainClient.RawRequest("rebroadcastmissed", nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Infof("Blockchain sync completed, wallet ready for general usage.")
+
+	return nil
+}
+
+func (w *Wallet) GetWalletSyncHeight() (uint32, *chainhash.Hash, error) {
 	// Fetch headers for unseen blocks in the main chain, determine whether a
 	// rescan is necessary, and when to begin it.
 	rescanPoint, err := w.RescanPoint()
 	if err != nil {
-		return err
+		return 0, nil, err
 	}
 
 	rescanHeight := uint32(0)
 	if rescanPoint != nil {
 		header, err := w.BlockHeader(rescanPoint)
 		if err != nil {
-			return err
+			return 0, nil, err
 		}
 		rescanHeight = header.Height
 	} else {
@@ -1295,16 +1333,16 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 	}
 	bytes, err := json.Marshal(req)
 	if err != nil {
-		return err
+		return 0, nil, err
 	}
 	strRsp := omnilib.JsonCmdReqHcToOm(string(bytes))
 	var response hcjson.Response
 	err = json.Unmarshal([]byte(strRsp), &response)
 	if err != nil {
-		return err
+		return 0, nil, err
 	}
 	if response.Error != nil {
-		return fmt.Errorf(response.Error.Message)
+		return 0, nil, fmt.Errorf(response.Error.Message)
 	}
 	omniRollbackHeight, err := strconv.Atoi(string(response.Result))
 
@@ -1337,34 +1375,9 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 		return err
 	})
 	if err != nil {
-		return err
+		return 0, nil, err
 	}
-	w.RollBackOminiTransaction(uint32(rescanHeight), nil)
-	err = <-w.Rescan(chainClient, rescanPoint)
-	if err != nil {
-		return err
-	}
-
-	w.resendUnminedTxs(chainClient)
-
-	// Send winning and missed ticket notifications out so that the wallet
-	// can immediately vote and redeem any tickets it may have missed on
-	// startup.
-	// TODO A proper pass through for hcrpcclient for these cmds.
-	if w.initiallyUnlocked {
-		_, err = chainClient.RawRequest("rebroadcastwinners", nil)
-		if err != nil {
-			return err
-		}
-		_, err = chainClient.RawRequest("rebroadcastmissed", nil)
-		if err != nil {
-			return err
-		}
-	}
-
-	log.Infof("Blockchain sync completed, wallet ready for general usage.")
-
-	return nil
+	return rescanHeight, rescanPoint, nil
 }
 
 type (
