@@ -708,7 +708,7 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 		height = serializedHeader.Height()
 	}
 
-	if w.EnableOmni() {
+	if w.EnableOmni() && serializedHeader != nil{
 		err := w.ProcessOminiTransaction(rec, blockMeta)
 		if err != nil {
 			return err
