@@ -1078,10 +1078,7 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 
 			// Otherwise, extract the actual addresses and
 			// see if any belong to us.
-			expClass, multisigAddrs, _, err := txscript.ExtractPkScriptAddrs(
-				txscript.DefaultScriptVersion,
-				expandedScript,
-				w.chainParams)
+			expClass, multisigAddrs, _, err := txscript.ExtractPkScriptAddrs(txscript.DefaultScriptVersion, expandedScript, w.chainParams)
 			if err != nil {
 				return err
 			}
@@ -1138,23 +1135,40 @@ func (w *Wallet) IsReleventTransaction(dbtx walletdb.ReadWriteTx, rec *udb.TxRec
 	addrmgrNs := dbtx.ReadWriteBucket(waddrmgrNamespaceKey)
 	// Handle input scripts that contain P2PKs that we care about.
 	for _, input := range rec.MsgTx.TxIn {
-		if txscript.IsMultisigSigScript(input.SignatureScript) {
-			rs, err := txscript.MultisigRedeemScriptFromScriptSig(input.SignatureScript)
-			if err != nil {
-				return false, err
-			}
+		if (input.PreviousOutPoint.Hash != chainhash.Hash{}) {
+			if txscript.IsMultisigSigScript(input.SignatureScript) {
+				rs, err := txscript.MultisigRedeemScriptFromScriptSig(input.SignatureScript)
+				if err != nil {
+					return false, err
+				}
 
-			class, addrs, _, err := txscript.ExtractPkScriptAddrs(txscript.DefaultScriptVersion, rs, w.chainParams)
-			if err != nil {
-				// Non-standard outputs are skipped.
-				continue
-			}
-			if class != txscript.MultiSigTy {
-				// This should never happen, but be paranoid.
-				continue
-			}
-			for _, addr := range addrs {
-				_, err := w.Manager.Address(addrmgrNs, addr)
+				class, addrs, _, err := txscript.ExtractPkScriptAddrs(txscript.DefaultScriptVersion, rs, w.chainParams)
+				if err != nil {
+					// Non-standard outputs are skipped.
+					continue
+				}
+				if class != txscript.MultiSigTy {
+					// This should never happen, but be paranoid.
+					continue
+				}
+				for _, addr := range addrs {
+					_, err := w.Manager.Address(addrmgrNs, addr)
+					if err == nil {
+						return true, nil
+					} else {
+						// Missing addresses are skipped.  Other errors should
+						// be propagated.
+						if !apperrors.IsError(err, apperrors.ErrAddressNotFound) {
+							return false, err
+						}
+					}
+				}
+			} else {
+				addr, err := txscript.AddressFromScriptSig(input.SignatureScript, w.chainParams)
+				if err != nil {
+					return false, err
+				}
+				_, err = w.Manager.Address(addrmgrNs, addr)
 				if err == nil {
 					return true, nil
 				} else {
@@ -1171,11 +1185,6 @@ func (w *Wallet) IsReleventTransaction(dbtx walletdb.ReadWriteTx, rec *udb.TxRec
 	// Check every output to determine whether it is controlled by a wallet
 	// key.  If so, mark the output as a credit.
 	for _, output := range rec.MsgTx.TxOut {
-		// Ignore unspendable outputs.
-		if output.Value == 0 {
-			continue
-		}
-
 		_, addrs, _, err := txscript.ExtractPkScriptAddrs(output.Version,
 			output.PkScript, w.chainParams)
 		if err != nil {
