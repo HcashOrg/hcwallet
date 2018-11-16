@@ -1327,6 +1327,10 @@ func (w *Wallet) GetWalletSyncHeight() (uint32, *chainhash.Hash, error) {
 		_, height := w.MainChainTip()
 		rescanHeight = uint32(height)
 	}
+	err = w.RollBackOminiTransaction(rescanHeight, nil)
+	if err != nil{
+		return 0, nil, err
+	}
 	//omni record height
 	req := omnilib.Request{
 		Method: "omni_getwaterline",
