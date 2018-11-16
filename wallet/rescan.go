@@ -238,7 +238,7 @@ func (w *Wallet) RescanFromHeight(chainClient *hcrpcclient.Client, startHeight i
 			}
 			omni_height, err := strconv.Atoi(string(response.Result))
 			if(omni_height <= 0){//need scanwallet from 0
-				omni_height = 0
+				omni_height = int(startHeight)
 			}
 			startHeight = int32(omni_height)
 		}
@@ -254,9 +254,6 @@ func (w *Wallet) RescanFromHeight(chainClient *hcrpcclient.Client, startHeight i
 		if err != nil {
 			return err
 		}
-
-
-
 		return w.rescan(chainClient, &startHash, startHeight, nil, nil)
 	}()
 
