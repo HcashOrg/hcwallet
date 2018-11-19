@@ -708,7 +708,7 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 		height = serializedHeader.Height()
 	}
 
-	if w.EnableOmni() && serializedHeader != nil{
+	if w.EnableOmni() && serializedHeader != nil {
 		err := w.ProcessOminiTransaction(rec, blockMeta)
 		if err != nil {
 			return err
@@ -917,8 +917,7 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 				return err
 			}
 
-			class, addrs, _, err := txscript.ExtractPkScriptAddrs(
-				txscript.DefaultScriptVersion, rs, w.chainParams)
+			class, addrs, _, err := txscript.ExtractPkScriptAddrs(txscript.DefaultScriptVersion, rs, w.chainParams)
 			if err != nil {
 				// Non-standard outputs are skipped.
 				continue
@@ -1007,8 +1006,7 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 			continue
 		}
 
-		class, addrs, _, err := txscript.ExtractPkScriptAddrs(output.Version,
-			output.PkScript, w.chainParams)
+		class, addrs, _, err := txscript.ExtractPkScriptAddrs(output.Version, output.PkScript, w.chainParams)
 		if err != nil {
 			// Non-standard outputs are skipped.
 			continue
@@ -1057,8 +1055,7 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 				// Search both the script store in the tx store
 				// and the address manager for the redeem script.
 				var err error
-				expandedScript, err = w.TxStore.GetTxScript(txmgrNs,
-					addr.ScriptAddress())
+				expandedScript, err = w.TxStore.GetTxScript(txmgrNs, addr.ScriptAddress())
 				if err != nil {
 					return err
 				}
@@ -1066,9 +1063,7 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 				if expandedScript == nil {
 					script, done, err := w.Manager.RedeemScript(addrmgrNs, addr)
 					if err != nil {
-						log.Debugf("failed to find redeemscript for "+
-							"address %v in address manager: %v",
-							addr.EncodeAddress(), err)
+						log.Debugf("failed to find redeemscript for "+"address %v in address manager: %v", addr.EncodeAddress(), err)
 						continue
 					}
 					defer done()
@@ -1092,14 +1087,12 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 				_, err := w.Manager.Address(addrmgrNs, maddr)
 				// An address we own; handle accordingly.
 				if err == nil {
-					errStore := w.TxStore.AddMultisigOut(
-						txmgrNs, rec, blockMeta, uint32(i))
+					errStore := w.TxStore.AddMultisigOut(txmgrNs, rec, blockMeta, uint32(i))
 					if errStore != nil {
 						// This will throw if there are multiple private keys
 						// for this multisignature output owned by the wallet,
 						// so it's routed to debug.
-						log.Debugf("unable to add multisignature output: %v",
-							errStore.Error())
+						log.Debugf("unable to add multisignature output: %v", errStore.Error())
 					}
 				}
 			}

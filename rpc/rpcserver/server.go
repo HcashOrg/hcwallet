@@ -166,7 +166,7 @@ type loaderServer struct {
 	ready     uint32 // atomic
 	loader    *loader.Loader
 	activeNet *netparams.Params
-	server *legacyrpc.Server
+	server    *legacyrpc.Server
 	rpcClient *chain.RPCClient
 	mu        sync.Mutex
 }
@@ -911,6 +911,7 @@ func (s *walletServer) GetTransaction(ctx context.Context, req *pb.GetTransactio
 	}
 	return resp, nil
 }
+
 // BUGS:
 // - MinimumRecentTransactions is ignored.
 // - Wrong error codes when a block height or hash is not recognized
@@ -2494,13 +2495,13 @@ func marshalDecodedTxInputs(mtx *wire.MsgTx) []*pb.DecodedTransaction_Input {
 		inputs[i] = &pb.DecodedTransaction_Input{
 			PreviousTransactionHash:  txIn.PreviousOutPoint.Hash[:],
 			PreviousTransactionIndex: txIn.PreviousOutPoint.Index,
-			Tree:                     pb.DecodedTransaction_Input_TreeType(txIn.PreviousOutPoint.Tree),
-			Sequence:                 txIn.Sequence,
-			AmountIn:                 txIn.ValueIn,
-			BlockHeight:              txIn.BlockHeight,
-			BlockIndex:               txIn.BlockIndex,
-			SignatureScript:          txIn.SignatureScript,
-			SignatureScriptAsm:       disbuf,
+			Tree:               pb.DecodedTransaction_Input_TreeType(txIn.PreviousOutPoint.Tree),
+			Sequence:           txIn.Sequence,
+			AmountIn:           txIn.ValueIn,
+			BlockHeight:        txIn.BlockHeight,
+			BlockIndex:         txIn.BlockIndex,
+			SignatureScript:    txIn.SignatureScript,
+			SignatureScriptAsm: disbuf,
 		}
 	}
 
@@ -2617,4 +2618,13 @@ func (s *loaderServer) RescanPoint(ctx context.Context, req *pb.RescanPointReque
 		}, nil
 	}
 	return &pb.RescanPointResponse{RescanPointHash: nil}, nil
+}
+
+func (s *walletServer) BestBlock(ctx context.Context, req *pb.BestBlockRequest) (*pb.BestBlockResponse, error) {
+	hash, height := s.wallet.MainChainTip()
+	resp := &pb.BestBlockResponse{
+		Hash:   hash[:],
+		Height: uint32(height),
+	}
+	return resp, nil
 }

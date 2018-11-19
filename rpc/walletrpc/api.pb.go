@@ -4332,6 +4332,82 @@ func (m *ValidateAddressResponse) GetIsCompressed() bool {
 	return false
 }
 
+type BestBlockRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *BestBlockRequest) Reset()         { *m = BestBlockRequest{} }
+func (m *BestBlockRequest) String() string { return proto.CompactTextString(m) }
+func (*BestBlockRequest) ProtoMessage()    {}
+func (*BestBlockRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{151}
+}
+func (m *BestBlockRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BestBlockRequest.Unmarshal(m, b)
+}
+func (m *BestBlockRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BestBlockRequest.Marshal(b, m, deterministic)
+}
+func (dst *BestBlockRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BestBlockRequest.Merge(dst, src)
+}
+func (m *BestBlockRequest) XXX_Size() int {
+	return xxx_messageInfo_BestBlockRequest.Size(m)
+}
+func (m *BestBlockRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_BestBlockRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BestBlockRequest proto.InternalMessageInfo
+
+type BestBlockResponse struct {
+	Height               uint32   `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	Hash                 []byte   `protobuf:"bytes,2,opt,name=hash,proto3" json:"hash,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *BestBlockResponse) Reset()         { *m = BestBlockResponse{} }
+func (m *BestBlockResponse) String() string { return proto.CompactTextString(m) }
+func (*BestBlockResponse) ProtoMessage()    {}
+func (*BestBlockResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{152}
+}
+func (m *BestBlockResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BestBlockResponse.Unmarshal(m, b)
+}
+func (m *BestBlockResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BestBlockResponse.Marshal(b, m, deterministic)
+}
+func (dst *BestBlockResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BestBlockResponse.Merge(dst, src)
+}
+func (m *BestBlockResponse) XXX_Size() int {
+	return xxx_messageInfo_BestBlockResponse.Size(m)
+}
+func (m *BestBlockResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_BestBlockResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BestBlockResponse proto.InternalMessageInfo
+
+func (m *BestBlockResponse) GetHeight() uint32 {
+	if m != nil {
+		return m.Height
+	}
+	return 0
+}
+
+func (m *BestBlockResponse) GetHash() []byte {
+	if m != nil {
+		return m.Hash
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*VersionRequest)(nil), "walletrpc.VersionRequest")
 	proto.RegisterType((*VersionResponse)(nil), "walletrpc.VersionResponse")
@@ -4470,6 +4546,8 @@ func init() {
 	proto.RegisterType((*DecodeRawTransactionResponse)(nil), "walletrpc.DecodeRawTransactionResponse")
 	proto.RegisterType((*ValidateAddressRequest)(nil), "walletrpc.ValidateAddressRequest")
 	proto.RegisterType((*ValidateAddressResponse)(nil), "walletrpc.ValidateAddressResponse")
+	proto.RegisterType((*BestBlockRequest)(nil), "walletrpc.BestBlockRequest")
+	proto.RegisterType((*BestBlockResponse)(nil), "walletrpc.BestBlockResponse")
 	proto.RegisterEnum("walletrpc.TransactionDetails_TransactionType", TransactionDetails_TransactionType_name, TransactionDetails_TransactionType_value)
 	proto.RegisterEnum("walletrpc.NextAddressRequest_Kind", NextAddressRequest_Kind_name, NextAddressRequest_Kind_value)
 	proto.RegisterEnum("walletrpc.NextAddressRequest_GapPolicy", NextAddressRequest_GapPolicy_name, NextAddressRequest_GapPolicy_value)
@@ -4570,6 +4648,7 @@ type WalletServiceClient interface {
 	TicketPrice(ctx context.Context, in *TicketPriceRequest, opts ...grpc.CallOption) (*TicketPriceResponse, error)
 	StakeInfo(ctx context.Context, in *StakeInfoRequest, opts ...grpc.CallOption) (*StakeInfoResponse, error)
 	BlockInfo(ctx context.Context, in *BlockInfoRequest, opts ...grpc.CallOption) (*BlockInfoResponse, error)
+	BestBlock(ctx context.Context, in *BestBlockRequest, opts ...grpc.CallOption) (*BestBlockResponse, error)
 	// Notifications
 	TransactionNotifications(ctx context.Context, in *TransactionNotificationsRequest, opts ...grpc.CallOption) (WalletService_TransactionNotificationsClient, error)
 	AccountNotifications(ctx context.Context, in *AccountNotificationsRequest, opts ...grpc.CallOption) (WalletService_AccountNotificationsClient, error)
@@ -4741,6 +4820,15 @@ func (c *walletServiceClient) StakeInfo(ctx context.Context, in *StakeInfoReques
 func (c *walletServiceClient) BlockInfo(ctx context.Context, in *BlockInfoRequest, opts ...grpc.CallOption) (*BlockInfoResponse, error) {
 	out := new(BlockInfoResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/BlockInfo", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *walletServiceClient) BestBlock(ctx context.Context, in *BestBlockRequest, opts ...grpc.CallOption) (*BestBlockResponse, error) {
+	out := new(BestBlockResponse)
+	err := c.cc.Invoke(ctx, "/walletrpc.WalletService/BestBlock", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5033,6 +5121,7 @@ type WalletServiceServer interface {
 	TicketPrice(context.Context, *TicketPriceRequest) (*TicketPriceResponse, error)
 	StakeInfo(context.Context, *StakeInfoRequest) (*StakeInfoResponse, error)
 	BlockInfo(context.Context, *BlockInfoRequest) (*BlockInfoResponse, error)
+	BestBlock(context.Context, *BestBlockRequest) (*BestBlockResponse, error)
 	// Notifications
 	TransactionNotifications(*TransactionNotificationsRequest, WalletService_TransactionNotificationsServer) error
 	AccountNotifications(*AccountNotificationsRequest, WalletService_AccountNotificationsServer) error
@@ -5261,6 +5350,24 @@ func _WalletService_BlockInfo_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).BlockInfo(ctx, req.(*BlockInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WalletService_BestBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BestBlockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServiceServer).BestBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/walletrpc.WalletService/BestBlock",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServiceServer).BestBlock(ctx, req.(*BestBlockRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5681,6 +5788,10 @@ var _WalletService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BlockInfo",
 			Handler:    _WalletService_BlockInfo_Handler,
+		},
+		{
+			MethodName: "BestBlock",
+			Handler:    _WalletService_BestBlock_Handler,
 		},
 		{
 			MethodName: "ChangePassphrase",

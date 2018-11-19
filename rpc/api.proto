@@ -29,6 +29,7 @@ service WalletService {
 	rpc TicketPrice (TicketPriceRequest) returns (TicketPriceResponse);
 	rpc StakeInfo (StakeInfoRequest) returns (StakeInfoResponse);
 	rpc BlockInfo (BlockInfoRequest) returns (BlockInfoResponse);
+	rpc BestBlock (BestBlockRequest) returns (BestBlockResponse);
 
 	// Notifications
 	rpc TransactionNotifications (TransactionNotificationsRequest) returns (stream TransactionNotificationsResponse);
@@ -853,4 +854,12 @@ message ValidateAddressResponse {
 	bytes pay_to_addr_script = 9;
 	uint32 sigs_required = 10;
     bool is_compressed = 11;
+}
+
+message BestBlockRequest {
+}
+
+message BestBlockResponse {
+	uint32 height = 1;
+	bytes hash = 2;
 }

@@ -2179,9 +2179,9 @@ func redeemMultiSigOuts(icmd interface{}, w *wallet.Wallet, chainClient *hcrpccl
 // until the rescan completes or exits with an error.
 func rescanWallet(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
 	cmd := icmd.(*hcjson.RescanWalletCmd)
-//	if *cmd.BeginHeight != 0 {
-//		return nil, fmt.Errorf("not support sync from height != 0")
-//	}
+	//	if *cmd.BeginHeight != 0 {
+	//		return nil, fmt.Errorf("not support sync from height != 0")
+	//	}
 	err := <-w.RescanFromHeight(chainClient, int32(*cmd.BeginHeight))
 	return nil, err
 }
