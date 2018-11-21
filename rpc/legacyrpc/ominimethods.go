@@ -14,16 +14,16 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/HcashOrg/hcd/chaincfg/chainhash"
 	"github.com/HcashOrg/hcd/hcjson"
 	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/omnilib"
 	"github.com/HcashOrg/hcwallet/wallet"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
-	"github.com/HcashOrg/hcd/chaincfg/chainhash"
-	"github.com/HcashOrg/hcd/txscript"
 )
 
 const (
@@ -116,8 +116,7 @@ func getOminiMethod() map[string]LegacyRpcHandler {
 		"omni_getfeedistributions":               {handler: OmniGetfeedistributions},
 		"omni_setautocommit":                     {handler: OmniSetautocommit},
 		"omni_rollback":                          {handler: OmniRollBack},
-		"omni_getblockinfo":                     {handler: OmniGetBlockInfo},
-
+		"omni_getblockinfo":                      {handler: OmniGetBlockInfo},
 	}
 }
 
@@ -249,8 +248,8 @@ func OmniSendchangeissuer(icmd interface{}, w *wallet.Wallet) (interface{}, erro
 	if err != nil {
 		return nil, err
 	}
-	acc_type := addr.DSA(w.ChainParams())
-	if acc_type == 4{
+	accType := addr.DSA(w.ChainParams())
+	if accType == 4 {
 		account = 1
 	}
 	_, err = decodeAddress(omniSendchangeissuerCmd.Toaddress, w.ChainParams())
@@ -454,9 +453,9 @@ func omniSend(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 	marshalledJSON, err := hcjson.MarshalCmd(1, newCmd)
 	if err != nil {
+		log.Errorf("omni send error %v", err)
 		return nil, err
 	}
-	fmt.Println(string(marshalledJSON))
 	//construct omni variables
 	omnilib.JsonCmdReqHcToOm(string(marshalledJSON))
 	return final, err
@@ -481,15 +480,13 @@ func omniSendToAddress(cmd *SendFromAddressToAddress, w *wallet.Wallet, payLoad 
 		}
 	}
 
-	account := uint32(udb.DefaultAccountNum)
-
 	addr, err := decodeAddress(cmd.FromAddress, w.ChainParams())
 	if err != nil {
 		return "", err
 	}
-	acc_type := addr.DSA(w.ChainParams())
-	if acc_type == 4{
-		account = 1
+	account := uint32(udb.DefaultAccountNum)
+	if addr.DSA(w.ChainParams()) == 4 {
+		account = udb.DefaultBlissAccountNum
 	}
 	_, err = decodeAddress(cmd.ToAddress, w.ChainParams())
 	if err != nil {
@@ -510,8 +507,7 @@ func omniSendToAddress(cmd *SendFromAddressToAddress, w *wallet.Wallet, payLoad 
 // OmniGetwalletbalances Returns a list of the total token balances of the whole wallet.
 // $ omnicore-cli "omni_getwalletbalances"
 func OmniGetwalletbalances(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	account := uint32(udb.DefaultAccountNum)
-	addresses, err := w.FetchAddressesByAccount(account)
+	addresses, err := getWalletAddress(w)
 	if err != nil {
 		return nil, err
 	}
@@ -539,8 +535,7 @@ func OmniGetwalletbalances(icmd interface{}, w *wallet.Wallet) (interface{}, err
 // OmniGetwalletaddressbalances Returns a list of all token balances for every wallet address.
 // $ omnicore-cli "omni_getwalletaddressbalances"
 func OmniGetwalletaddressbalances(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	account := uint32(udb.DefaultAccountNum)
-	addresses, err := w.FetchAddressesByAccount(account)
+	addresses, err := getWalletAddress(w)
 	if err != nil {
 		return nil, err
 	}
@@ -569,8 +564,7 @@ func OmniGetwalletaddressbalances(icmd interface{}, w *wallet.Wallet) (interface
 // $ omnicore-cli "omni_listblocktransactions" 279007
 func OmniListblocktransactions(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	omniListblocktransactionsCmd := icmd.(*hcjson.OmniListblocktransactionsCmd)
-	account := uint32(udb.DefaultAccountNum)
-	addresses, err := w.FetchAddressesByAccount(account)
+	addresses, err := getWalletAddress(w)
 	if err != nil {
 		return nil, err
 	}
@@ -599,16 +593,15 @@ func OmniListblocktransactions(icmd interface{}, w *wallet.Wallet) (interface{},
 // $ omnicore-cli "omni_listpendingtransactions"
 func OmniListpendingtransactions(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	omniListpendingtransactionsCmd := icmd.(*hcjson.OmniListpendingtransactionsCmd)
-	account := uint32(udb.DefaultAccountNum)
 	var addresses []string
 	if omniListpendingtransactionsCmd.Address != nil {
 		addresses = append(addresses, *omniListpendingtransactionsCmd.Address)
 	} else {
-		addresses1, err := w.FetchAddressesByAccount(account)
+		var err error
+		addresses, err = getWalletAddress(w)
 		if err != nil {
 			return nil, err
 		}
-		addresses = addresses1
 	}
 
 	req := omnilib.Request{
@@ -645,7 +638,10 @@ func sendPairsWithPayLoad(w *wallet.Wallet, amounts map[string]hcutil.Amount, ac
 	}
 
 	outputs = append(outputs, payloadNullDataOutput)
-
+	account, err = detechAccount(w, fromAddress)
+	if err != nil {
+		return "", err
+	}
 	txSha, err := w.SendOutputs(outputs, account, minconf, changeAddr, fromAddress)
 	if err != nil {
 		if err == txrules.ErrAmountNegative {
@@ -724,7 +720,7 @@ func OmniSenddexsell(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		FromAddress:   omniSenddexsellCmd.Fromaddress,
 		ChangeAddress: omniSenddexsellCmd.Fromaddress,
 		ToAddress:     omniSenddexsellCmd.Fromaddress,
-		Amount:       MininumAmount,
+		Amount:        MininumAmount,
 	}
 	txid, err := omniSendToAddress(cmd, w, payLoad)
 	if err != nil {
@@ -773,7 +769,7 @@ func OmniSenddexaccept(icmd interface{}, w *wallet.Wallet) (interface{}, error) 
 		FromAddress:   omniSenddexacceptCmd.Fromaddress,
 		ChangeAddress: omniSenddexacceptCmd.Fromaddress,
 		ToAddress:     omniSenddexacceptCmd.Toaddress,
-		Amount:        MininumAmount,  // > Minacceptfee
+		Amount:        MininumAmount, // > Minacceptfee
 	}
 	txid, err := omniSendToAddress(cmd, w, payLoad)
 	if err != nil {
@@ -787,9 +783,6 @@ func OmniSenddexaccept(icmd interface{}, w *wallet.Wallet) (interface{}, error) 
 // OmniSendissuancecrowdsale Create new tokens as crowdsale.
 // $ omnicore-cli "omni_sendissuancecrowdsale" \     "3JYd75REX3HXn1vAU83YuGfmiPXW7BpYXo" 2 1 0 "Companies" "Bitcoin Mining" \     "Quantum Miner" "" "" 2 "100" 1483228800 30 2
 func OmniSendissuancecrowdsale(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	//_ = icmd.(*hcjson.OmniSendissuancecrowdsaleCmd)
-	//return omni_cmdReq(icmd, w)
-
 	txIdBytes, err := omni_cmdReq(icmd, w)
 	omniSendissuancecrowdsaleCmd := icmd.(*hcjson.OmniSendissuancecrowdsaleCmd)
 	if err != nil {
@@ -832,8 +825,6 @@ func OmniSendissuancefixed(icmd interface{}, w *wallet.Wallet) (interface{}, err
 // OmniSendissuancemanaged Create new tokens with manageable supply.
 // $ omnicore-cli "omni_sendissuancemanaged" \     "3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH" 2 1 0 "Companies" "Bitcoin Mining" "Quantum Miner" "" ""
 func OmniSendissuancemanaged(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	//_ = icmd.(*hcjson.OmniSendissuancemanagedCmd)
-	//return omni_cmdReq(icmd, w)
 	txIdBytes, err := omni_cmdReq(icmd, w)
 	sendIssueCmd := icmd.(*hcjson.OmniSendissuancemanagedCmd)
 	if err != nil {
@@ -1416,7 +1407,7 @@ func OmniCreaterawtxInput(icmd interface{}, w *wallet.Wallet) (interface{}, erro
 	if err != nil {
 		return nil, err
 	}
-	if len(serializedTx) >0{
+	if len(serializedTx) > 0 {
 		err = tx.Deserialize(bytes.NewBuffer(serializedTx))
 		if err != nil {
 			e := errors.New("TX decode failed")
@@ -1453,7 +1444,7 @@ func OmniCreaterawtxReference(icmd interface{}, w *wallet.Wallet) (interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	if len(serializedTx) >0{
+	if len(serializedTx) > 0 {
 		err = tx.Deserialize(bytes.NewBuffer(serializedTx))
 		if err != nil {
 			e := errors.New("TX decode failed")
@@ -1470,7 +1461,7 @@ func OmniCreaterawtxReference(icmd interface{}, w *wallet.Wallet) (interface{}, 
 		return nil, fmt.Errorf("cannot create txout script: %s", err)
 	}
 	var amount int64 = MininumAmount
-	if cmd.Amount != nil{
+	if cmd.Amount != nil {
 		amount = *cmd.Amount
 	}
 	tx.AddTxOut(wire.NewTxOut(amount, pkScript))
@@ -1493,7 +1484,7 @@ func OmniCreaterawtxChange(icmd interface{}, w *wallet.Wallet) (interface{}, err
 	if err != nil {
 		return nil, err
 	}
-	if len(serializedTx) >0{
+	if len(serializedTx) > 0 {
 		err = tx.Deserialize(bytes.NewBuffer(serializedTx))
 		if err != nil {
 			e := errors.New("TX decode failed")
@@ -1504,7 +1495,7 @@ func OmniCreaterawtxChange(icmd interface{}, w *wallet.Wallet) (interface{}, err
 	var prevTxs hcjson.OmniPrevtxs
 	err = json.Unmarshal([]byte(cmd.Prevtxs), &prevTxs)
 	fmt.Printf("prevTxs:%#v", prevTxs)
-	for _, item := range prevTxs.Prevtxs{
+	for _, item := range prevTxs.Prevtxs {
 		// Add all transaction inputs to a new transaction after performing
 		// some validity checks.
 		txHash, err := chainhash.NewHashFromStr(item.Txid)
@@ -1708,4 +1699,38 @@ func OmniGetfeedistributions(icmd interface{}, w *wallet.Wallet) (interface{}, e
 func OmniSetautocommit(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	_ = icmd.(*hcjson.OmniSetautocommitCmd)
 	return omni_cmdReq(icmd, w)
+}
+
+// detechAccount indicate the address is default or bliss
+func detechAccount(w *wallet.Wallet, addrStr string) (uint32, error) {
+	addr, err := hcutil.DecodeAddress(addrStr)
+	if err != nil {
+		return 0, nil
+	}
+	account := 0
+	acc_type := addr.DSA(w.ChainParams())
+	if acc_type == 4 {
+		account = 1
+	}
+	return uint32(account), nil
+}
+
+// getWalletAddress return all addresses in wallet
+func getWalletAddress(w *wallet.Wallet) ([]string, error) {
+	//get default addresses
+	account := uint32(udb.DefaultAccountNum)
+	addresses, err := w.FetchAddressesByAccount(account)
+	if err != nil {
+		return nil, err
+	}
+
+	//get bliss addresses
+	blissAccount := uint32(udb.DefaultBlissAccountNum)
+	blissAddresses, err := w.FetchAddressesByAccount(blissAccount)
+	if err != nil {
+		return nil, err
+	}
+
+	addresses = append(addresses, blissAddresses...)
+	return addresses, nil
 }
