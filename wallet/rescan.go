@@ -47,19 +47,18 @@ func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 	rescanFrom := *startHash
 	inclusive := true
 
-	mutexOnlyOneChan.Lock()
 	indexScanning++
 	index := indexScanning
+	mutexOnlyOneChan.Lock()
 	isScanning = true
-	mutexOnlyOneChan.Unlock()
 
 	defer func() {
-		mutexOnlyOneChan.Lock()
 		if indexScanning == index{
 			isScanning = false
 		}
 		mutexOnlyOneChan.Unlock()
 	}()
+
 	for {
 		select {
 		case <-cancel:
@@ -67,12 +66,9 @@ func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 		default:
 		}
 
-		mutexOnlyOneChan.Lock()
 		if indexScanning != index{
-			mutexOnlyOneChan.Unlock()
 			return nil
 		}
-		mutexOnlyOneChan.Unlock()
 
 		var rescanBlocks []chainhash.Hash
 		err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
@@ -143,7 +139,6 @@ func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 		if err != nil {
 			return err
 		}
-		mutexOnlyOneChan.Lock()
 		err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
 			return w.TxStore.UpdateProcessedTxsBlockMarker(dbtx, &rescanBlocks[len(rescanBlocks)-1])
 		})
@@ -153,7 +148,6 @@ func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Ha
 		if p != nil {
 			p <- RescanProgress{ScannedThrough: scanningThrough}
 		}
-		mutexOnlyOneChan.Unlock()
 		rescanFrom = rescanBlocks[len(rescanBlocks)-1]
 		height += int32(len(rescanBlocks))
 		inclusive = false
