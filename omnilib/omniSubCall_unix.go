@@ -29,8 +29,8 @@ func LoadLibAndInit() {
 	C.CLoadLibAndInit()
 }
 
-func OmniStart(strArgs string) {
-	C.COmniStart(C.CString(strArgs))
+func OmniStart(strArgs string, strArgs1 string) {
+	C.COmniStart(C.CString(strArgs), C.CString(strArgs1))
 }
 
 

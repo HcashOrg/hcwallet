@@ -2,10 +2,10 @@ package omnilib
 
 
 
-func OmniCommunicate(netName string) {
+func OmniCommunicate(netName, dataDir string) {
 	//add by ycj 20180915
 	LoadLibAndInit()
-	OmniStart(netName)
+	OmniStart(netName, dataDir)
 
 	//time.Sleep(time.Second * 2)
 	/*

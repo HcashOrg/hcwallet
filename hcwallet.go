@@ -178,9 +178,8 @@ func walletMain() error {
 	} else if cfg.SimNet {
 		netName = "regtest"
 	}
-
 	if cfg.EnableOmni {
-		omnilib.OmniCommunicate(netName)
+		omnilib.OmniCommunicate(netName, cfg.AppDataDir.Value)
 	}
 
 	// Create and start HTTP server to serve wallet client connections.

@@ -7,7 +7,7 @@
 #include <windows.h>
 
 typedef const char* (WINAPI *FunJsonCmdReq)(char *);
-typedef int (WINAPI *FunOmniStart)(char *);
+typedef int (WINAPI *FunOmniStart)(char *, char*);
 typedef int (WINAPI *FunSetCallback)(unsigned int,void *);
 
 FunOmniStart    funOmniStart = NULL; //
@@ -42,11 +42,11 @@ void CLoadLibAndInit()
     return;
 }
 
-int COmniStart(char *pcArgs)
+int COmniStart(char *pcArgs, char *pcArgs1)
 {
     if(funOmniStart==NULL)
         return -1;
-    return funOmniStart(pcArgs);
+    return funOmniStart(pcArgs, pcArgs1);
 }
 
 const char* CJsonCmdReq(char *pcReq)
@@ -65,15 +65,15 @@ int CSetCallback(int iIndex,void* pCallback)
 };
 
 #else //for linux etc
-extern int OmniStart(char *pcArgs);
+extern int OmniStart(char *pcArgs, char *pcArgs1);
 extern const char* JsonCmdReq(char *pcReq);
 void CLoadLibAndInit()
 {
     return;
 }
-int COmniStart(char *pcArgs)
+int COmniStart(char *pcArgs, char *pcArgs1)
 {
-    return OmniStart(pcArgs);
+    return OmniStart(pcArgs, pcArgs1);
 }
 const char* CJsonCmdReq(char *pcReq)
 {
