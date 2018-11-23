@@ -43,6 +43,9 @@ func (w *Wallet) IsScanning() bool{
 func (w *Wallet) rescan(chainClient *hcrpcclient.Client, startHash *chainhash.Hash, height int32,
 	p chan<- RescanProgress, cancel <-chan struct{}) error {
 
+	if p == nil && isScanning{
+		return nil
+	}
 	blockHashStorage := make([]chainhash.Hash, maxBlocksPerRescan)
 	rescanFrom := *startHash
 	inclusive := true
