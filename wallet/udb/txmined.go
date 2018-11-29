@@ -1368,6 +1368,8 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 	if block == nil {
 		// Unmined tx must have been already added for the credit to be added.
 		if existsRawUnmined(ns, rec.Hash[:]) == nil {
+			//fmt.Println(rec.Hash.String())
+			return false, nil
 			panic("attempted to add credit for unmined tx, but unmined tx with same hash does not exist")
 		}
 
