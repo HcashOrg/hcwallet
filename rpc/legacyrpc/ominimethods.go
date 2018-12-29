@@ -117,6 +117,8 @@ func getOminiMethod() map[string]LegacyRpcHandler {
 		"omni_setautocommit":                     {handler: OmniSetautocommit},
 		"omni_rollback":                          {handler: OmniRollBack},
 		"omni_getblockinfo":                      {handler: OmniGetBlockInfo},
+		"omni_createagreement":                   {handler: OmniCreateAgreement},
+		"omni_sendagreement":                   {handler: OmniSendAgreement},
 	}
 }
 
@@ -130,6 +132,37 @@ func OmniRollBack(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 func OmniGetBlockInfo(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	//cmd := icmd.(*hcjson.OmniGetBlockInfoCmd)
 	return omni_cmdReq(icmd, w)
+}
+
+func OmniCreateAgreement(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	return omni_cmdReq(icmd, w)
+}
+
+func OmniSendAgreement(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	txIdBytes, err := omni_cmdReq(icmd, w)
+	cmd := icmd.(*hcjson.OmniSendAgreementCmd)
+	if err != nil {
+		return nil, err
+	}
+
+	txidStr := ""
+	err = json.Unmarshal(txIdBytes, &txidStr)
+	if err != nil {
+		return nil, err
+	}
+
+	payLoad, err := hex.DecodeString(txidStr)
+	if err != nil {
+		return nil, err
+	}
+
+	sendParams := &SendFromAddressToAddress{
+		FromAddress:   cmd.FromAddress,
+		ToAddress:     cmd.ToAddress,
+		ChangeAddress: cmd.FromAddress,
+		Amount:        1,
+	}
+	return omniSendToAddress(sendParams, w, payLoad)
 }
 
 //add by ycj 20180915
