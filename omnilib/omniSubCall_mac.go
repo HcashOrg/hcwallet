@@ -6,7 +6,7 @@ package omnilib
 // #include <stdlib.h>
 // #include "./omniproxy.h"
 // #cgo CFLAGS: -I./
-//#cgo LDFLAGS:-L./ -lomnicored -lbitcoin_server -lbitcoin_common -lunivalue -lbitcoin_util -lbitcoin_wallet  -lbitcoin_consensus -lbitcoin_crypto -lleveldb -lmemenv -lsecp256k1 /usr/local/lib/libboost_system.a /usr/local/lib/libboost_filesystem.a /usr/local/lib/libboost_program_options.a /usr/local/lib/libboost_thread-mt.a /usr/local/lib/libboost_chrono.a /usr/local/lib/libdb_cxx.a /usr/local/Cellar/openssl/1.0.2p/lib/libssl.a /usr/local/Cellar/openssl/1.0.2p/lib/libcrypto.a  /usr/local/lib/libevent_pthreads.a /usr/local/lib/libevent.a -lm -ldl -lstdc++
+//#cgo LDFLAGS:-L./ -lomnicored -lbitcoin_server -lbitcoin_common -lunivalue -lbitcoin_util -lbitcoin_wallet  -lbitcoin_consensus -lbitcoin_crypto -lleveldb -lmemenv -lsecp256k1 /usr/local/lib/libboost_system.a /usr/local/lib/libboost_filesystem.a /usr/local/lib/libboost_program_options.a /usr/local/lib/libboost_thread-mt.a /usr/local/lib/libboost_chrono.a /usr/local/lib/libboost_iostreams.a /usr/local/lib/libdb_cxx.a /usr/local/Cellar/openssl/1.0.2p/lib/libssl.a /usr/local/Cellar/openssl/1.0.2p/lib/libcrypto.a  /usr/local/lib/libevent_pthreads.a /usr/local/lib/libevent.a -lm -ldl -lstdc++
 import "C"
 import (
 	"unsafe"
