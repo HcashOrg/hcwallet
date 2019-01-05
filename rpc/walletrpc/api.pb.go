@@ -2580,6 +2580,181 @@ func (m *SignMessageResponse) GetSignature() []byte {
 	return nil
 }
 
+type SignMessagesRequest struct {
+	Passphrase           []byte                         `protobuf:"bytes,1,opt,name=passphrase,proto3" json:"passphrase,omitempty"`
+	Messages             []*SignMessagesRequest_Message `protobuf:"bytes,2,rep,name=messages,proto3" json:"messages,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                       `json:"-"`
+	XXX_unrecognized     []byte                         `json:"-"`
+	XXX_sizecache        int32                          `json:"-"`
+}
+
+func (m *SignMessagesRequest) Reset()         { *m = SignMessagesRequest{} }
+func (m *SignMessagesRequest) String() string { return proto.CompactTextString(m) }
+func (*SignMessagesRequest) ProtoMessage()    {}
+func (*SignMessagesRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{66}
+}
+func (m *SignMessagesRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SignMessagesRequest.Unmarshal(m, b)
+}
+func (m *SignMessagesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SignMessagesRequest.Marshal(b, m, deterministic)
+}
+func (dst *SignMessagesRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignMessagesRequest.Merge(dst, src)
+}
+func (m *SignMessagesRequest) XXX_Size() int {
+	return xxx_messageInfo_SignMessagesRequest.Size(m)
+}
+func (m *SignMessagesRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_SignMessagesRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SignMessagesRequest proto.InternalMessageInfo
+
+func (m *SignMessagesRequest) GetPassphrase() []byte {
+	if m != nil {
+		return m.Passphrase
+	}
+	return nil
+}
+
+func (m *SignMessagesRequest) GetMessages() []*SignMessagesRequest_Message {
+	if m != nil {
+		return m.Messages
+	}
+	return nil
+}
+
+type SignMessagesRequest_Message struct {
+	Address              string   `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	Message              string   `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *SignMessagesRequest_Message) Reset()         { *m = SignMessagesRequest_Message{} }
+func (m *SignMessagesRequest_Message) String() string { return proto.CompactTextString(m) }
+func (*SignMessagesRequest_Message) ProtoMessage()    {}
+func (*SignMessagesRequest_Message) Descriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{66, 0}
+}
+func (m *SignMessagesRequest_Message) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SignMessagesRequest_Message.Unmarshal(m, b)
+}
+func (m *SignMessagesRequest_Message) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SignMessagesRequest_Message.Marshal(b, m, deterministic)
+}
+func (dst *SignMessagesRequest_Message) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignMessagesRequest_Message.Merge(dst, src)
+}
+func (m *SignMessagesRequest_Message) XXX_Size() int {
+	return xxx_messageInfo_SignMessagesRequest_Message.Size(m)
+}
+func (m *SignMessagesRequest_Message) XXX_DiscardUnknown() {
+	xxx_messageInfo_SignMessagesRequest_Message.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SignMessagesRequest_Message proto.InternalMessageInfo
+
+func (m *SignMessagesRequest_Message) GetAddress() string {
+	if m != nil {
+		return m.Address
+	}
+	return ""
+}
+
+func (m *SignMessagesRequest_Message) GetMessage() string {
+	if m != nil {
+		return m.Message
+	}
+	return ""
+}
+
+type SignMessagesResponse struct {
+	Replies              []*SignMessagesResponse_SignReply `protobuf:"bytes,1,rep,name=replies,proto3" json:"replies,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                          `json:"-"`
+	XXX_unrecognized     []byte                            `json:"-"`
+	XXX_sizecache        int32                             `json:"-"`
+}
+
+func (m *SignMessagesResponse) Reset()         { *m = SignMessagesResponse{} }
+func (m *SignMessagesResponse) String() string { return proto.CompactTextString(m) }
+func (*SignMessagesResponse) ProtoMessage()    {}
+func (*SignMessagesResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{67}
+}
+func (m *SignMessagesResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SignMessagesResponse.Unmarshal(m, b)
+}
+func (m *SignMessagesResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SignMessagesResponse.Marshal(b, m, deterministic)
+}
+func (dst *SignMessagesResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignMessagesResponse.Merge(dst, src)
+}
+func (m *SignMessagesResponse) XXX_Size() int {
+	return xxx_messageInfo_SignMessagesResponse.Size(m)
+}
+func (m *SignMessagesResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_SignMessagesResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SignMessagesResponse proto.InternalMessageInfo
+
+func (m *SignMessagesResponse) GetReplies() []*SignMessagesResponse_SignReply {
+	if m != nil {
+		return m.Replies
+	}
+	return nil
+}
+
+type SignMessagesResponse_SignReply struct {
+	Signature            []byte   `protobuf:"bytes,1,opt,name=signature,proto3" json:"signature,omitempty"`
+	Error                string   `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *SignMessagesResponse_SignReply) Reset()         { *m = SignMessagesResponse_SignReply{} }
+func (m *SignMessagesResponse_SignReply) String() string { return proto.CompactTextString(m) }
+func (*SignMessagesResponse_SignReply) ProtoMessage()    {}
+func (*SignMessagesResponse_SignReply) Descriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{67, 0}
+}
+func (m *SignMessagesResponse_SignReply) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SignMessagesResponse_SignReply.Unmarshal(m, b)
+}
+func (m *SignMessagesResponse_SignReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SignMessagesResponse_SignReply.Marshal(b, m, deterministic)
+}
+func (dst *SignMessagesResponse_SignReply) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignMessagesResponse_SignReply.Merge(dst, src)
+}
+func (m *SignMessagesResponse_SignReply) XXX_Size() int {
+	return xxx_messageInfo_SignMessagesResponse_SignReply.Size(m)
+}
+func (m *SignMessagesResponse_SignReply) XXX_DiscardUnknown() {
+	xxx_messageInfo_SignMessagesResponse_SignReply.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SignMessagesResponse_SignReply proto.InternalMessageInfo
+
+func (m *SignMessagesResponse_SignReply) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+func (m *SignMessagesResponse_SignReply) GetError() string {
+	if m != nil {
+		return m.Error
+	}
+	return ""
+}
 type TransactionNotificationsRequest struct {
 }
 
@@ -4408,6 +4583,131 @@ func (m *BestBlockResponse) GetHash() []byte {
 	return nil
 }
 
+
+type CommittedTicketsRequest struct {
+	Tickets              [][]byte `protobuf:"bytes,1,rep,name=tickets,proto3" json:"tickets,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CommittedTicketsRequest) Reset()         { *m = CommittedTicketsRequest{} }
+func (m *CommittedTicketsRequest) String() string { return proto.CompactTextString(m) }
+func (*CommittedTicketsRequest) ProtoMessage()    {}
+func (*CommittedTicketsRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{147}
+}
+func (m *CommittedTicketsRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CommittedTicketsRequest.Unmarshal(m, b)
+}
+func (m *CommittedTicketsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CommittedTicketsRequest.Marshal(b, m, deterministic)
+}
+func (dst *CommittedTicketsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CommittedTicketsRequest.Merge(dst, src)
+}
+func (m *CommittedTicketsRequest) XXX_Size() int {
+	return xxx_messageInfo_CommittedTicketsRequest.Size(m)
+}
+func (m *CommittedTicketsRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_CommittedTicketsRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CommittedTicketsRequest proto.InternalMessageInfo
+
+func (m *CommittedTicketsRequest) GetTickets() [][]byte {
+	if m != nil {
+		return m.Tickets
+	}
+	return nil
+}
+
+type CommittedTicketsResponse struct {
+	TicketAddresses      []*CommittedTicketsResponse_TicketAddress `protobuf:"bytes,1,rep,name=ticketAddresses,proto3" json:"ticketAddresses,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                  `json:"-"`
+	XXX_unrecognized     []byte                                    `json:"-"`
+	XXX_sizecache        int32                                     `json:"-"`
+}
+
+func (m *CommittedTicketsResponse) Reset()         { *m = CommittedTicketsResponse{} }
+func (m *CommittedTicketsResponse) String() string { return proto.CompactTextString(m) }
+func (*CommittedTicketsResponse) ProtoMessage()    {}
+func (*CommittedTicketsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{150}
+}
+func (m *CommittedTicketsResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CommittedTicketsResponse.Unmarshal(m, b)
+}
+func (m *CommittedTicketsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CommittedTicketsResponse.Marshal(b, m, deterministic)
+}
+func (dst *CommittedTicketsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CommittedTicketsResponse.Merge(dst, src)
+}
+func (m *CommittedTicketsResponse) XXX_Size() int {
+	return xxx_messageInfo_CommittedTicketsResponse.Size(m)
+}
+func (m *CommittedTicketsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_CommittedTicketsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CommittedTicketsResponse proto.InternalMessageInfo
+
+func (m *CommittedTicketsResponse) GetTicketAddresses() []*CommittedTicketsResponse_TicketAddress {
+	if m != nil {
+		return m.TicketAddresses
+	}
+	return nil
+}
+
+type CommittedTicketsResponse_TicketAddress struct {
+	Ticket               []byte   `protobuf:"bytes,1,opt,name=ticket,proto3" json:"ticket,omitempty"`
+	Address              string   `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CommittedTicketsResponse_TicketAddress) Reset() {
+	*m = CommittedTicketsResponse_TicketAddress{}
+}
+func (m *CommittedTicketsResponse_TicketAddress) String() string { return proto.CompactTextString(m) }
+func (*CommittedTicketsResponse_TicketAddress) ProtoMessage()    {}
+func (*CommittedTicketsResponse_TicketAddress) Descriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{150, 0}
+}
+func (m *CommittedTicketsResponse_TicketAddress) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CommittedTicketsResponse_TicketAddress.Unmarshal(m, b)
+}
+func (m *CommittedTicketsResponse_TicketAddress) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CommittedTicketsResponse_TicketAddress.Marshal(b, m, deterministic)
+}
+func (dst *CommittedTicketsResponse_TicketAddress) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CommittedTicketsResponse_TicketAddress.Merge(dst, src)
+}
+func (m *CommittedTicketsResponse_TicketAddress) XXX_Size() int {
+	return xxx_messageInfo_CommittedTicketsResponse_TicketAddress.Size(m)
+}
+func (m *CommittedTicketsResponse_TicketAddress) XXX_DiscardUnknown() {
+	xxx_messageInfo_CommittedTicketsResponse_TicketAddress.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CommittedTicketsResponse_TicketAddress proto.InternalMessageInfo
+
+func (m *CommittedTicketsResponse_TicketAddress) GetTicket() []byte {
+	if m != nil {
+		return m.Ticket
+	}
+	return nil
+}
+
+func (m *CommittedTicketsResponse_TicketAddress) GetAddress() string {
+	if m != nil {
+		return m.Address
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterType((*VersionRequest)(nil), "walletrpc.VersionRequest")
 	proto.RegisterType((*VersionResponse)(nil), "walletrpc.VersionResponse")
@@ -4476,6 +4776,10 @@ func init() {
 	proto.RegisterType((*LoadActiveDataFiltersResponse)(nil), "walletrpc.LoadActiveDataFiltersResponse")
 	proto.RegisterType((*SignMessageRequest)(nil), "walletrpc.SignMessageRequest")
 	proto.RegisterType((*SignMessageResponse)(nil), "walletrpc.SignMessageResponse")
+	proto.RegisterType((*SignMessagesRequest)(nil), "walletrpc.SignMessagesRequest")
+	proto.RegisterType((*SignMessagesRequest_Message)(nil), "walletrpc.SignMessagesRequest.Message")
+	proto.RegisterType((*SignMessagesResponse)(nil), "walletrpc.SignMessagesResponse")
+	proto.RegisterType((*SignMessagesResponse_SignReply)(nil), "walletrpc.SignMessagesResponse.SignReply")
 	proto.RegisterType((*TransactionNotificationsRequest)(nil), "walletrpc.TransactionNotificationsRequest")
 	proto.RegisterType((*TransactionNotificationsResponse)(nil), "walletrpc.TransactionNotificationsResponse")
 	proto.RegisterType((*AccountNotificationsRequest)(nil), "walletrpc.AccountNotificationsRequest")
@@ -4548,6 +4852,9 @@ func init() {
 	proto.RegisterType((*ValidateAddressResponse)(nil), "walletrpc.ValidateAddressResponse")
 	proto.RegisterType((*BestBlockRequest)(nil), "walletrpc.BestBlockRequest")
 	proto.RegisterType((*BestBlockResponse)(nil), "walletrpc.BestBlockResponse")
+	proto.RegisterType((*CommittedTicketsRequest)(nil), "walletrpc.CommittedTicketsRequest")
+	proto.RegisterType((*CommittedTicketsResponse)(nil), "walletrpc.CommittedTicketsResponse")
+	proto.RegisterType((*CommittedTicketsResponse_TicketAddress)(nil), "walletrpc.CommittedTicketsResponse.TicketAddress")
 	proto.RegisterEnum("walletrpc.TransactionDetails_TransactionType", TransactionDetails_TransactionType_name, TransactionDetails_TransactionType_value)
 	proto.RegisterEnum("walletrpc.NextAddressRequest_Kind", NextAddressRequest_Kind_name, NextAddressRequest_Kind_value)
 	proto.RegisterEnum("walletrpc.NextAddressRequest_GapPolicy", NextAddressRequest_GapPolicy_name, NextAddressRequest_GapPolicy_value)
@@ -4670,6 +4977,8 @@ type WalletServiceClient interface {
 	RevokeTickets(ctx context.Context, in *RevokeTicketsRequest, opts ...grpc.CallOption) (*RevokeTicketsResponse, error)
 	LoadActiveDataFilters(ctx context.Context, in *LoadActiveDataFiltersRequest, opts ...grpc.CallOption) (*LoadActiveDataFiltersResponse, error)
 	SignMessage(ctx context.Context, in *SignMessageRequest, opts ...grpc.CallOption) (*SignMessageResponse, error)
+	SignMessages(ctx context.Context, in *SignMessagesRequest, opts ...grpc.CallOption) (*SignMessagesResponse, error)
+	CommittedTickets(ctx context.Context, in *CommittedTicketsRequest, opts ...grpc.CallOption) (*CommittedTicketsResponse, error)
 	ValidateAddress(ctx context.Context, in *ValidateAddressRequest, opts ...grpc.CallOption) (*ValidateAddressResponse, error)
 }
 
@@ -5097,9 +5406,26 @@ func (c *walletServiceClient) SignMessage(ctx context.Context, in *SignMessageRe
 	return out, nil
 }
 
+func (c *walletServiceClient) SignMessages(ctx context.Context, in *SignMessagesRequest, opts ...grpc.CallOption) (*SignMessagesResponse, error) {
+	out := new(SignMessagesResponse)
+	err := c.cc.Invoke(ctx, "/walletrpc.WalletService/SignMessages", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
 func (c *walletServiceClient) ValidateAddress(ctx context.Context, in *ValidateAddressRequest, opts ...grpc.CallOption) (*ValidateAddressResponse, error) {
 	out := new(ValidateAddressResponse)
 	err := grpc.Invoke(ctx, "/walletrpc.WalletService/ValidateAddress", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *walletServiceClient) CommittedTickets(ctx context.Context, in *CommittedTicketsRequest, opts ...grpc.CallOption) (*CommittedTicketsResponse, error) {
+	out := new(CommittedTicketsResponse)
+	err := c.cc.Invoke(ctx, "/walletrpc.WalletService/CommittedTickets", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5143,7 +5469,9 @@ type WalletServiceServer interface {
 	RevokeTickets(context.Context, *RevokeTicketsRequest) (*RevokeTicketsResponse, error)
 	LoadActiveDataFilters(context.Context, *LoadActiveDataFiltersRequest) (*LoadActiveDataFiltersResponse, error)
 	SignMessage(context.Context, *SignMessageRequest) (*SignMessageResponse, error)
+	SignMessages(context.Context, *SignMessagesRequest) (*SignMessagesResponse, error)
 	ValidateAddress(context.Context, *ValidateAddressRequest) (*ValidateAddressResponse, error)
+	CommittedTickets(context.Context, *CommittedTicketsRequest) (*CommittedTicketsResponse, error)
 }
 
 func RegisterWalletServiceServer(s *grpc.Server, srv WalletServiceServer) {
@@ -5731,6 +6059,24 @@ func _WalletService_SignMessage_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WalletService_SignMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServiceServer).SignMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/walletrpc.WalletService/SignMessages",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServiceServer).SignMessages(ctx, req.(*SignMessagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _WalletService_ValidateAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ValidateAddressRequest)
 	if err := dec(in); err != nil {
@@ -5745,6 +6091,24 @@ func _WalletService_ValidateAddress_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WalletServiceServer).ValidateAddress(ctx, req.(*ValidateAddressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WalletService_CommittedTickets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommittedTicketsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServiceServer).CommittedTickets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/walletrpc.WalletService/CommittedTickets",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServiceServer).CommittedTickets(ctx, req.(*CommittedTicketsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5854,8 +6218,16 @@ var _WalletService_serviceDesc = grpc.ServiceDesc{
 			Handler:    _WalletService_SignMessage_Handler,
 		},
 		{
+			MethodName: "SignMessages",
+			Handler:    _WalletService_SignMessages_Handler,
+		},
+		{
 			MethodName: "ValidateAddress",
 			Handler:    _WalletService_ValidateAddress_Handler,
+		},
+		{
+			MethodName: "CommittedTickets",
+			Handler:    _WalletService_CommittedTickets_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -53,7 +53,9 @@ service WalletService {
 	rpc RevokeTickets(RevokeTicketsRequest) returns (RevokeTicketsResponse);
 	rpc LoadActiveDataFilters(LoadActiveDataFiltersRequest) returns (LoadActiveDataFiltersResponse);
 	rpc SignMessage (SignMessageRequest) returns (SignMessageResponse);
+	rpc SignMessages (SignMessagesRequest) returns (SignMessagesResponse);
 	rpc ValidateAddress (ValidateAddressRequest) returns (ValidateAddressResponse);
+	rpc CommittedTickets (CommittedTicketsRequest) returns (CommittedTicketsResponse);
 }
 
 service WalletLoaderService {
@@ -290,7 +292,7 @@ message GetTransactionsRequest {
 	int32 minimum_recent_transactions = 5;
 
 	// Try to include at most this many transactions in the reply
-    int32 target_transaction_count = 6;
+    	int32 target_transaction_count = 6;
 }
 message GetTransactionsResponse {
 	BlockDetails mined_transactions = 1;
@@ -505,6 +507,21 @@ message SignMessageRequest{
 }
 message SignMessageResponse{
 	bytes signature = 1;
+}
+message SignMessagesRequest{
+	message Message {
+		string address = 1;
+		string message = 2;
+	}
+	bytes passphrase = 1;
+	repeated Message messages = 2;
+}
+message SignMessagesResponse{
+	message SignReply {
+		bytes signature = 1;
+		string error = 2;
+	}
+	repeated SignReply replies = 1;
 }
 
 message TransactionNotificationsRequest {}
@@ -862,4 +879,16 @@ message BestBlockRequest {
 message BestBlockResponse {
 	uint32 height = 1;
 	bytes hash = 2;
+}
+
+message CommittedTicketsRequest {
+	repeated bytes tickets = 1;
+}
+
+message CommittedTicketsResponse {
+	message TicketAddress {
+		bytes ticket = 1;
+		string address = 2;
+	}
+	repeated TicketAddress ticketAddresses = 1;
 }

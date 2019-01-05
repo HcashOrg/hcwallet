@@ -4623,3 +4623,76 @@ func (w *Wallet) rescanPoint(dbtx walletdb.ReadTx) (*chainhash.Hash, error) {
 	}
 	return &rescanPoint, nil
 }
+
+// CommittedTickets takes a list of tickets and returns a filtered list of
+// tickets that are controlled by this wallet.
+func (w *Wallet) CommittedTickets(tickets []*chainhash.Hash) ([]*chainhash.Hash, []hcutil.Address, error) {
+	hashes := make([]*chainhash.Hash, 0, len(tickets))
+	addresses := make([]hcutil.Address, 0, len(tickets))
+	// Verify we own this ticket
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
+		addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
+		for _, v := range tickets {
+			// Make sure ticket exists
+			tx, err := w.TxStore.Tx(txmgrNs, v)
+			if err != nil {
+				log.Debugf("%v", err)
+				continue
+			}
+			if isSStx, _ := stake.IsSStx(tx); !isSStx {
+				continue
+			}
+
+			// Commitment outputs are at alternating output
+			// indexes, starting at 1.
+			var bestAddr hcutil.Address
+			var bestAmount hcutil.Amount
+
+			for i := 1; i < len(tx.TxOut); i += 2 {
+				scr := tx.TxOut[i].PkScript
+				addr, err := stake.AddrFromSStxPkScrCommitment(scr,
+					w.chainParams)
+				if err != nil {
+					log.Debugf("%v", err)
+					break
+				}
+				if _, ok := addr.(*hcutil.AddressPubKeyHash); !ok {
+					log.Tracef("Skipping commitment at  index %v: address is not P2PKH", i)
+					continue
+				}
+				amt, err := stake.AmountFromSStxPkScrCommitment(scr)
+				if err != nil {
+					log.Debugf("%v", err)
+					break
+				}
+				if amt > bestAmount {
+					bestAddr = addr
+					bestAmount = amt
+				}
+			}
+
+			if bestAddr == nil {
+				log.Debugf("no best address")
+				continue
+			}
+
+			if !w.Manager.ExistsHash160(addrmgrNs,
+				bestAddr.Hash160()[:]) {
+				log.Debugf("not our address: %x", bestAddr.Hash160())
+				continue
+			}
+			ticketHash := tx.TxHash()
+			log.Tracef("Ticket purchase %v: best commitment address %v amount %v", &ticketHash, bestAddr, bestAmount)
+
+			hashes = append(hashes, v)
+			addresses = append(addresses, bestAddr)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return hashes, addresses, nil
+}

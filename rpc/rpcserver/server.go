@@ -2628,3 +2628,106 @@ func (s *walletServer) BestBlock(ctx context.Context, req *pb.BestBlockRequest) 
 	}
 	return resp, nil
 }
+
+
+
+func (s *walletServer) CommittedTickets(ctx context.Context, req *pb.CommittedTicketsRequest) (*pb.CommittedTicketsResponse, error) {
+
+	// Translate [][]byte to []*chainhash.Hash
+	in := make([]*chainhash.Hash, 0, len(req.Tickets))
+	for _, v := range req.Tickets {
+		hash, err := chainhash.NewHash(v)
+		if err != nil {
+			return &pb.CommittedTicketsResponse{},
+				status.Error(codes.InvalidArgument,
+					"invalid hash "+hex.EncodeToString(v))
+		}
+		in = append(in, hash)
+	}
+
+	// Figure out which tickets we own
+	out, outAddr, err := s.wallet.CommittedTickets(in)
+	if err != nil {
+		return nil, translateError(err)
+	}
+	if len(out) != len(outAddr) {
+		// Sanity check
+		return nil, status.Error(codes.Internal,
+			"impossible condition: ticket and address count unequal")
+	}
+
+	// Translate []*chainhash.Hash to [][]byte
+	ctr := &pb.CommittedTicketsResponse{
+		TicketAddresses: make([]*pb.CommittedTicketsResponse_TicketAddress,
+			0, len(out)),
+	}
+	for k, v := range out {
+		ctr.TicketAddresses = append(ctr.TicketAddresses,
+			&pb.CommittedTicketsResponse_TicketAddress{
+				Ticket:  v[:],
+				Address: outAddr[k].String(),
+			})
+	}
+
+	return ctr, nil
+}
+func (s *walletServer) SignMessages(cts context.Context, req *pb.SignMessagesRequest) (*pb.SignMessagesResponse, error) {
+	lock := make(chan time.Time, 1)
+	defer func() {
+		lock <- time.Time{} // send matters, not the value
+	}()
+	err := s.wallet.Unlock(req.Passphrase, lock)
+	if err != nil {
+		return nil, translateError(err)
+	}
+
+	smr := pb.SignMessagesResponse{
+		Replies: make([]*pb.SignMessagesResponse_SignReply, 0,
+			len(req.Messages)),
+	}
+
+	for _, v := range req.Messages {
+		e := ""
+		sig, err := s.signMessage(v.Address, v.Message)
+		if err != nil {
+			e = err.Error()
+		}
+		smr.Replies = append(smr.Replies,
+			&pb.SignMessagesResponse_SignReply{
+				Signature: sig,
+				Error:     e,
+			})
+	}
+
+	return &smr, nil
+}
+
+func (s *walletServer) signMessage(address, message string) ([]byte, error) {
+	addr, err := decodeAddress(address, s.wallet.ChainParams())
+	if err != nil {
+		return nil, err
+	}
+
+	// Addresses must have an associated secp256k1 private key and therefore
+	// must be P2PK or P2PKH (P2SH is not allowed).
+	var sig []byte
+	switch a := addr.(type) {
+	case *hcutil.AddressSecpPubKey:
+	case *hcutil.AddressPubKeyHash:
+		if a.DSA(a.Net()) != chainec.ECTypeSecp256k1 {
+			goto WrongAddrKind
+		}
+	default:
+		goto WrongAddrKind
+	}
+
+	sig, err = s.wallet.SignMessage(message, addr)
+	if err != nil {
+		return nil, translateError(err)
+	}
+	return sig, nil
+
+WrongAddrKind:
+	return nil, status.Error(codes.InvalidArgument,
+		"address must be secp256k1 P2PK or P2PKH")
+}
