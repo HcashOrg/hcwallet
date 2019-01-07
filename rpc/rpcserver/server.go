@@ -39,7 +39,7 @@ import (
 	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
 	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
-	hcrpcclient "github.com/HcashOrg/hcrpcclient"
+	"github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/chain"
 	"github.com/HcashOrg/hcwallet/internal/cfgutil"

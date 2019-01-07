@@ -275,7 +275,7 @@ func (s *Store) Tx(ns walletdb.ReadBucket, txHash *chainhash.Hash) (*wire.MsgTx,
 	_, v = latestTxRecord(ns, txHash[:])
 	if v == nil {
 		// not found
-		return nil, nil
+		return nil, fmt.Errorf("not exist")
 	}
 	return s.parseTx(*txHash, v)
 }
