@@ -69,6 +69,7 @@ func getOminiMethod() map[string]LegacyRpcHandler {
 		"omni_getwalletaddressbalances":          {handler: OmniGetwalletaddressbalances},
 		"omni_gettransaction":                    {handler: OmniGettransaction},
 		"omni_listtransactions":                  {handler: OmniListtransactions},
+		"omni_listwallettransactions":           {handler: OmniListwallettransactions},
 		"omni_listblocktransactions":             {handler: OmniListblocktransactions},
 		"omni_listpendingtransactions":           {handler: OmniListpendingtransactions},
 		"omni_getactivedexsells":                 {handler: OmniGetactivedexsells},
@@ -1278,6 +1279,36 @@ func OmniGettransaction(icmd interface{}, w *wallet.Wallet) (interface{}, error)
 func OmniListtransactions(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	_ = icmd.(*hcjson.OmniListtransactionsCmd)
 	return omni_cmdReq(icmd, w)
+}
+
+// OmniListwallettransactions Returns a list of the total token balances of the whole wallet.
+// $ omnicore-cli "omni_listwallettransactions"
+func OmniListwallettransactions(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd, _ := icmd.(*hcjson.OmniListwallettransactionsCmd)
+	addresses, err := getWalletAddress(w)
+	if err != nil {
+		return nil, err
+	}
+
+	req := omnilib.Request{
+		Method: "omni_listwallettransactions",
+		Params: []interface{}{addresses,cmd.Count, cmd.Skip, cmd.Startblock, cmd.Endblock},
+
+	}
+	bytes, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	strRsp := omnilib.JsonCmdReqHcToOm(string(bytes))
+	var response hcjson.Response
+	err = json.Unmarshal([]byte(strRsp), &response)
+	if err != nil {
+		return nil, err
+	}
+	if response.Error != nil {
+		return nil, fmt.Errorf(response.Error.Message)
+	}
+	return response.Result, nil
 }
 
 // OmniGetactivedexsells Returns currently active offers on the distributed exchange.
