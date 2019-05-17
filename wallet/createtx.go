@@ -539,6 +539,14 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 	if err != nil {
 		return nil, err
 	}
+
+	if w.ProcessTxLockRequest(&rec.MsgTx) {
+		w.AcceptLockRequest(&rec.MsgTx);
+	}else{
+		w.RejectLockRequest(&rec.MsgTx);
+		return nil, fmt.Errorf("tx lock conflict")
+	}
+
 	// Use a single DB update to store and publish the transaction.  If the
 	// transaction is rejected, the update is rolled back.
 	err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {

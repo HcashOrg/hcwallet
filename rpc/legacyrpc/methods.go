@@ -134,6 +134,7 @@ func init() {
 		"sendmany":                 {handler: sendMany},
 		"sendmanyv2":               {handler: sendManyV2},
 		"sendtoaddress":            {handler: sendToAddress},
+		"instantsendtoaddress":    {handler: instantSendToAddress},
 		"sendfromaddresstoaddress": {handler: sendFromAddressToAddress},
 		"getstraightpubkey":        {handlerWithChain: getStraightPubKey},
 		"sendtomultisig":           {handlerWithChain: sendToMultiSig},
@@ -2431,6 +2432,44 @@ func sendFromAddressToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, 
 // the TxID for the created transaction is returned.
 func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*hcjson.SendToAddressCmd)
+
+	// Transaction comments are not yet supported.  Error instead of
+	// pretending to save them.
+
+	if !isNilOrEmpty(cmd.Comment) || !isNilOrEmpty(cmd.CommentTo) {
+		return nil, &hcjson.RPCError{
+			Code:    hcjson.ErrRPCUnimplemented,
+			Message: "Transaction comments are not yet supported",
+		}
+	}
+
+	account := uint32(udb.DefaultAccountNum)
+	amt, err := hcutil.NewAmount(cmd.Amount)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check that signed integer parameters are positive.
+	if amt < 0 {
+		return nil, ErrNeedPositiveAmount
+	}
+
+	// Mock up map of address and amount pairs.
+	pairs := map[string]hcutil.Amount{
+		cmd.Address: amt,
+	}
+
+	// sendtoaddress always spends from the default account, this matches bitcoind
+	return sendPairs(w, pairs, account, 1, "", []byte{}, "")
+}
+
+// instantSendToAddress handles a instantSendToAddress RPC request by creating a new
+// transaction spending unspent transaction outputs for a wallet to another
+// payment address.  Leftover inputs not sent to the payment address or a fee
+// for the miner are sent back to a new address in the wallet.  Upon success,
+// the TxID for the created transaction is returned.
+func instantSendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := icmd.(*hcjson.InstantSendToAddressCmd)
 
 	// Transaction comments are not yet supported.  Error instead of
 	// pretending to save them.

@@ -145,6 +145,7 @@ var (
 	bucketMultisigUsp             = []byte("mu")
 	bucketStakeInvalidatedCredits = []byte("ic")
 	bucketStakeInvalidatedDebits  = []byte("id")
+	bucketLockCache	 			  = []byte("lkch")
 )
 
 // Root (namespace) bucket keys
@@ -2054,6 +2055,12 @@ func createStore(ns walletdb.ReadWriteBucket, chainParams *chaincfg.Params) erro
 		return storeError(apperrors.ErrDatabase, str, err)
 	}
 
+	_, err = ns.CreateBucket(bucketLockCache)
+	if err != nil {
+		str := "failed to create invalidated debits bucket"
+		return storeError(apperrors.ErrDatabase, str, err)
+	}
+
 	// Insert the genesis block header.
 	var serializedGenesisBlock RawBlockHeader
 	buf := bytes.NewBuffer(serializedGenesisBlock[:0])
@@ -2174,6 +2181,12 @@ func upgradeToVersion3(ns walletdb.ReadWriteBucket, chainParams *chaincfg.Params
 		return storeError(apperrors.ErrDatabase, str, err)
 	}
 	_, err = ns.CreateBucket(bucketStakeInvalidatedDebits)
+	if err != nil {
+		str := "failed to create invalidated debits bucket"
+		return storeError(apperrors.ErrDatabase, str, err)
+	}
+
+	_, err = ns.CreateBucket(bucketLockCache)
 	if err != nil {
 		str := "failed to create invalidated debits bucket"
 		return storeError(apperrors.ErrDatabase, str, err)

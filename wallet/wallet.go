@@ -3949,7 +3949,13 @@ func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
 	if err != nil {
 		return nil, err
 	}
-
+/*
+	if w.ProcessTxLockRequest(createdTx.Tx) {
+		w.AcceptLockRequest(createdTx.Tx);
+	}else{
+		w.RejectLockRequest(createdTx.Tx);
+	}
+	*/
 	// TODO: The record already has the serialized tx, so no need to
 	// serialize it again.
 	hash := createdTx.Tx.TxHash()
@@ -4695,4 +4701,37 @@ func (w *Wallet) CommittedTickets(tickets []*chainhash.Hash) ([]*chainhash.Hash,
 	}
 
 	return hashes, addresses, nil
+}
+
+
+func (w *Wallet) ProcessTxLockRequest(tx *wire.MsgTx) bool {
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
+		if w.TxStore.IsInLockCache(txmgrNs, tx) {
+			return fmt.Errorf("double spent transaction")
+		}
+		return nil
+	})
+	if err == nil{
+		return true
+	}
+	return false
+}
+
+func (w *Wallet) AcceptLockRequest(tx *wire.MsgTx) error{
+	err := walletdb.Update(w.db, func(txdb walletdb.ReadWriteTx) error {
+		txmgrNs := txdb.ReadWriteBucket(wtxmgrNamespaceKey)
+		w.TxStore.PutLockTx(txmgrNs, tx)
+		return nil
+	})
+	return err
+}
+
+func (w *Wallet) RejectLockRequest(tx *wire.MsgTx)error{
+	err := walletdb.Update(w.db, func(txdb walletdb.ReadWriteTx) error {
+		txmgrNs := txdb.ReadWriteBucket(wtxmgrNamespaceKey)
+		w.TxStore.RejectLockTx(txmgrNs, tx)
+		return nil
+	})
+	return err
 }

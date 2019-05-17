@@ -182,6 +182,59 @@ func (s *Store) MainChainTip(ns walletdb.ReadBucket) (chainhash.Hash, int32) {
 	return hash, height
 }
 
+// MainChainTip returns the hash and height of the currently marked tip-most
+// block of the main chain.
+func (s *Store) IsInLockCache(ns walletdb.ReadBucket, tx *wire.MsgTx) bool {
+	for _, txIn := range tx.TxIn {
+		//prevHash := txIn.PreviousOutPoint.Hash.String()
+		prevHash := txIn.PreviousOutPoint.Hash[:]
+		v := ns.NestedReadBucket(bucketLockCache).Get(prevHash)
+		if v != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Store) PutLockTx(ns walletdb.ReadWriteBucket , tx *wire.MsgTx) bool {
+	for _, txIn := range tx.TxIn {
+		//prevHash := txIn.PreviousOutPoint.Hash.String()
+		prevHash := txIn.PreviousOutPoint.Hash[:]
+		err := ns.NestedReadWriteBucket(bucketLockCache).Put(prevHash, []byte(txIn.PreviousOutPoint.String()))
+		if err != nil {
+			log.Error(err.Error())
+			return false
+		}
+	}
+	data, _  := tx.Bytes()
+	hashByte := tx.TxHash()
+	err := ns.NestedReadWriteBucket(bucketLockCache).Put(hashByte[:], data)
+	if err != nil {
+		log.Error(tx.TxHash().String())
+		return false
+	}
+	return true
+}
+
+func (s *Store) RejectLockTx(ns walletdb.ReadWriteBucket , tx *wire.MsgTx) bool {
+	for _, txIn := range tx.TxIn {
+		//prevHash := txIn.PreviousOutPoint.Hash.String()
+		prevHash := txIn.PreviousOutPoint.Hash[:]
+		err := ns.NestedReadWriteBucket(bucketLockCache).Delete(prevHash)
+		if err != nil {
+			log.Error(err.Error())
+			return false
+		}
+	}
+	hashByte := tx.TxHash()
+	err := ns.NestedReadWriteBucket(bucketLockCache).Delete(hashByte[:])
+	if err != nil {
+		log.Error(tx.TxHash().String())
+		return false
+	}
+	return true
+}
+
 // ExtendMainChain inserts a block header into the database.  It must connect to
 // the existing tip block.
 //
