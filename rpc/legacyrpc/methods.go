@@ -2498,7 +2498,7 @@ func instantSendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, erro
 	}
 
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(w, pairs, account, 1, "", []byte{}, "")
+	return sendPairs(w, pairs, account, 1, "", []byte("hcashInstantSend"), "")
 }
 
 // getStraightPubKey handles a getStraightPubKey RPC request by getting a straight public key
