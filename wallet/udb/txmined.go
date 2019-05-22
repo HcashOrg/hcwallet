@@ -181,7 +181,7 @@ func (s *Store) MainChainTip(ns walletdb.ReadBucket) (chainhash.Hash, int32) {
 
 	return hash, height
 }
-
+/*
 // MainChainTip returns the hash and height of the currently marked tip-most
 // block of the main chain.
 func (s *Store) IsInLockCache(ns walletdb.ReadBucket, tx *wire.MsgTx) bool {
@@ -234,6 +234,7 @@ func (s *Store) RejectLockTx(ns walletdb.ReadWriteBucket , tx *wire.MsgTx) bool 
 	}
 	return true
 }
+*/
 
 // ExtendMainChain inserts a block header into the database.  It must connect to
 // the existing tip block.

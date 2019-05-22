@@ -145,7 +145,7 @@ var (
 	bucketMultisigUsp             = []byte("mu")
 	bucketStakeInvalidatedCredits = []byte("ic")
 	bucketStakeInvalidatedDebits  = []byte("id")
-	bucketLockCache	 			  = []byte("lkch")
+//	bucketLockCache	 			  = []byte("lkch")
 )
 
 // Root (namespace) bucket keys
@@ -2054,13 +2054,13 @@ func createStore(ns walletdb.ReadWriteBucket, chainParams *chaincfg.Params) erro
 		str := "failed to create invalidated debits bucket"
 		return storeError(apperrors.ErrDatabase, str, err)
 	}
-
+/*
 	_, err = ns.CreateBucket(bucketLockCache)
 	if err != nil {
 		str := "failed to create invalidated debits bucket"
 		return storeError(apperrors.ErrDatabase, str, err)
 	}
-
+*/
 	// Insert the genesis block header.
 	var serializedGenesisBlock RawBlockHeader
 	buf := bytes.NewBuffer(serializedGenesisBlock[:0])
@@ -2185,13 +2185,13 @@ func upgradeToVersion3(ns walletdb.ReadWriteBucket, chainParams *chaincfg.Params
 		str := "failed to create invalidated debits bucket"
 		return storeError(apperrors.ErrDatabase, str, err)
 	}
-
+/*
 	_, err = ns.CreateBucket(bucketLockCache)
 	if err != nil {
 		str := "failed to create invalidated debits bucket"
 		return storeError(apperrors.ErrDatabase, str, err)
 	}
-
+*/
 	// For all block records, add the byte for marking stake invalidation.  The
 	// function passed to ForEach may not modify the bucket, so record all
 	// values and write the updates outside the ForEach.
