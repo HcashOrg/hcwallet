@@ -13,7 +13,7 @@ import (
 type unifiedDBMetadata struct {
 }
 
-var metadataRootBucketKey = []byte("meta_V4")
+var metadataRootBucketKey = []byte("meta")
 
 func (unifiedDBMetadata) rootBucketKey() []byte { return metadataRootBucketKey }
 

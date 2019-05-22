@@ -4703,7 +4703,7 @@ func (w *Wallet) CommittedTickets(tickets []*chainhash.Hash) ([]*chainhash.Hash,
 	return hashes, addresses, nil
 }
 
-
+/*
 func (w *Wallet) ProcessTxLockRequest(tx *wire.MsgTx) bool {
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
 		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
@@ -4735,3 +4735,4 @@ func (w *Wallet) RejectLockRequest(tx *wire.MsgTx)error{
 	})
 	return err
 }
+*/
