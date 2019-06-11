@@ -1257,6 +1257,7 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 
 	var ticketHashes []*chainhash.Hash
 	var votes []*wire.MsgTx
+	winning := false
 	voteBits := w.VoteBits()
 	err = walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
 		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
@@ -1309,6 +1310,7 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 				continue
 			}
 			votes[i] = vote
+			winning = true
 		}
 		return nil
 	})
@@ -1352,6 +1354,24 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 				ticketHashes[i], voteHash, voteBits.Bits)
 		}(i, vote)
 	}
+
+	if winning {
+		go func() {
+			txMsgR,err:=chainClient.FetchPendingTxLock(10)
+			if err!=nil{
+				return
+			}
+
+			for _,txMsgBytes:=range txMsgR.MsgTx{
+				msgtx:=wire.MsgTx{}
+				msgtx.FromBytes(txMsgBytes)
+				chainClient.SendRawTransaction(&msgtx,true)
+			}
+
+
+		}()
+	}
+
 	return nil
 }
 
