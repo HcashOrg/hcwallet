@@ -109,6 +109,7 @@ func generateRPCKeyPair(writeKey bool) (tls.Certificate, error) {
 	return keyPair, nil
 }
 
+// grpc(only ssl) and legacyrpc
 func startRPCServers(walletLoader *loader.Loader) (*grpc.Server, *legacyrpc.Server, error) {
 	var jsonrpcAddrNotifier jsonrpcListenerEventServer
 	var grpcAddrNotifier grpcListenerEventServer
