@@ -1011,6 +1011,116 @@ func makeTicket(params *chaincfg.Params, inputPool *extendedOutPoint,
 	return mtx, nil
 }
 
+// makeAITicket creates a ticket from a split transaction output. It can optionally
+// create a ticket that pays a fee to a pool if a pool input and pool address are
+// passed.
+func makeAITicket(params *chaincfg.Params, inputPool *extendedOutPoint,
+	input *extendedOutPoint, addrVote hcutil.Address, addrSubsidy hcutil.Address,
+	ticketCost int64, addrPool hcutil.Address) (*wire.MsgTx, error) {
+	mtx := wire.NewMsgTx()
+
+	if addrPool != nil && inputPool != nil {
+		txIn := wire.NewTxIn(inputPool.op, []byte{})
+		mtx.AddTxIn(txIn)
+	}
+
+	txIn := wire.NewTxIn(input.op, []byte{})
+	mtx.AddTxIn(txIn)
+
+	// Create a new script which pays to the provided address with an
+	// SStx tagged output.
+
+	pkScript, err := txscript.PayToAISStx(addrVote)
+	if err != nil {
+		return nil, err
+	}
+
+	txOut := wire.NewTxOut(ticketCost, pkScript)
+	txOut.Version = txscript.DefaultScriptVersion
+	mtx.AddTxOut(txOut)
+
+	// Obtain the commitment amounts.
+	var amountsCommitted []int64
+	userSubsidyNullIdx := 0
+	if addrPool == nil {
+		_, amountsCommitted, err = stake.SStxNullOutputAmounts(
+			[]int64{input.amt}, []int64{0}, ticketCost)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		_, amountsCommitted, err = stake.SStxNullOutputAmounts(
+			[]int64{inputPool.amt, input.amt}, []int64{0, 0}, ticketCost)
+		if err != nil {
+			return nil, err
+		}
+		userSubsidyNullIdx = 1
+	}
+
+	// Zero value P2PKH addr.
+	zeroed := [20]byte{}
+	addrZeroed, err := hcutil.NewAddressPubKeyHash(zeroed[:], params, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. (Optional) If we're passed a pool address, make an extra
+	// commitment to the pool.
+	limits := uint16(defaultTicketFeeLimits)
+	if addrPool != nil {
+		pkScript, err = txscript.GenerateSStxAddrPush(addrPool,
+			hcutil.Amount(amountsCommitted[0]), limits)
+		if err != nil {
+			return nil, fmt.Errorf("cannot create pool txout script: %s", err)
+		}
+		txout := wire.NewTxOut(int64(0), pkScript)
+		mtx.AddTxOut(txout)
+
+		// Create a new script which pays to the provided address with an
+		// SStx change tagged output.
+		pkScript, err = txscript.PayToSStxChange(addrZeroed)
+		if err != nil {
+			return nil, err
+		}
+
+		txOut = wire.NewTxOut(0, pkScript)
+		txOut.Version = txscript.DefaultScriptVersion
+		mtx.AddTxOut(txOut)
+	}
+
+	// 3. Create the commitment and change output paying to the user.
+	//
+	// Create an OP_RETURN push containing the pubkeyhash to send rewards to.
+	// Apply limits to revocations for fees while not allowing
+	// fees for votes.
+	pkScript, err = txscript.GenerateAISStxAddrPush(addrSubsidy,
+		hcutil.Amount(amountsCommitted[userSubsidyNullIdx]), limits)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create user txout script: %s", err)
+	}
+	txout := wire.NewTxOut(int64(0), pkScript)
+	mtx.AddTxOut(txout)
+
+	// Create a new script which pays to the provided address with an
+	// SStx change tagged output.
+	pkScript, err = txscript.PayToAISStxChange(addrZeroed)
+	if err != nil {
+		return nil, err
+	}
+
+	txOut = wire.NewTxOut(0, pkScript)
+	txOut.Version = txscript.DefaultScriptVersion
+	mtx.AddTxOut(txOut)
+
+	// Make sure we generated a valid SStx.
+	if _, err := stake.IsSStx(mtx); err != nil {
+		return nil, err
+	}
+
+	return mtx, nil
+}
+
+
 func (w *Wallet) getTicketFeeAndNeededTicketPrice(account uint32, poolAddressExist bool, ticketPrice, ticketFeeIncrement hcutil.Amount) (hcutil.Amount, hcutil.Amount, error) {
 	var ticketFee, neededPerTicket hcutil.Amount
 
@@ -1703,7 +1813,7 @@ func (w *Wallet) purchaseAITickets(req purchaseAITicketRequest) ([]*chainhash.Ha
 		}
 
 		// Generate the ticket msgTx and sign it.
-		ticket, err := makeTicket(w.chainParams, eopPool, eop, addrVote, addrSubsidy, int64(ticketPrice), poolAddress)
+		ticket, err := makeAITicket(w.chainParams, eopPool, eop, addrVote, addrSubsidy, int64(ticketPrice), poolAddress)
 		if err != nil {
 			return ticketHashes, err
 		}

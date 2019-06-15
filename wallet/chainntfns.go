@@ -77,7 +77,7 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 				_, height = w.TxStore.MainChainTip(ns)
 				return nil
 			})
-			if err == nil && !w.IsScanning() {
+			if err == nil && !w.IsScanning()  && w.chainClient != nil {
 				w.RescanFromHeight(w.chainClient.Client, height)
 			}
 		}
