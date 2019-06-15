@@ -186,6 +186,7 @@ func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Addre
 		createSSGenRequests:      make(chan createSSGenRequest),
 		createSSRtxRequests:      make(chan createSSRtxRequest),
 		purchaseTicketRequests:   make(chan purchaseTicketRequest),
+		purchaseAITicketRequests: make(chan purchaseAITicketRequest),
 		addressReuse:             addressReuse,
 		ticketAddress:            ticketAddress,
 		addressBuffers:           make(map[uint32]*bip0044AccountData),
@@ -1589,6 +1590,16 @@ out:
 			data, err := w.purchaseTickets(txr)
 			heldUnlock.release()
 			txr.resp <- purchaseTicketResponse{data, err}
+
+		case txr := <-w.purchaseAITicketRequests:
+			heldUnlock, err := w.holdUnlock()
+			if err != nil {
+				txr.resp <- purchaseAITicketResponse{nil, err}
+				continue
+			}
+			data, err := w.purchaseAITickets(txr)
+			heldUnlock.release()
+			txr.resp <- purchaseAITicketResponse{data, err}
 
 		case <-quit:
 			break out
