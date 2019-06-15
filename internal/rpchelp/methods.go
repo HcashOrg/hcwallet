@@ -93,6 +93,7 @@ var Methods = []struct {
 
 	// TODO Alphabetize
 	{"purchaseticket", returnsString},
+	{"purchaseaiticket", returnsString},
 	{"sendtossrtx", returnsString},
 	{"sendtosstx", returnsString},
 	{"sendtossgen", returnsString},

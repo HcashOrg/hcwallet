@@ -122,6 +122,7 @@ type Wallet struct {
 	createSSGenRequests    chan createSSGenRequest
 	createSSRtxRequests    chan createSSRtxRequest
 	purchaseTicketRequests chan purchaseTicketRequest
+	purchaseAITicketRequests chan purchaseAITicketRequest
 
 	// Internal address handling.
 	addressReuse     bool
@@ -1441,6 +1442,21 @@ type (
 		resp        chan purchaseTicketResponse
 	}
 
+	purchaseAITicketRequest struct {
+		minBalance  hcutil.Amount
+		spendLimit  hcutil.Amount
+		minConf     int32
+		ticketAddr  hcutil.Address
+		account     uint32
+		numTickets  int
+		poolAddress hcutil.Address
+		poolFees    float64
+		expiry      int32
+		txFee       hcutil.Amount
+		ticketFee   hcutil.Amount
+		resp        chan purchaseAITicketResponse
+	}
+
 	consolidateResponse struct {
 		txHash *chainhash.Hash
 		err    error
@@ -1468,6 +1484,11 @@ type (
 		err error
 	}
 	purchaseTicketResponse struct {
+		data []*chainhash.Hash
+		err  error
+	}
+
+	purchaseAITicketResponse struct {
 		data []*chainhash.Hash
 		err  error
 	}
@@ -1685,6 +1706,33 @@ func (w *Wallet) CreateSSRtx(ticketHash chainhash.Hash) (*CreatedTx, error) {
 	resp := <-req.resp
 	return resp.tx, resp.err
 }
+
+// PurchaseAITickets receives a request from the RPC and ships it to txCreator
+// to purchase a new aiticket. It returns a slice of the hashes of the purchased
+// aitickets.
+func (w *Wallet) PurchaseAITickets(minBalance, spendLimit hcutil.Amount,
+	minConf int32, ticketAddr hcutil.Address, account uint32,
+	numTickets int, poolAddress hcutil.Address, poolFees float64,
+	expiry int32, txFee hcutil.Amount, ticketFee hcutil.Amount) ([]*chainhash.Hash, error) {
+	req := purchaseAITicketRequest{
+		minBalance:  minBalance,
+		spendLimit:  spendLimit,
+		minConf:     minConf,
+		ticketAddr:  ticketAddr,
+		account:     account,
+		numTickets:  numTickets,
+		poolAddress: poolAddress,
+		poolFees:    poolFees,
+		expiry:      expiry,
+		txFee:       txFee,
+		ticketFee:   ticketFee,
+		resp:        make(chan purchaseAITicketResponse),
+	}
+	w.purchaseAITicketRequests <- req
+	resp := <-req.resp
+	return resp.data, resp.err
+}
+
 
 // PurchaseTickets receives a request from the RPC and ships it to txCreator
 // to purchase a new ticket. It returns a slice of the hashes of the purchased
