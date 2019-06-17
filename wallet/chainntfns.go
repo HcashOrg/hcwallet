@@ -55,6 +55,8 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 			if err != nil || rpt != nil {
 				break
 			}
+
+			log.Error("handleConsensusRPCNotifications:",n.Transaction)
 			err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
 				return w.processSerializedTransaction(dbtx, n.Transaction, nil, nil)
 			})
@@ -63,6 +65,9 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 					return w.watchFutureAddresses(tx)
 				})
 			}
+		case chain.NewInstantTx:
+			notificationName = "newinstanttx"
+			log.Error("newInstantxnotify")
 		case chain.MissedTickets:
 			notificationName = "spentandmissedtickets"
 			err = w.handleMissedTickets(n.BlockHash, int32(n.BlockHeight), n.Tickets)
@@ -1221,6 +1226,10 @@ func (w *Wallet) handleChainVotingNotifications(chainClient *chain.RPCClient) {
 	w.wg.Done()
 }
 
+
+
+
+
 // selectOwnedTickets returns a slice of tickets hashes from the tickets
 // argument that are owned by the wallet.
 //
@@ -1355,19 +1364,25 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 		}(i, vote)
 	}
 
+	log.Error("winning",winning)
+
 	if winning {
 		go func() {
-			txMsgR,err:=chainClient.FetchPendingTxLock(10)
-			if err!=nil{
+
+			txMsgR, err := chainClient.FetchPendingTxLock(10)
+			if err != nil {
 				return
 			}
 
-			for _,txMsgBytes:=range txMsgR.MsgTx{
-				msgtx:=wire.MsgTx{}
-				msgtx.FromBytes(txMsgBytes)
-				chainClient.SendRawTransaction(&msgtx,true)
+			log.Error("fetchPending",txMsgR)
+			for _, txMsgBytes := range txMsgR.MsgTx {
+				msgtx := wire.MsgTx{}
+				err := msgtx.FromBytes(txMsgBytes)
+				if err != nil {
+					return
+				}
+				chainClient.SendRawTransaction(&msgtx, true)
 			}
-
 
 		}()
 	}

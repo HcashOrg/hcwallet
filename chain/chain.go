@@ -68,7 +68,7 @@ func NewRPCClient(chainParams *chaincfg.Params, connect, user, pass string, cert
 		dequeueNotification:       make(chan interface{}),
 		enqueueVotingNotification: make(chan interface{}),
 		dequeueVotingNotification: make(chan interface{}),
-		quit: make(chan struct{}),
+		quit:                      make(chan struct{}),
 	}
 	ntfnCallbacks := &hcrpcclient.NotificationHandlers{
 		OnClientConnected:       client.onClientConnect,
@@ -76,6 +76,7 @@ func NewRPCClient(chainParams *chaincfg.Params, connect, user, pass string, cert
 		OnBlockDisconnected:     client.onBlockDisconnected,
 		OnRelevantTxAccepted:    client.onRelevantTxAccepted,
 		OnReorganization:        client.onReorganization,
+		OnNewInstantTx:          client.onNewInstantTx,
 		OnWinningTickets:        client.onWinningTickets,
 		OnSpentAndMissedTickets: client.onSpentAndMissedTickets,
 		OnStakeDifficulty:       client.onStakeDifficulty,
@@ -211,6 +212,11 @@ type (
 		Tickets     []*chainhash.Hash
 	}
 
+	NewInstantTx struct {
+		Tickets     []*chainhash.Hash
+		LotteryHash *chainhash.Hash
+	}
+
 	// MissedTickets is a notifcation for tickets that have been missed.
 	MissedTickets struct {
 		BlockHash   *chainhash.Hash
@@ -272,6 +278,16 @@ func (c *RPCClient) onRelevantTxAccepted(transaction []byte) {
 	select {
 	case c.enqueueNotification <- RelevantTxAccepted{
 		Transaction: transaction,
+	}:
+	case <-c.quit:
+	}
+}
+
+func (c *RPCClient) onNewInstantTx(lotteryHash *chainhash.Hash, tickets []*chainhash.Hash) {
+	select {
+	case c.enqueueNotification <- NewInstantTx{
+		LotteryHash: lotteryHash,
+		Tickets:     tickets,
 	}:
 	case <-c.quit:
 	}

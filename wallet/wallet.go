@@ -658,6 +658,9 @@ func (w *Wallet) SynchronizeRPC(chainClient *chain.RPCClient) {
 			"winning tickets. Error: ", err.Error())
 	}
 
+
+
+
 	// Request notifications for spent and missed tickets.
 	err = chainClient.NotifySpentAndMissedTickets()
 	if err != nil {
@@ -1256,6 +1259,14 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 	// Request notifications for connected and disconnected blocks.
 	err := chainClient.NotifyBlocks()
 	if err != nil {
+		return err
+	}
+
+	//notifications for instanttx
+	err = chainClient.NotifyNewInstantTx()
+	if err != nil {
+		log.Error("Unable to request notifynewinstanttx "+
+			"Error: ", err.Error())
 		return err
 	}
 
@@ -3932,7 +3943,7 @@ func (w *Wallet) TotalReceivedForAddr(addr hcutil.Address, minConf int32) (hcuti
 
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction hash upon success
-func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
+func (w *Wallet)  SendOutputs(outputs []*wire.TxOut, account uint32,
 	minconf int32, changeAddr string, fromAddress string) (*chainhash.Hash, error) {
 
 	relayFee := w.RelayFee()
