@@ -1113,7 +1113,7 @@ func makeAITicket(params *chaincfg.Params, inputPool *extendedOutPoint,
 	mtx.AddTxOut(txOut)
 
 	// Make sure we generated a valid SStx.
-	if _, err := stake.IsSStx(mtx); err != nil {
+	if _, err := stake.IsAiSStx(mtx); err != nil {
 		return nil, err
 	}
 
