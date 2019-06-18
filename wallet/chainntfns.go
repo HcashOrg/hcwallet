@@ -56,7 +56,7 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 				break
 			}
 
-			log.Error("handleConsensusRPCNotifications:",n.Transaction)
+			log.Error("handleConsensusRPCNotifications:", n.Transaction)
 			err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
 				return w.processSerializedTransaction(dbtx, n.Transaction, nil, nil)
 			})
@@ -68,7 +68,7 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 		case chain.NewInstantTx:
 			notificationName = "newinstanttx"
 			log.Error("newInstantxnotify")
-			w.handleNewInstantTx(n.LotteryHash,n.Tickets)
+			w.handleNewInstantTx(n.InstantTxHash, n.Tickets)
 		case chain.MissedTickets:
 			notificationName = "spentandmissedtickets"
 			err = w.handleMissedTickets(n.BlockHash, int32(n.BlockHeight), n.Tickets)
@@ -1227,10 +1227,6 @@ func (w *Wallet) handleChainVotingNotifications(chainClient *chain.RPCClient) {
 	w.wg.Done()
 }
 
-
-
-
-
 // selectOwnedTickets returns a slice of tickets hashes from the tickets
 // argument that are owned by the wallet.
 //
@@ -1246,12 +1242,61 @@ func selectOwnedTickets(w *Wallet, dbtx walletdb.ReadTx, tickets []*chainhash.Ha
 	return owned
 }
 
-func (w *Wallet)handleNewInstantTx(lotteryHash *chainhash.Hash,tickets []*chainhash.Hash) {
+func (w *Wallet) handleNewInstantTx(instantTxHash *chainhash.Hash, tickets []*chainhash.Hash) {
 
-	instantTxVote:=wire.NewMsgInstantTxVote()
-	instantTxVote.Sig=[]byte("test")
+	var ticketHashes []*chainhash.Hash
+	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
-	w.chainClient.SendInstantTxVote(instantTxVote)
+		// Only consider tickets owned by this wallet.
+		ticketHashes = selectOwnedTickets(w, dbtx, tickets)
+		if len(ticketHashes) == 0 {
+			return nil
+		}
+		for _, ticketHash := range ticketHashes {
+			ticketPurchase, err := w.TxStore.Tx(txmgrNs, ticketHash)
+			if err != nil || ticketPurchase == nil {
+				ticketPurchase, err = w.StakeMgr.TicketPurchase(dbtx, ticketHash)
+			}
+			if err != nil {
+				log.Errorf("Failed to read ticket purchase transaction for "+
+					"instant ticket %v: %v", ticketHash, err)
+				continue
+			}
+
+			out := ticketPurchase.TxOut[0]
+			//find addr associated with the ticket
+			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.Version,
+				out.PkScript, w.chainParams)
+
+			if err != nil {
+				log.Errorf("Failed to extract addrs for "+
+					"instant ticket %v: %v", ticketHash, err)
+				continue
+			}
+			//instanttxvote
+			instantTxVote := wire.NewMsgInstantTxVote()
+			instantTxVote.Vote=true
+			instantTxVote.TicketHash=*ticketHash
+			instantTxVote.InstanTxHash=*instantTxHash
+
+			signMsg:=instantTxVote.InstanTxHash.String()+instantTxVote.TicketHash.String()
+
+
+			//sign msg
+			sig,err:=w.SignMessage(signMsg,addrs[0])
+
+			instantTxVote.Sig=sig
+
+			w.chainClient.SendInstantTxVote(instantTxVote)
+		}
+		return nil
+	})
+
+	if err != nil {
+		log.Errorf("db View failed handle instant tx: %v", err)
+	}
+
 }
 
 // handleWinningTickets receives a list of hashes and some block information
@@ -1373,7 +1418,7 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 		}(i, vote)
 	}
 
-	log.Error("winning",winning)
+	log.Error("winning", winning)
 
 	if winning {
 		go func() {
@@ -1383,7 +1428,7 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 				return
 			}
 
-			log.Error("fetchPending",txMsgR)
+			log.Error("fetchPending", txMsgR)
 			for _, txMsgBytes := range txMsgR.MsgTx {
 				msgtx := wire.MsgTx{}
 				err := msgtx.FromBytes(txMsgBytes)

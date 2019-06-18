@@ -214,7 +214,7 @@ type (
 
 	NewInstantTx struct {
 		Tickets     []*chainhash.Hash
-		LotteryHash *chainhash.Hash
+		InstantTxHash *chainhash.Hash
 	}
 
 	// MissedTickets is a notifcation for tickets that have been missed.
@@ -283,10 +283,10 @@ func (c *RPCClient) onRelevantTxAccepted(transaction []byte) {
 	}
 }
 
-func (c *RPCClient) onNewInstantTx(lotteryHash *chainhash.Hash, tickets []*chainhash.Hash) {
+func (c *RPCClient) onNewInstantTx(instantTxHash *chainhash.Hash, tickets []*chainhash.Hash) {
 	select {
 	case c.enqueueNotification <- NewInstantTx{
-		LotteryHash: lotteryHash,
+		InstantTxHash: instantTxHash,
 		Tickets:     tickets,
 	}:
 	case <-c.quit:
