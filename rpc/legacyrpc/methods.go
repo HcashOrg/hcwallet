@@ -131,11 +131,12 @@ func init() {
 		"purchaseaiticket":         {handler: purchaseAITicket},
 		"rescanwallet":             {handlerWithChain: rescanWallet},
 		"revoketickets":            {handlerWithChain: revokeTickets},
+		"revokeaitickets":          {handlerWithChain: revokeAITickets},
 		"sendfrom":                 {handlerWithChain: sendFrom},
 		"sendmany":                 {handler: sendMany},
 		"sendmanyv2":               {handler: sendManyV2},
 		"sendtoaddress":            {handler: sendToAddress},
-		"instantsendtoaddress":    {handler: instantSendToAddress},
+		"instantsendtoaddress":     {handler: instantSendToAddress},
 		"sendfromaddresstoaddress": {handler: sendFromAddressToAddress},
 		"getstraightpubkey":        {handlerWithChain: getStraightPubKey},
 		"sendtomultisig":           {handlerWithChain: sendToMultiSig},
@@ -2296,6 +2297,13 @@ func rescanWallet(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.C
 // revokeTickets initiates the wallet to issue revocations for any missing tickets that
 // not yet been revoked.
 func revokeTickets(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
+	err := w.RevokeTickets(chainClient)
+	return nil, err
+}
+
+// revokeTickets initiates the wallet to issue revocations for any missing tickets that
+// not yet been revoked.
+func revokeAITickets(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
 	err := w.RevokeTickets(chainClient)
 	return nil, err
 }

@@ -400,3 +400,117 @@ func (w *Wallet) RevokeTickets(chainClient *hcrpcclient.Client) error {
 
 	return nil
 }
+
+// RevokeAITickets creates and sends revocation transactions for any unrevoked
+// missed and expired tickets.  The wallet must be unlocked to generate any
+// revocations.
+func (w *Wallet) RevokeAITickets(chainClient *hcrpcclient.Client) error {
+	var ticketHashes []chainhash.Hash
+	var tipHash chainhash.Hash
+	var tipHeight int32
+	err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+		ns := tx.ReadBucket(wtxmgrNamespaceKey)
+		var err error
+		tipHash, tipHeight = w.TxStore.MainChainTip(ns)
+		ticketHashes, err = w.TxStore.UnspentTickets(tx, tipHeight, false)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+
+	ticketHashPtrs := make([]*chainhash.Hash, len(ticketHashes))
+	for i := range ticketHashes {
+		ticketHashPtrs[i] = &ticketHashes[i]
+	}
+	expiredFuture := chainClient.ExistsExpiredTicketsAsync(ticketHashPtrs)
+	missedFuture := chainClient.ExistsMissedTicketsAsync(ticketHashPtrs)
+	expiredBitsHex, err := expiredFuture.Receive()
+	if err != nil {
+		return err
+	}
+	missedBitsHex, err := missedFuture.Receive()
+	if err != nil {
+		return err
+	}
+	expiredBits, err := hex.DecodeString(expiredBitsHex)
+	if err != nil {
+		return err
+	}
+	missedBits, err := hex.DecodeString(missedBitsHex)
+	if err != nil {
+		return err
+	}
+	revokableTickets := make([]*chainhash.Hash, 0, len(ticketHashes))
+	for i, p := range ticketHashPtrs {
+		if bitset.Bytes(expiredBits).Get(i) || bitset.Bytes(missedBits).Get(i) {
+			revokableTickets = append(revokableTickets, p)
+		}
+	}
+	feePerKb := w.RelayFee()
+	revocations := make([]*wire.MsgTx, 0, len(revokableTickets))
+	err = walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
+		for _, ticketHash := range revokableTickets {
+			addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
+			txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
+			ticketPurchase, err := w.TxStore.Tx(txmgrNs, ticketHash)
+			if err != nil {
+				return err
+			}
+
+			// Don't create revocations when this wallet doesn't have voting
+			// authority.
+			owned, err := w.hasVotingAuthority(addrmgrNs, ticketPurchase)
+			if err != nil {
+				return err
+			}
+			if !owned {
+				continue
+			}
+
+			revocation, err := createUnsignedRevocation(ticketHash,
+				ticketPurchase, feePerKb)
+			if err != nil {
+				return err
+			}
+			err = w.signRevocation(addrmgrNs, ticketPurchase, revocation)
+			if err != nil {
+				return err
+			}
+			revocations = append(revocations, revocation)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	for i, revocation := range revocations {
+		rec, err := udb.NewTxRecordFromMsgTx(revocation, time.Now())
+		if err != nil {
+			return err
+		}
+		err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
+			err = w.StakeMgr.StoreRevocationInfo(dbtx, revokableTickets[i],
+				&rec.Hash, &tipHash, tipHeight)
+			if err != nil {
+				return err
+			}
+			// Could be more efficient by avoiding processTransaction, as we
+			// know it is a revocation.
+			err = w.processTransactionRecord(dbtx, rec, nil, nil)
+			if err != nil {
+				return err
+			}
+			_, err = chainClient.SendRawTransaction(revocation, true)
+			return err
+		})
+		if err != nil {
+			return err
+		}
+		log.Infof("Revoked ticket %v with revocation %v", revokableTickets[i],
+			&rec.Hash)
+	}
+
+	return nil
+}
