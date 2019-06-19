@@ -1312,7 +1312,8 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 					ticketHash, err)
 				continue
 			}
-			if isSSGEN, _ := stake.IsSSGen(vote); !isSSGEN {
+			isAiSSGEN, _ := stake.IsAiSSGen(vote)
+			if isSSGEN, _ := stake.IsSSGen(vote); !isSSGEN && !isAiSSGEN{
 				log.Errorf("not a correct SSGEN format")
 				continue
 			}
