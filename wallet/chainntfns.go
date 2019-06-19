@@ -67,8 +67,10 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 			}
 		case chain.NewInstantTx:
 			notificationName = "newinstanttx"
-			log.Error("newInstantxnotify")
 			w.handleNewInstantTx(n.InstantTxHash, n.Tickets)
+		case chain.InstantTxVote:
+			notificationName="instanttxvote"
+			w.handleInstantTxVote(n.InstantTxVoteHash,n.InstantTxHash,n.TickeHash,n.Vote,n.Sig)
 		case chain.MissedTickets:
 			notificationName = "spentandmissedtickets"
 			err = w.handleMissedTickets(n.BlockHash, int32(n.BlockHeight), n.Tickets)
@@ -1241,6 +1243,11 @@ func selectOwnedTickets(w *Wallet, dbtx walletdb.ReadTx, tickets []*chainhash.Ha
 	}
 	return owned
 }
+
+func(w *Wallet) handleInstantTxVote(instantTxVoteHash *chainhash.Hash, instantTxHash *chainhash.Hash, tickeHash *chainhash.Hash, vote bool, sig []byte) {
+	log.Debug("handleInstanttxvote")
+}
+
 
 func (w *Wallet) handleNewInstantTx(instantTxHash *chainhash.Hash, tickets []*chainhash.Hash) {
 

@@ -77,6 +77,7 @@ func NewRPCClient(chainParams *chaincfg.Params, connect, user, pass string, cert
 		OnRelevantTxAccepted:    client.onRelevantTxAccepted,
 		OnReorganization:        client.onReorganization,
 		OnNewInstantTx:          client.onNewInstantTx,
+		OnInstantTxVote:         client.onInstantTxVote,
 		OnWinningTickets:        client.onWinningTickets,
 		OnSpentAndMissedTickets: client.onSpentAndMissedTickets,
 		OnStakeDifficulty:       client.onStakeDifficulty,
@@ -213,8 +214,16 @@ type (
 	}
 
 	NewInstantTx struct {
-		Tickets     []*chainhash.Hash
+		Tickets       []*chainhash.Hash
 		InstantTxHash *chainhash.Hash
+	}
+
+	InstantTxVote struct {
+		InstantTxVoteHash *chainhash.Hash
+		InstantTxHash     *chainhash.Hash
+		TickeHash         *chainhash.Hash
+		Vote              bool
+		Sig               []byte
 	}
 
 	// MissedTickets is a notifcation for tickets that have been missed.
@@ -287,7 +296,20 @@ func (c *RPCClient) onNewInstantTx(instantTxHash *chainhash.Hash, tickets []*cha
 	select {
 	case c.enqueueNotification <- NewInstantTx{
 		InstantTxHash: instantTxHash,
-		Tickets:     tickets,
+		Tickets:       tickets,
+	}:
+	case <-c.quit:
+	}
+}
+
+func (c *RPCClient) onInstantTxVote(instantTxVoteHash *chainhash.Hash, instantTxHash *chainhash.Hash, tickeHash *chainhash.Hash, vote bool, sig []byte) {
+	select {
+	case c.enqueueNotification <- InstantTxVote{
+		InstantTxVoteHash: instantTxVoteHash,
+		InstantTxHash:     instantTxHash,
+		TickeHash:         tickeHash,
+		Vote:              vote,
+		Sig:               sig,
 	}:
 	case <-c.quit:
 	}
