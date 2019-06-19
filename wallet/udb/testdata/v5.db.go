@@ -294,7 +294,11 @@ func createUnsignedTicketPurchase(prevOut *wire.OutPoint,
 	}
 	tx.AddTxOut(wire.NewTxOut(0, pkScript))
 
-	_, err = stake.IsSStx(tx)
+	ok, err := stake.IsSStx(tx)
+	_, errAi := stake.IsAiSStx(tx)
+	if !ok{
+		err =  errAi
+	}
 	return tx, err
 }
 

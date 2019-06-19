@@ -316,16 +316,18 @@ func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff int64) error {
 
 		var expired, isTicketPurchase, isVote bool
 		isSStx, _ := stake.IsSStx(&tx)
+		isSStxAi, _ := stake.IsAiSStx(&tx)
 		isSSGen, _ := stake.IsSSGen(&tx)
+		isSSGenAi, _ := stake.IsAiSSGen(&tx)
 		switch {
 		case tx.Expiry != wire.NoExpiryValue && tx.Expiry <= uint32(tipHeight):
 			expired = true
-		case isSStx:
+		case isSStx, isSStxAi:
 			isTicketPurchase = true
 			if tx.TxOut[0].Value == stakeDiff {
 				continue
 			}
-		case isSSGen:
+		case isSSGen, isSSGenAi:
 			isVote = true
 			// This will never actually error
 			_, votedHeight, _ := stake.SSGenBlockVotedOn(&tx)

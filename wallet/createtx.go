@@ -2051,7 +2051,9 @@ func (w *Wallet) txToSStxInternal(dbtx walletdb.ReadWriteTx, pair map[string]hcu
 
 	}
 	if _, err := stake.IsSStx(msgtx); err != nil {
-		return nil, err
+		if _, errAi := stake.IsAiSStx(msgtx); errAi != nil {
+			return nil, err
+		}
 	}
 	err = walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
 		addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)

@@ -489,6 +489,9 @@ func (w *Wallet) processSerializedTransaction(dbtx walletdb.ReadWriteTx, seriali
 	}
 	if len(rec.MsgTx.TxOut) == 3 {
 		tempOut := rec.MsgTx.TxOut[2]
+		if rec.MsgTx.TxOut[0].PkScript[0] == 200 {
+			fmt.Println("test 200")
+		}
 		if tempOut.PkScript[0] == 106 && len(tempOut.PkScript) == 66 {
 			fmt.Println(tempOut)
 		}
@@ -744,7 +747,8 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 	// the OP_SSTX tagged out, except if we're operating as a stake pool
 	// server. In that case, additionally consider the first commitment
 	// output as well.
-	if is, _ := stake.IsSStx(&rec.MsgTx); is {
+	isAi, _ := stake.IsAiSStx(&rec.MsgTx)
+	if is, _ := stake.IsSStx(&rec.MsgTx); is || isAi{
 		// Errors don't matter here.  If addrs is nil, the range below
 		// does nothing.
 		txOut := rec.MsgTx.TxOut[0]
@@ -1446,7 +1450,8 @@ func (w *Wallet) handleMissedTickets(blockHash *chainhash.Hash, blockHeight int3
 					ticketHash, err)
 				continue
 			}
-			if _, err := stake.IsSSRtx(revocation); err != nil {
+			_, errAi := stake.IsAiSSRtx(revocation)
+			if _, err := stake.IsSSRtx(revocation); err != nil && errAi != nil{
 				log.Errorf("Failed to sign revocation for ticket hash %v: %v",
 					ticketHash, err)
 			}

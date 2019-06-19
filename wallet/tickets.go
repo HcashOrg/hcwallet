@@ -241,7 +241,10 @@ func (w *Wallet) updateStakePoolInvalidTicket(stakemgrNs walletdb.ReadWriteBucke
 func (w *Wallet) AddTicket(ticket *wire.MsgTx) error {
 	_, err := stake.IsSStx(ticket)
 	if err != nil {
-		return err
+		_, errAi := stake.IsAiSStx(ticket)
+		if errAi != nil {
+			return err
+		}
 	}
 
 	return walletdb.Update(w.db, func(tx walletdb.ReadWriteTx) error {

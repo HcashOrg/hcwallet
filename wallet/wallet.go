@@ -3556,17 +3556,20 @@ type StakeInfoData struct {
 
 func isTicketPurchase(tx *wire.MsgTx) bool {
 	b, _ := stake.IsSStx(tx)
-	return b
+	bAi, _ := stake.IsAiSStx(tx)
+	return b || bAi
 }
 
 func isVote(tx *wire.MsgTx) bool {
 	b, _ := stake.IsSSGen(tx)
-	return b
+	bAi, _ := stake.IsAiSSGen(tx)
+	return b || bAi
 }
 
 func isRevocation(tx *wire.MsgTx) bool {
 	b, _ := stake.IsSSRtx(tx)
-	return b
+	bAi, _ := stake.IsAiSSRtx(tx)
+	return b || bAi
 }
 
 // hasVotingAuthority returns whether the 0th output of a ticket purchase can be
@@ -4078,7 +4081,8 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 			// and doesn't need to be signed.
 			if i == 0 {
 				isSSGen, err := stake.IsSSGen(tx)
-				if err == nil && isSSGen {
+				isAiSSGen, errAi := stake.IsAiSSGen(tx)
+				if (err == nil && isSSGen ) || (errAi == nil && isAiSSGen ) {
 					// Put some garbage in the signature script.
 					txIn.SignatureScript = []byte{0xDE, 0xAD, 0xBE, 0xEF}
 					continue
@@ -4711,7 +4715,8 @@ func (w *Wallet) CommittedTickets(tickets []*chainhash.Hash) ([]*chainhash.Hash,
 				log.Debugf("%v", err)
 				continue
 			}
-			if isSStx, _ := stake.IsSStx(tx); !isSStx {
+			isAiSStx, _ := stake.IsAiSStx(tx)
+			if isSStx, _ := stake.IsSStx(tx); !isSStx && !isAiSStx{
 				continue
 			}
 
