@@ -1014,7 +1014,11 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 		isStakeType := class == txscript.StakeSubmissionTy ||
 			class == txscript.StakeSubChangeTy ||
 			class == txscript.StakeGenTy ||
-			class == txscript.StakeRevocationTy
+			class == txscript.StakeRevocationTy||
+			class == txscript.AiStakeSubmissionTy ||
+			class == txscript.AiStakeSubChangeTy ||
+			class == txscript.AiStakeGenTy ||
+			class == txscript.AiStakeRevocationTy
 		if isStakeType {
 			class, err = txscript.GetStakeOutSubclass(output.PkScript)
 			if err != nil {
@@ -1249,6 +1253,9 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 		return err
 	}
 
+	if len(winningTicketHashes) == 10{
+		fmt.Println("test winningTicketHashes")
+	}
 	// TODO The behavior of this is not quite right if tons of blocks
 	// are coming in quickly, because the transaction store will end up
 	// out of sync with the voting channel here. This should probably

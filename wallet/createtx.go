@@ -2159,19 +2159,19 @@ func (w *Wallet) findEligibleOutputs(dbtx walletdb.ReadTx, account uint32, minco
 
 		// Make sure everything we're trying to spend is actually mature.
 		switch {
-		case class == txscript.StakeSubmissionTy:
+		case class == txscript.StakeSubmissionTy, class == txscript.AiStakeSubmissionTy:
 			continue
-		case class == txscript.StakeGenTy:
+		case class == txscript.StakeGenTy, class == txscript.AiStakeGenTy:
 			target := int32(w.chainParams.CoinbaseMaturity)
 			if !confirmed(target, output.Height, currentHeight) {
 				continue
 			}
-		case class == txscript.StakeRevocationTy:
+		case class == txscript.StakeRevocationTy, class == txscript.AiStakeRevocationTy:
 			target := int32(w.chainParams.CoinbaseMaturity)
 			if !confirmed(target, output.Height, currentHeight) {
 				continue
 			}
-		case class == txscript.StakeSubChangeTy:
+		case class == txscript.StakeSubChangeTy,  class == txscript.AiStakeSubChangeTy:
 			target := int32(w.chainParams.SStxChangeMaturity)
 			if !confirmed(target, output.Height, currentHeight) {
 				continue
@@ -2455,12 +2455,19 @@ func createUnsignedVote(ticketHash *chainhash.Hash, ticketPurchase *wire.MsgTx,
 	}
 	vote.AddTxOut(wire.NewTxOut(0, voteScript))
 
+	isAiSSTx, _ := stake.IsAiSStx(ticketPurchase)
 	// All remaining outputs pay to the output destinations and amounts tagged
 	// by the ticket purchase.
 	for i, hash160 := range ticketHash160s {
 		scriptFn := txscript.PayToSSGenPKHDirect
 		if ticketPayKinds[i] { // P2SH
 			scriptFn = txscript.PayToSSGenSHDirect
+		}
+		if isAiSSTx {
+			scriptFn = txscript.PayToAiSSGenPKHDirect
+			if ticketPayKinds[i] { // P2SH
+				scriptFn = txscript.PayToAiSSGenSHDirect
+			}
 		}
 		// Error is checking for a nil hash160, just ignore it.
 		script, _ := scriptFn(hash160, int(sigTypes[i]))

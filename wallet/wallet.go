@@ -2494,10 +2494,16 @@ func listTransactions(tx walletdb.ReadTx, details *udb.TxDetails, addrMgr *udb.M
 	switch details.TxType {
 	case stake.TxTypeSStx:
 		txTypeStr = hcjson.LTTTTicket
+	case stake.TxTypeAiSStx:
+		txTypeStr = hcjson.LTTTAiTicket
 	case stake.TxTypeSSGen:
 		txTypeStr = hcjson.LTTTVote
+	case stake.TxTypeAiSSGen:
+		txTypeStr = hcjson.LTTTAiVote
 	case stake.TxTypeSSRtx:
 		txTypeStr = hcjson.LTTTRevocation
+	case stake.TxTypeAiSSRtx:
+		txTypeStr = hcjson.LTTTAiRevocation
 	}
 
 	// Fee can only be determined if every input is a debit.
@@ -3240,7 +3246,7 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32, addresses map[string]struct
 			}
 
 			switch details.TxRecord.TxType {
-			case stake.TxTypeSStx:
+			case stake.TxTypeSStx, stake.TxTypeAiSStx:
 				// Ticket commitment, only spendable after ticket maturity.
 				// You can only spent it after TM many blocks has gone past, so
 				// ticket maturity + 1??? Check this HC TODO
@@ -3257,14 +3263,14 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32, addresses map[string]struct
 						continue
 					}
 				}
-			case stake.TxTypeSSGen:
+			case stake.TxTypeSSGen, stake.TxTypeAiSSGen:
 				// All non-OP_RETURN outputs for SSGen tx are only spendable
 				// after coinbase maturity many blocks.
 				if !confirmed(int32(w.chainParams.CoinbaseMaturity),
 					details.Height(), tipHeight) {
 					continue
 				}
-			case stake.TxTypeSSRtx:
+			case stake.TxTypeSSRtx, stake.TxTypeAiSSRtx:
 				// All outputs for SSRtx tx are only spendable
 				// after coinbase maturity many blocks.
 				if !confirmed(int32(w.chainParams.CoinbaseMaturity),

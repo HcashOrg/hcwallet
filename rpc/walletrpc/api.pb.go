@@ -477,6 +477,10 @@ const (
 	ValidateAddressResponse_StakeSubChangeTy  ValidateAddressResponse_ScriptType = 9
 	ValidateAddressResponse_PubkeyAltTy       ValidateAddressResponse_ScriptType = 10
 	ValidateAddressResponse_PubkeyHashAltTy   ValidateAddressResponse_ScriptType = 11
+	ValidateAddressResponse_AiStakeSubmissionTy ValidateAddressResponse_ScriptType = 12
+	ValidateAddressResponse_AiStakeGenTy        ValidateAddressResponse_ScriptType = 13
+	ValidateAddressResponse_AiStakeRevocationTy ValidateAddressResponse_ScriptType = 14
+	ValidateAddressResponse_AiStakeSubChangeTy  ValidateAddressResponse_ScriptType = 15
 )
 
 var ValidateAddressResponse_ScriptType_name = map[int32]string{
@@ -492,6 +496,10 @@ var ValidateAddressResponse_ScriptType_name = map[int32]string{
 	9:  "StakeSubChangeTy",
 	10: "PubkeyAltTy",
 	11: "PubkeyHashAltTy",
+	12:  "AiStakeSubmissionTy",
+	13:  "AiStakeGenTy",
+	14:  "AiStakeRevocationTy",
+	15:  "AiStakeSubChangeTy",
 }
 var ValidateAddressResponse_ScriptType_value = map[string]int32{
 	"NonStandardTy":     0,
@@ -506,6 +514,10 @@ var ValidateAddressResponse_ScriptType_value = map[string]int32{
 	"StakeSubChangeTy":  9,
 	"PubkeyAltTy":       10,
 	"PubkeyHashAltTy":   11,
+	"AiStakeSubmissionTy": 12,
+	"AiStakeGenTy":        13,
+	"AiStakeRevocationTy": 14,
+	"AiStakeSubChangeTy":  15,
 }
 
 func (x ValidateAddressResponse_ScriptType) String() string {

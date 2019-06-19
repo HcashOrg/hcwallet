@@ -914,6 +914,8 @@ func (s *Store) PruneUnconfirmed(ns walletdb.ReadWriteBucket, height int32, stak
 		// Remove ticket purchases with a different current stake difficulty
 		case rec.TxType == stake.TxTypeSStx && rec.MsgTx.TxOut[0].Value != stakeDiff:
 		// Skip others
+		case rec.TxType == stake.TxTypeAiSStx && rec.MsgTx.TxOut[0].Value != stakeDiff:
+			// Skip others
 		default:
 			continue
 		}
@@ -1048,7 +1050,7 @@ func (s *Store) moveMinedTx(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.Read
 		creditOpCode := fetchRawCreditTagOpCode(credVal)
 
 		// Do not decrement ticket amounts.
-		if !(creditOpCode == txscript.OP_SSTX) {
+		if !(creditOpCode == txscript.OP_SSTX ||  creditOpCode == txscript.OP_AISSTX ) {
 			minedBalance -= amt
 		}
 		err = deleteRawUnspent(ns, unspentKey)
@@ -1126,7 +1128,7 @@ func (s *Store) moveMinedTx(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.Read
 		}
 
 		// Do not increment ticket credits.
-		if !(cred.opCode == txscript.OP_SSTX) {
+		if !(cred.opCode == txscript.OP_SSTX || cred.opCode == txscript.OP_AISSTX) {
 			minedBalance += amount
 		}
 	}
@@ -1256,7 +1258,7 @@ func (s *Store) InsertMinedTx(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.Re
 
 	// If the transaction is a ticket purchase, record it in the ticket
 	// purchases bucket.
-	if txType == stake.TxTypeSStx {
+	if txType == stake.TxTypeSStx || ( txType == stake.TxTypeAiSStx){
 		tk := rec.Hash[:]
 		tv := existsRawTicketRecord(ns, tk)
 		if tv == nil {
@@ -1365,12 +1367,20 @@ func getP2PKHOpCode(pkScript []byte) uint8 {
 	switch {
 	case class == txscript.StakeSubmissionTy:
 		return txscript.OP_SSTX
+	case class == txscript.AiStakeSubmissionTy:
+		return txscript.OP_AISSTX
 	case class == txscript.StakeGenTy:
 		return txscript.OP_SSGEN
+	case class == txscript.AiStakeGenTy:
+		return txscript.OP_AISSGEN
 	case class == txscript.StakeRevocationTy:
 		return txscript.OP_SSRTX
+	case class == txscript.AiStakeRevocationTy:
+		return txscript.OP_AISSRTX
 	case class == txscript.StakeSubChangeTy:
 		return txscript.OP_SSTXCHANGE
+	case class == txscript.AiStakeSubChangeTy:
+		return txscript.OP_AISSTXCHANGE
 	}
 
 	return opNonstake
@@ -1391,13 +1401,13 @@ func pkScriptType(pkScript []byte) scriptType {
 		return scriptTypeP2PKHAlt
 	case txscript.PubkeyAltTy:
 		return scriptTypeP2PKAlt
-	case txscript.StakeSubmissionTy:
+	case txscript.StakeSubmissionTy, txscript.AiStakeSubmissionTy :
 		fallthrough
-	case txscript.StakeGenTy:
+	case txscript.StakeGenTy, txscript.AiStakeGenTy:
 		fallthrough
-	case txscript.StakeRevocationTy:
+	case txscript.StakeRevocationTy, txscript.AiStakeRevocationTy:
 		fallthrough
-	case txscript.StakeSubChangeTy:
+	case txscript.StakeSubChangeTy, txscript.AiStakeSubChangeTy:
 		subClass, err := txscript.GetStakeOutSubclass(pkScript)
 		if err != nil {
 			return scriptTypeUnspecified
@@ -1417,6 +1427,9 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 	index uint32, change bool, account uint32) (bool, error) {
 
 	opCode := getP2PKHOpCode(rec.MsgTx.TxOut[index].PkScript)
+	if opCode == 200 {
+		fmt.Println("test 200200")
+	}
 	isCoinbase := blockchain.IsCoinBaseTx(&rec.MsgTx)
 
 	if block == nil {
@@ -1480,7 +1493,7 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 		return false, err
 	}
 	// Update the balance so long as it's not a ticket output.
-	if !(opCode == txscript.OP_SSTX) {
+	if !(opCode == txscript.OP_SSTX || opCode == txscript.OP_AISSTX) {
 		err = putMinedBalance(ns, minedBalance+txOutAmt)
 		if err != nil {
 			return false, err
@@ -1552,7 +1565,11 @@ func (s *Store) addMultisigOut(ns walletdb.ReadWriteBucket, rec *TxRecord,
 	isStakeType := class == txscript.StakeSubmissionTy ||
 		class == txscript.StakeSubChangeTy ||
 		class == txscript.StakeGenTy ||
-		class == txscript.StakeRevocationTy
+		class == txscript.StakeRevocationTy ||
+		class == txscript.AiStakeSubmissionTy ||
+		class == txscript.AiStakeSubChangeTy ||
+		class == txscript.AiStakeGenTy ||
+		class == txscript.AiStakeRevocationTy
 	if isStakeType {
 		class, err = txscript.GetStakeOutSubclass(p2shScript)
 		if err != nil {
@@ -1853,7 +1870,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.ReadBuc
 
 				// Ticket output spends are never decremented, so no need
 				// to add them back.
-				if !(creditOpCode == txscript.OP_SSTX) {
+				if !(creditOpCode == txscript.OP_SSTX || creditOpCode == txscript.OP_AISSTX) {
 					minedBalance += amt
 				}
 
@@ -1926,7 +1943,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.ReadBuc
 				if credKey != nil {
 					// Ticket amounts were never added, so ignore them when
 					// correcting the balance.
-					isTicketOutput := (txType == stake.TxTypeSStx && i == 0)
+					isTicketOutput := ((txType == stake.TxTypeSStx || txType == stake.TxTypeAiSStx) && i == 0)
 					if !isTicketOutput {
 						minedBalance -= hcutil.Amount(output.Value)
 					}
@@ -2934,7 +2951,7 @@ func (s *Store) unspentOutputsForAmount(ns, addrmgrNs walletdb.ReadBucket, neede
 		}
 		// Skip ticket outputs, as only SSGen can spend these.
 		opcode := fetchRawCreditTagOpCode(cVal)
-		if opcode == txscript.OP_SSTX {
+		if opcode == txscript.OP_SSTX || opcode == txscript.OP_AISSTX {
 			return nil
 		}
 
@@ -2953,13 +2970,14 @@ func (s *Store) unspentOutputsForAmount(ns, addrmgrNs walletdb.ReadBucket, neede
 				return nil
 			}
 		}
-		if opcode == txscript.OP_SSGEN || opcode == txscript.OP_SSRTX {
+		if opcode == txscript.OP_SSGEN || opcode == txscript.OP_SSRTX ||
+			opcode == txscript.OP_AISSGEN || opcode == txscript.OP_AISSRTX {
 			if !confirmed(int32(s.chainParams.CoinbaseMaturity), txHeight,
 				syncHeight) {
 				return nil
 			}
 		}
-		if opcode == txscript.OP_SSTXCHANGE {
+		if opcode == txscript.OP_SSTXCHANGE || opcode == txscript.OP_AISSTXCHANGE {
 			if !confirmed(int32(s.chainParams.SStxChangeMaturity), txHeight,
 				syncHeight) {
 				return nil
@@ -3031,15 +3049,16 @@ func (s *Store) unspentOutputsForAmount(ns, addrmgrNs walletdb.ReadBucket, neede
 
 			// Skip ticket outputs, as only SSGen can spend these.
 			opcode := fetchRawUnminedCreditTagOpcode(v)
-			if opcode == txscript.OP_SSTX {
+			if opcode == txscript.OP_SSTX ||opcode == txscript.OP_AISSTX {
 				return nil
 			}
 
 			// Skip outputs that are not mature.
-			if opcode == txscript.OP_SSGEN || opcode == txscript.OP_SSRTX {
+			if opcode == txscript.OP_SSGEN || opcode == txscript.OP_SSRTX ||
+				opcode == txscript.OP_AISSGEN || opcode == txscript.OP_AISSRTX {
 				return nil
 			}
-			if opcode == txscript.OP_SSTXCHANGE {
+			if opcode == txscript.OP_SSTXCHANGE || opcode == txscript.OP_AISSTXCHANGE {
 				return nil
 			}
 
@@ -3177,6 +3196,9 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 			copy(cKey[36:68], v[4:36])  // Block hash
 			copy(cKey[68:72], k[32:36]) // Output index
 
+			testHash, _ := chainhash.NewHash(k[0:32])
+			fmt.Println(testHash.String())
+
 			cVal := existsRawCredit(ns, cKey)
 
 			// Check the account first.
@@ -3210,7 +3232,7 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 
 			// Skip ticket outputs, as only SSGen can spend these.
 			opcode := fetchRawCreditTagOpCode(cVal)
-			if opcode == txscript.OP_SSTX {
+			if opcode == txscript.OP_SSTX || opcode == txscript.OP_AISSTX{
 				continue
 			}
 
@@ -3229,13 +3251,15 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 					continue
 				}
 			}
-			if opcode == txscript.OP_SSGEN || opcode == txscript.OP_SSRTX {
+			if opcode == txscript.OP_SSGEN || opcode == txscript.OP_SSRTX ||
+				opcode == txscript.OP_AISSGEN || opcode == txscript.OP_AISSRTX{
 				if !confirmed(int32(s.chainParams.CoinbaseMaturity), txHeight,
 					syncHeight) {
 					continue
 				}
 			}
-			if opcode == txscript.OP_SSTXCHANGE {
+			if opcode == txscript.OP_SSTXCHANGE ||
+				opcode == txscript.OP_AISSTXCHANGE{
 				if !confirmed(int32(s.chainParams.SStxChangeMaturity), txHeight,
 					syncHeight) {
 					continue
@@ -3327,15 +3351,16 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 
 			// Skip ticket outputs, as only SSGen can spend these.
 			opcode := fetchRawUnminedCreditTagOpcode(v)
-			if opcode == txscript.OP_SSTX {
+			if opcode == txscript.OP_SSTX ||opcode == txscript.OP_AISSTX {
 				continue
 			}
 
 			// Skip outputs that are not mature.
-			if opcode == txscript.OP_SSGEN || opcode == txscript.OP_SSRTX {
+			if opcode == txscript.OP_SSGEN || opcode == txscript.OP_SSRTX ||
+				opcode == txscript.OP_AISSGEN || opcode == txscript.OP_AISSRTX {
 				continue
 			}
-			if opcode == txscript.OP_SSTXCHANGE {
+			if opcode == txscript.OP_SSTXCHANGE ||opcode == txscript.OP_AISSTXCHANGE {
 				continue
 			}
 
@@ -3436,7 +3461,7 @@ func (s *Store) balanceFullScan(ns, addrmgrNs walletdb.ReadBucket, minConf int32
 				ab.ImmatureCoinbaseRewards += utxoAmt
 			}
 
-		case txscript.OP_SSTX:
+		case txscript.OP_SSTX, txscript.OP_AISSTX:
 			// Locked as stake ticket.
 			txHash := extractRawCreditTxHash(k)
 
@@ -3515,9 +3540,9 @@ func (s *Store) balanceFullScan(ns, addrmgrNs walletdb.ReadBucket, minConf int32
 				ab.LockedByTickets += lockedByTicketsAmt - fee
 			}
 			ab.VotingAuthority += votingAuthorityAmt - fee
-		case txscript.OP_SSGEN:
+		case txscript.OP_SSGEN, txscript.OP_AISSGEN:
 			fallthrough
-		case txscript.OP_SSRTX:
+		case txscript.OP_SSRTX, txscript.OP_AISSRTX:
 			if confirmed(int32(s.chainParams.CoinbaseMaturity),
 				height, syncHeight) {
 				ab.Spendable += utxoAmt
@@ -3525,7 +3550,7 @@ func (s *Store) balanceFullScan(ns, addrmgrNs walletdb.ReadBucket, minConf int32
 				ab.ImmatureStakeGeneration += utxoAmt
 			}
 
-		case txscript.OP_SSTXCHANGE:
+		case txscript.OP_SSTXCHANGE, txscript.OP_AISSTXCHANGE:
 			if confirmed(int32(s.chainParams.SStxChangeMaturity),
 				height, syncHeight) {
 				ab.Spendable += utxoAmt
@@ -3586,7 +3611,7 @@ func (s *Store) balanceFullScan(ns, addrmgrNs walletdb.ReadBucket, minConf int32
 			} else if !fetchRawCreditIsCoinbase(v) {
 				ab.Unconfirmed += utxoAmt
 			}
-		case txscript.OP_SSTX:
+		case txscript.OP_SSTX, txscript.OP_AISSTX:
 			txHash := extractRawUnminedCreditTxHash(k)
 
 			rawUnmined := existsRawUnmined(ns, txHash)
@@ -3665,11 +3690,11 @@ func (s *Store) balanceFullScan(ns, addrmgrNs walletdb.ReadBucket, minConf int32
 				ab.LockedByTickets += lockedByTicketsAmt - fee
 			}
 			ab.VotingAuthority += votingAuthorityAmt - fee
-		case txscript.OP_SSGEN:
+		case txscript.OP_SSGEN, txscript.OP_AISSGEN:
 			fallthrough
-		case txscript.OP_SSRTX:
+		case txscript.OP_SSRTX, txscript.OP_AISSRTX:
 			ab.ImmatureStakeGeneration += utxoAmt
-		case txscript.OP_SSTXCHANGE:
+		case txscript.OP_SSTXCHANGE, txscript.OP_AISSTXCHANGE:
 			return nil
 		default:
 			log.Warnf("Unhandled unconfirmed opcode %v: %v", opcode, v)

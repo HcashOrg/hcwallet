@@ -104,7 +104,7 @@ func (s *Store) InsertMemPoolTx(ns walletdb.ReadWriteBucket, rec *TxRecord) erro
 
 	for i, input := range rec.MsgTx.TxIn {
 		// Skip stakebases for votes.
-		if i == 0 && txType == stake.TxTypeSSGen {
+		if i == 0 && (txType == stake.TxTypeSSGen || txType == stake.TxTypeAiSSGen){
 			continue
 		}
 		prevOut := &input.PreviousOutPoint
@@ -117,7 +117,7 @@ func (s *Store) InsertMemPoolTx(ns walletdb.ReadWriteBucket, rec *TxRecord) erro
 
 	// If the transaction is a ticket purchase, record it in the ticket
 	// purchases bucket.
-	if txType == stake.TxTypeSStx {
+	if txType == stake.TxTypeSStx || txType == stake.TxTypeAiSStx{
 		tk := rec.Hash[:]
 		tv := existsRawTicketRecord(ns, tk)
 		if tv == nil {
