@@ -1035,6 +1035,13 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 		for _, addr := range addrs {
 			ma, err := w.Manager.Address(addrmgrNs, addr)
 			if err == nil {
+				isSStx, _ := stake.IsSStx(&rec.MsgTx)
+				isAiSStx, _ := stake.IsAiSStx(&rec.MsgTx)
+				if isSStx  {
+					fmt.Println("test  185")
+				} else if isAiSStx {
+					fmt.Println("test  198")
+				}
 				err = w.TxStore.AddCredit(txmgrNs, rec, blockMeta,
 					uint32(i), ma.Internal(), ma.Account())
 				if err != nil {

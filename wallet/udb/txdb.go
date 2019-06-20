@@ -15,8 +15,8 @@ import (
 	"github.com/HcashOrg/hcd/blockchain/stake"
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
-	"github.com/HcashOrg/hcd/wire"
 	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/wire"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/walletdb"
 	"golang.org/x/crypto/ripemd160"
@@ -876,7 +876,10 @@ func fetchRawCreditUnspentValue(k []byte) ([]byte, error) {
 
 // fetchRawCreditTagOpCode fetches the compressed OP code for a transaction.
 func fetchRawCreditTagOpCode(v []byte) uint8 {
-	return (((v[8] >> 2) & 0x07) + 0xb9)
+	//if opCode > txscript.OP_AIBASE && opCode > txscript.OP_AITOP{
+	//	return (((v[8] >> 2) & 0x07) + txscript.OP_AIBASE)
+	//}
+	return (((v[8] >> 2) & 0x1F) + 0xb9)
 }
 
 // fetchRawCreditIsCoinbase returns whether or not the credit is a coinbase
@@ -1466,7 +1469,7 @@ func fetchRawUnminedCreditAmountChange(v []byte) (hcutil.Amount, bool, error) {
 }
 
 func fetchRawUnminedCreditTagOpcode(v []byte) uint8 {
-	return (((v[8] >> 2) & 0x07) + 0xb9)
+	return (((v[8] >> 2) & 0x1F) + 0xb9)
 }
 
 func fetchRawUnminedCreditTagIsCoinbase(v []byte) bool {

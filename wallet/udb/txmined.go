@@ -1075,6 +1075,7 @@ func (s *Store) moveMinedTx(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.Read
 		block:    block.Block,
 		spentBy:  indexedIncidence{index: ^uint32(0)},
 	}
+	//isAiStake, _ := rec.MsgTx
 	for i := uint32(0); i < uint32(len(rec.MsgTx.TxOut)); i++ {
 		k := canonicalOutPoint(&rec.Hash, i)
 		v := existsRawUnminedCredit(ns, k)
@@ -1427,7 +1428,7 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 	index uint32, change bool, account uint32) (bool, error) {
 
 	opCode := getP2PKHOpCode(rec.MsgTx.TxOut[index].PkScript)
-	if opCode == 200 {
+	if opCode >= txscript.OP_AISSTX && opCode <= txscript.OP_AISSTXCHANGE{
 		fmt.Println("test 200200")
 	}
 	isCoinbase := blockchain.IsCoinBaseTx(&rec.MsgTx)
