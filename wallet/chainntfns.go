@@ -1281,13 +1281,22 @@ func (w *Wallet) handleNewInstantTx(instantTxHash *chainhash.Hash, tickets []*ch
 					"instant ticket %v: %v", ticketHash, err)
 				continue
 			}
+
 			//instanttxvote
+			pk,err:=w.PubKeyForAddress(addrs[0])
+			if err!=nil{
+				log.Errorf("Failed to extract publick for "+
+					"instant ticket %v: %v", ticketHash, err)
+				continue
+			}
+
 			instantTxVote := wire.NewMsgInstantTxVote()
 			instantTxVote.Vote=true
 			instantTxVote.TicketHash=*ticketHash
-			instantTxVote.InstanTxHash=*instantTxHash
+			instantTxVote.InstantTxHash =*instantTxHash
+			instantTxVote.PubKey=pk.SerializeCompressed()
 
-			signMsg:=instantTxVote.InstanTxHash.String()+instantTxVote.TicketHash.String()
+			signMsg:=instantTxVote.InstantTxHash.String()+instantTxVote.TicketHash.String()
 
 
 			//sign msg

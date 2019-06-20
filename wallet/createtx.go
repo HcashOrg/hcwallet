@@ -577,11 +577,9 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		if isLockTx {
 			instantTx := wire.NewMsgInstantTx()
 			instantTx.MsgTx = *atx.Tx
-			hash, err := chainClient.GetBestBlockHash()
 			if err != nil {
 				return err
 			}
-			instantTx.LotteryHash = *hash
 			chainClient.SendInstantRawTransaction(instantTx, w.AllowHighFees)
 
 		} else {
