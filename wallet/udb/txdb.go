@@ -15,8 +15,8 @@ import (
 	"github.com/HcashOrg/hcd/blockchain/stake"
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
-	"github.com/HcashOrg/hcd/wire"
 	"github.com/HcashOrg/hcd/hcutil"
+	"github.com/HcashOrg/hcd/wire"
 	"github.com/HcashOrg/hcwallet/apperrors"
 	"github.com/HcashOrg/hcwallet/walletdb"
 	"golang.org/x/crypto/ripemd160"
@@ -771,7 +771,8 @@ func valueUnspentCredit(cred *credit, scrType scriptType, scrLoc uint32,
 		v[8] |= 1 << 1
 	}
 	if cred.isCoinbase {
-		v[8] |= 1 << 5
+		//v[8] |= 1 << 5
+		v[8] |= 1 << 6
 	}
 
 	v[81] = byte(scrType)
@@ -876,13 +877,19 @@ func fetchRawCreditUnspentValue(k []byte) ([]byte, error) {
 
 // fetchRawCreditTagOpCode fetches the compressed OP code for a transaction.
 func fetchRawCreditTagOpCode(v []byte) uint8 {
-	return (((v[8] >> 2) & 0x07) + 0xb9)
+	return (((v[8] >> 2) & 0x0F) + 0xb9)
+//	if v[8] == 34 || v[8] == 38 || v[8] == 42 || v[8] == 46{
+//		return (((v[8] >> 2) & 0x0F) + 0xb9)
+//	}
+
+//	return (((v[8] >> 2) & 0x07) + 0xb9)
 }
 
 // fetchRawCreditIsCoinbase returns whether or not the credit is a coinbase
 // output or not.
 func fetchRawCreditIsCoinbase(v []byte) bool {
-	return v[8]&(1<<5) != 0
+	//return v[8]&(1<<5) != 0
+	return v[8]&(1<<6) != 0
 }
 
 // fetchRawCreditScriptOffset returns the ScriptOffset for the pkScript of this
@@ -929,6 +936,11 @@ func spendCredit(ns walletdb.ReadWriteBucket, k []byte, spender *indexedIncidenc
 	copy(newv, v)
 	v = newv
 	v[8] |= 1 << 0
+
+	test0 := (((v[8] >> 2) & 0x07) + 0xb9)
+	test1 := (((v[8] >> 2) & 0x0F) + 0xb9)
+	fmt.Println(test0)
+	fmt.Println(test1)
 	copy(v[9:41], spender.txHash[:])
 	byteOrder.PutUint32(v[41:45], uint32(spender.block.Height))
 	copy(v[45:77], spender.block.Hash[:])
@@ -1418,7 +1430,8 @@ func valueUnminedCredit(amount hcutil.Amount, change bool, opCode uint8,
 		v[8] |= 1 << 1
 	}
 	if IsCoinbase {
-		v[8] |= 1 << 5
+		//v[8] |= 1 << 5
+		v[8] |= 1 << 6
 	}
 
 	v[9] = byte(scrType)
@@ -1466,11 +1479,18 @@ func fetchRawUnminedCreditAmountChange(v []byte) (hcutil.Amount, bool, error) {
 }
 
 func fetchRawUnminedCreditTagOpcode(v []byte) uint8 {
+	return (((v[8] >> 2) & 0x0F) + 0xb9)
+	/*
+	if v[8] == 34 || v[8] == 38 || v[8] == 42 || v[8] == 46{
+		return (((v[8] >> 2) & 0x0F) + 0xb9)
+	}
 	return (((v[8] >> 2) & 0x07) + 0xb9)
+	*/
 }
 
 func fetchRawUnminedCreditTagIsCoinbase(v []byte) bool {
-	return v[8]&(1<<5) != 0
+	//return v[8]&(1<<5) != 0
+	return v[8]&(1<<6) != 0
 }
 
 func fetchRawUnminedCreditScriptType(v []byte) scriptType {

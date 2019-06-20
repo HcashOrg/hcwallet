@@ -1032,6 +1032,116 @@ func makeTicket(params *chaincfg.Params, inputPool *extendedOutPoint,
 	return mtx, nil
 }
 
+// makeAITicket creates a ticket from a split transaction output. It can optionally
+// create a ticket that pays a fee to a pool if a pool input and pool address are
+// passed.
+func makeAITicket(params *chaincfg.Params, inputPool *extendedOutPoint,
+	input *extendedOutPoint, addrVote hcutil.Address, addrSubsidy hcutil.Address,
+	ticketCost int64, addrPool hcutil.Address) (*wire.MsgTx, error) {
+	mtx := wire.NewMsgTx()
+
+	if addrPool != nil && inputPool != nil {
+		txIn := wire.NewTxIn(inputPool.op, []byte{})
+		mtx.AddTxIn(txIn)
+	}
+
+	txIn := wire.NewTxIn(input.op, []byte{})
+	mtx.AddTxIn(txIn)
+
+	// Create a new script which pays to the provided address with an
+	// SStx tagged output.
+
+	pkScript, err := txscript.PayToAISStx(addrVote)
+	if err != nil {
+		return nil, err
+	}
+
+	txOut := wire.NewTxOut(ticketCost, pkScript)
+	txOut.Version = txscript.DefaultScriptVersion
+	mtx.AddTxOut(txOut)
+
+	// Obtain the commitment amounts.
+	var amountsCommitted []int64
+	userSubsidyNullIdx := 0
+	if addrPool == nil {
+		_, amountsCommitted, err = stake.SStxNullOutputAmounts(
+			[]int64{input.amt}, []int64{0}, ticketCost)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		_, amountsCommitted, err = stake.SStxNullOutputAmounts(
+			[]int64{inputPool.amt, input.amt}, []int64{0, 0}, ticketCost)
+		if err != nil {
+			return nil, err
+		}
+		userSubsidyNullIdx = 1
+	}
+
+	// Zero value P2PKH addr.
+	zeroed := [20]byte{}
+	addrZeroed, err := hcutil.NewAddressPubKeyHash(zeroed[:], params, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. (Optional) If we're passed a pool address, make an extra
+	// commitment to the pool.
+	limits := uint16(defaultTicketFeeLimits)
+	if addrPool != nil {
+		pkScript, err = txscript.GenerateSStxAddrPush(addrPool,
+			hcutil.Amount(amountsCommitted[0]), limits)
+		if err != nil {
+			return nil, fmt.Errorf("cannot create pool txout script: %s", err)
+		}
+		txout := wire.NewTxOut(int64(0), pkScript)
+		mtx.AddTxOut(txout)
+
+		// Create a new script which pays to the provided address with an
+		// SStx change tagged output.
+		pkScript, err = txscript.PayToSStxChange(addrZeroed)
+		if err != nil {
+			return nil, err
+		}
+
+		txOut = wire.NewTxOut(0, pkScript)
+		txOut.Version = txscript.DefaultScriptVersion
+		mtx.AddTxOut(txOut)
+	}
+
+	// 3. Create the commitment and change output paying to the user.
+	//
+	// Create an OP_RETURN push containing the pubkeyhash to send rewards to.
+	// Apply limits to revocations for fees while not allowing
+	// fees for votes.
+	pkScript, err = txscript.GenerateAISStxAddrPush(addrSubsidy,
+		hcutil.Amount(amountsCommitted[userSubsidyNullIdx]), limits)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create user txout script: %s", err)
+	}
+	txout := wire.NewTxOut(int64(0), pkScript)
+	mtx.AddTxOut(txout)
+
+	// Create a new script which pays to the provided address with an
+	// SStx change tagged output.
+	pkScript, err = txscript.PayToAISStxChange(addrZeroed)
+	if err != nil {
+		return nil, err
+	}
+
+	txOut = wire.NewTxOut(0, pkScript)
+	txOut.Version = txscript.DefaultScriptVersion
+	mtx.AddTxOut(txOut)
+
+	// Make sure we generated a valid SStx.
+	if _, err := stake.IsAiSStx(mtx); err != nil {
+		return nil, err
+	}
+
+	return mtx, nil
+}
+
+
 func (w *Wallet) getTicketFeeAndNeededTicketPrice(account uint32, poolAddressExist bool, ticketPrice, ticketFeeIncrement hcutil.Amount) (hcutil.Amount, hcutil.Amount, error) {
 	var ticketFee, neededPerTicket hcutil.Amount
 
@@ -1435,6 +1545,363 @@ func (w *Wallet) purchaseTickets(req purchaseTicketRequest) ([]*chainhash.Hash, 
 	return ticketHashes, nil
 }
 
+// purchaseTickets indicates to the wallet that a ticket should be purchased
+// using all currently available funds.  The ticket address parameter in the
+// request can be nil in which case the ticket address associated with the
+// wallet instance will be used.  Also, when the spend limit in the request is
+// greater than or equal to 0, tickets that cost more than that limit will
+// return an error that not enough funds are available.
+func (w *Wallet) purchaseAITickets(req purchaseAITicketRequest) ([]*chainhash.Hash, error) {
+	chainClient, err := w.requireChainClient()
+	if err != nil {
+		return nil, err
+	}
+
+	account := req.account
+
+	// Ensure the minimum number of required confirmations is positive.
+	if req.minConf < 0 {
+		return nil, fmt.Errorf("need positive minconf")
+	}
+	// Need a positive or zero expiry that is higher than the next block to
+	// generate.
+	if req.expiry < 0 {
+		return nil, fmt.Errorf("need positive expiry")
+	}
+
+	// Perform a sanity check on expiry.
+	var tipHeight int32
+	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+		ns := tx.ReadBucket(wtxmgrNamespaceKey)
+		_, tipHeight = w.TxStore.MainChainTip(ns)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if req.expiry <= tipHeight+1 && req.expiry > 0 {
+		return nil, fmt.Errorf("need expiry that is beyond next height ("+
+			"given: %v, next height %v)", req.expiry, tipHeight+1)
+	}
+
+	// addrFunc returns a change address.
+	addrFunc := w.newChangeAddress
+	if w.addressReuse {
+		var err error
+		var addr hcutil.Address
+
+		if account == udb.DefaultAccountNum {
+			xpub := w.addressBuffers[udb.DefaultAccountNum].albExternal.branchXpub
+			addr, err = deriveChildAddress(xpub, 0, w.chainParams)
+		} else {
+			err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+				addrmgrNs := tx.ReadBucket(waddrmgrNamespaceKey)
+				addr, err = w.Manager.LoadBlissAddr(addrmgrNs, account, udb.ExternalBranch, 0)
+				return err
+			})
+		}
+
+		addrFunc = func(persistReturnedChildFunc, uint32, walletdb.ReadWriteTx) (hcutil.Address, error) {
+			return addr, err
+		}
+	}
+
+	// Fetch a new address for creating a split transaction. Then,
+	// make a split transaction that contains exact outputs for use
+	// in ticket generation. Cache its hash to use below when
+	// generating a ticket. The account balance is checked first
+	// in case there is not enough money to generate the split
+	// even without fees.
+	// TODO This can still sometimes fail if the split amount
+	// required plus fees for the split is larger than the
+	// balance we have, wasting an address. In the future,
+	// address this better and prevent address burning.
+
+	// Get the current ticket price from the daemon.
+	ticketPricesF64, err := w.ChainClient().GetStakeDifficulty()
+	if err != nil {
+		return nil, err
+	}
+	ticketPrice, err := hcutil.NewAmount(ticketPricesF64.NextStakeDifficulty)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure the ticket price does not exceed the spend limit if set.
+	if req.spendLimit >= 0 && ticketPrice > req.spendLimit {
+		return nil, ErrSStxPriceExceedsSpendLimit
+	}
+
+	// Try to get the pool address from the request. If none exists
+	// in the request, try to get the global pool address. Then do
+	// the same for pool fees, but check sanity too.
+	poolAddress := req.poolAddress
+	if poolAddress == nil {
+		poolAddress = w.PoolAddress()
+	}
+	poolFees := req.poolFees
+	if poolFees == 0.0 {
+		poolFees = w.PoolFees()
+	}
+	if poolAddress != nil && poolFees == 0.0 {
+		return nil, fmt.Errorf("pool address given, but pool fees not set")
+	}
+
+	// Make sure that we have enough funds. Calculate different
+	// ticket required amounts depending on whether or not a
+	// pool output is needed. If the ticket fee increment is
+	// unset in the request, use the global ticket fee increment.
+	ticketFeeIncrement := req.ticketFee
+	if ticketFeeIncrement == 0 {
+		ticketFeeIncrement = w.TicketFeeIncrement()
+	}
+
+	ticketFee, neededPerTicket, err := w.getTicketFeeAndNeededTicketPrice(account, poolAddress != nil, ticketPrice, ticketFeeIncrement)
+
+	// If we need to calculate the amount for a pool fee percentage,
+	// do so now.
+	var poolFeeAmt hcutil.Amount
+	if poolAddress != nil {
+		poolFeeAmt = txrules.StakePoolTicketFee(ticketPrice, ticketFee,
+			tipHeight, poolFees, w.ChainParams())
+		if poolFeeAmt >= ticketPrice {
+			return nil, fmt.Errorf("pool fee amt of %v >= than current "+
+				"ticket price of %v", poolFeeAmt, ticketPrice)
+		}
+	}
+
+	// Make sure this doesn't over spend based on the balance to
+	// maintain. This component of the API is inaccessible to the
+	// end user through the legacy RPC, so it should only ever be
+	// set by internal calls e.g. automatic ticket purchase.
+	if req.minBalance > 0 {
+		bal, err := w.CalculateAccountBalance(account, req.minConf)
+		if err != nil {
+			return nil, err
+		}
+
+		estimatedFundsUsed := neededPerTicket * hcutil.Amount(req.numTickets)
+		if req.minBalance+estimatedFundsUsed > bal.Spendable {
+			notEnoughFundsStr := fmt.Sprintf("not enough funds; balance to "+
+				"maintain is %v and estimated cost is %v (resulting in %v "+
+				"funds needed) but wallet account %v only has %v",
+				req.minBalance.ToCoin(), estimatedFundsUsed.ToCoin(),
+				req.minBalance.ToCoin()+estimatedFundsUsed.ToCoin(),
+				account, bal.Spendable.ToCoin())
+			log.Debugf("%s", notEnoughFundsStr)
+			return nil, txauthor.InsufficientFundsError{}
+		}
+	}
+
+	// Fetch the single use split address to break tickets into, to
+	// immediately be consumed as tickets.
+	//
+	// This opens a write transaction.
+	splitTxAddr, err := w.NewInternalAddress(req.account, WithGapPolicyWrap())
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the split transaction by using txToOutputs. This varies
+	// based upon whether or not the user is using a stake pool or not.
+	// For the default stake pool implementation, the user pays out the
+	// first ticket commitment of a smaller amount to the pool, while
+	// paying themselves with the larger ticket commitment.
+	var splitOuts []*wire.TxOut
+	for i := 0; i < req.numTickets; i++ {
+		// No pool used.
+		if poolAddress == nil {
+			pkScript, err := txscript.PayToAddrScript(splitTxAddr)
+			if err != nil {
+				return nil, fmt.Errorf("cannot create txout script: %s", err)
+			}
+
+			splitOuts = append(splitOuts, wire.NewTxOut(int64(neededPerTicket), pkScript))
+		} else {
+			// Stake pool used.
+			userAmt := neededPerTicket - poolFeeAmt
+			poolAmt := poolFeeAmt
+
+			// Pool amount.
+			pkScript, err := txscript.PayToAddrScript(splitTxAddr)
+			if err != nil {
+				return nil, fmt.Errorf("cannot create txout script: %s", err)
+			}
+
+			splitOuts = append(splitOuts, wire.NewTxOut(int64(poolAmt), pkScript))
+
+			// User amount.
+			pkScript, err = txscript.PayToAddrScript(splitTxAddr)
+			if err != nil {
+				return nil, fmt.Errorf("cannot create txout script: %s", err)
+			}
+
+			splitOuts = append(splitOuts, wire.NewTxOut(int64(userAmt), pkScript))
+		}
+	}
+
+	txFeeIncrement := req.txFee
+	if txFeeIncrement == 0 {
+		txFeeIncrement = w.RelayFee()
+	}
+	splitTx, err := w.txToOutputsInternal(splitOuts, account, req.minConf,
+		chainClient, false, txFeeIncrement, "", "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to send split transaction: %v", err)
+	}
+
+	// After tickets are created and published, watch for future addresses used
+	// by the split tx and any published tickets.
+	defer func() {
+		err := walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+			return w.watchFutureAddresses(tx)
+		})
+		if err != nil {
+			log.Errorf("Failed to watch for future addresses after ticket "+
+				"purchases: %v", err)
+		}
+	}()
+
+	// Generate the tickets individually.
+	ticketHashes := make([]*chainhash.Hash, 0, req.numTickets)
+	for i := 0; i < req.numTickets; i++ {
+		// Generate the extended outpoints that we need to use for ticket
+		// inputs. There are two inputs for pool tickets corresponding to the
+		// fees and the user subsidy, while user-handled tickets have only one
+		// input.
+		var eopPool, eop *extendedOutPoint
+		if poolAddress == nil {
+			txOut := splitTx.Tx.TxOut[i]
+
+			eop = &extendedOutPoint{
+				op: &wire.OutPoint{
+					Hash:  splitTx.Tx.TxHash(),
+					Index: uint32(i),
+					Tree:  wire.TxTreeRegular,
+				},
+				amt:      txOut.Value,
+				pkScript: txOut.PkScript,
+			}
+		} else {
+			poolIdx := i * 2
+			poolTxOut := splitTx.Tx.TxOut[poolIdx]
+			userIdx := i*2 + 1
+			txOut := splitTx.Tx.TxOut[userIdx]
+
+			eopPool = &extendedOutPoint{
+				op: &wire.OutPoint{
+					Hash:  splitTx.Tx.TxHash(),
+					Index: uint32(poolIdx),
+					Tree:  wire.TxTreeRegular,
+				},
+				amt:      poolTxOut.Value,
+				pkScript: poolTxOut.PkScript,
+			}
+			eop = &extendedOutPoint{
+				op: &wire.OutPoint{
+					Hash:  splitTx.Tx.TxHash(),
+					Index: uint32(userIdx),
+					Tree:  wire.TxTreeRegular,
+				},
+				amt:      txOut.Value,
+				pkScript: txOut.PkScript,
+			}
+		}
+
+		// If the user hasn't specified a voting address
+		// to delegate voting to, just use an address from
+		// this wallet. Check the passed address from the
+		// request first, then check the ticket address
+		// stored from the configuation. Finally, generate
+		// an address.
+		var addrVote, addrSubsidy hcutil.Address
+		err := walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
+			addrVote = req.ticketAddr
+			if addrVote == nil {
+				addrVote = w.ticketAddress
+				if addrVote == nil {
+					addrVote, err = addrFunc(w.persistReturnedChild(dbtx), req.account, dbtx)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			addrSubsidy, err = addrFunc(w.persistReturnedChild(dbtx), req.account, dbtx)
+			return err
+		})
+		if err != nil {
+			return ticketHashes, err
+		}
+
+		// Generate the ticket msgTx and sign it.
+		ticket, err := makeAITicket(w.chainParams, eopPool, eop, addrVote, addrSubsidy, int64(ticketPrice), poolAddress)
+		if err != nil {
+			return ticketHashes, err
+		}
+		var forSigning []udb.Credit
+		if eopPool != nil {
+			eopPoolCredit := udb.Credit{
+				OutPoint:     *eopPool.op,
+				BlockMeta:    udb.BlockMeta{},
+				Amount:       hcutil.Amount(eopPool.amt),
+				PkScript:     eopPool.pkScript,
+				Received:     time.Now(),
+				FromCoinBase: false,
+			}
+			forSigning = append(forSigning, eopPoolCredit)
+		}
+		eopCredit := udb.Credit{
+			OutPoint:     *eop.op,
+			BlockMeta:    udb.BlockMeta{},
+			Amount:       hcutil.Amount(eop.amt),
+			PkScript:     eop.pkScript,
+			Received:     time.Now(),
+			FromCoinBase: false,
+		}
+		forSigning = append(forSigning, eopCredit)
+
+		// Set the expiry.
+		ticket.Expiry = uint32(req.expiry)
+
+		err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+			ns := tx.ReadBucket(waddrmgrNamespaceKey)
+			return signMsgTx(ticket, forSigning, w.Manager, ns, w.chainParams)
+		})
+		if err != nil {
+			return ticketHashes, err
+		}
+		err = validateMsgTxCredits(ticket, forSigning)
+		if err != nil {
+			return ticketHashes, err
+		}
+
+		rec, err := udb.NewTxRecordFromMsgTx(ticket, time.Now())
+		if err != nil {
+			return ticketHashes, err
+		}
+
+		// Open a DB update to insert and publish the transaction.  If
+		// publishing fails, the update is rolled back.
+		var ticketHash *chainhash.Hash
+		err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
+			err = w.processTransactionRecord(dbtx, rec, nil, nil)
+			if err != nil {
+				return err
+			}
+			ticketHash, err = chainClient.SendRawTransaction(ticket, w.AllowHighFees)
+			return err
+		})
+		if err != nil {
+			return ticketHashes, err
+		}
+		ticketHashes = append(ticketHashes, ticketHash)
+		log.Infof("Successfully sent SStx purchase transaction %v", ticketHash)
+	}
+
+	return ticketHashes, nil
+}
+
+
 // txToSStx creates a raw SStx transaction sending the amounts for each
 // address/amount pair and fee to each address and the miner.  minconf
 // specifies the minimum number of confirmations required before an
@@ -1605,7 +2072,9 @@ func (w *Wallet) txToSStxInternal(dbtx walletdb.ReadWriteTx, pair map[string]hcu
 
 	}
 	if _, err := stake.IsSStx(msgtx); err != nil {
-		return nil, err
+		if _, errAi := stake.IsAiSStx(msgtx); errAi != nil {
+			return nil, err
+		}
 	}
 	err = walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
 		addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
@@ -1713,19 +2182,19 @@ func (w *Wallet) findEligibleOutputs(dbtx walletdb.ReadTx, account uint32, minco
 
 		// Make sure everything we're trying to spend is actually mature.
 		switch {
-		case class == txscript.StakeSubmissionTy:
+		case class == txscript.StakeSubmissionTy, class == txscript.AiStakeSubmissionTy:
 			continue
-		case class == txscript.StakeGenTy:
+		case class == txscript.StakeGenTy, class == txscript.AiStakeGenTy:
 			target := int32(w.chainParams.CoinbaseMaturity)
 			if !confirmed(target, output.Height, currentHeight) {
 				continue
 			}
-		case class == txscript.StakeRevocationTy:
+		case class == txscript.StakeRevocationTy, class == txscript.AiStakeRevocationTy:
 			target := int32(w.chainParams.CoinbaseMaturity)
 			if !confirmed(target, output.Height, currentHeight) {
 				continue
 			}
-		case class == txscript.StakeSubChangeTy:
+		case class == txscript.StakeSubChangeTy,  class == txscript.AiStakeSubChangeTy:
 			target := int32(w.chainParams.SStxChangeMaturity)
 			if !confirmed(target, output.Height, currentHeight) {
 				continue
@@ -2009,12 +2478,19 @@ func createUnsignedVote(ticketHash *chainhash.Hash, ticketPurchase *wire.MsgTx,
 	}
 	vote.AddTxOut(wire.NewTxOut(0, voteScript))
 
+	isAiSSTx, _ := stake.IsAiSStx(ticketPurchase)
 	// All remaining outputs pay to the output destinations and amounts tagged
 	// by the ticket purchase.
 	for i, hash160 := range ticketHash160s {
 		scriptFn := txscript.PayToSSGenPKHDirect
 		if ticketPayKinds[i] { // P2SH
 			scriptFn = txscript.PayToSSGenSHDirect
+		}
+		if isAiSSTx {
+			scriptFn = txscript.PayToAiSSGenPKHDirect
+			if ticketPayKinds[i] { // P2SH
+				scriptFn = txscript.PayToAiSSGenSHDirect
+			}
 		}
 		// Error is checking for a nil hash160, just ignore it.
 		script, _ := scriptFn(hash160, int(sigTypes[i]))

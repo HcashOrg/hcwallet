@@ -104,7 +104,7 @@ func (s *Store) InsertMemPoolTx(ns walletdb.ReadWriteBucket, rec *TxRecord) erro
 
 	for i, input := range rec.MsgTx.TxIn {
 		// Skip stakebases for votes.
-		if i == 0 && txType == stake.TxTypeSSGen {
+		if i == 0 && (txType == stake.TxTypeSSGen || txType == stake.TxTypeAiSSGen){
 			continue
 		}
 		prevOut := &input.PreviousOutPoint
@@ -117,7 +117,7 @@ func (s *Store) InsertMemPoolTx(ns walletdb.ReadWriteBucket, rec *TxRecord) erro
 
 	// If the transaction is a ticket purchase, record it in the ticket
 	// purchases bucket.
-	if txType == stake.TxTypeSStx {
+	if txType == stake.TxTypeSStx || txType == stake.TxTypeAiSStx{
 		tk := rec.Hash[:]
 		tv := existsRawTicketRecord(ns, tk)
 		if tv == nil {
@@ -316,16 +316,18 @@ func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff int64) error {
 
 		var expired, isTicketPurchase, isVote bool
 		isSStx, _ := stake.IsSStx(&tx)
+		isSStxAi, _ := stake.IsAiSStx(&tx)
 		isSSGen, _ := stake.IsSSGen(&tx)
+		isSSGenAi, _ := stake.IsAiSSGen(&tx)
 		switch {
 		case tx.Expiry != wire.NoExpiryValue && tx.Expiry <= uint32(tipHeight):
 			expired = true
-		case isSStx:
+		case isSStx, isSStxAi:
 			isTicketPurchase = true
 			if tx.TxOut[0].Value == stakeDiff {
 				continue
 			}
-		case isSSGen:
+		case isSSGen, isSSGenAi:
 			isVote = true
 			// This will never actually error
 			_, votedHeight, _ := stake.SSGenBlockVotedOn(&tx)

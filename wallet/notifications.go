@@ -507,9 +507,15 @@ func TxTransactionType(tx *wire.MsgTx) TransactionType {
 		return TransactionTypeCoinbase
 	} else if ok, _ := stake.IsSStx(tx); ok {
 		return TransactionTypeTicketPurchase
-	} else if ok, _ = stake.IsSSGen(tx); ok {
+	}else if ok, _ := stake.IsAiSStx(tx); ok {
+		return TransactionTypeTicketPurchase
+	}else if ok, _ = stake.IsSSGen(tx); ok {
+		return TransactionTypeVote
+	}else if ok, _ = stake.IsAiSSGen(tx); ok {
 		return TransactionTypeVote
 	} else if ok, _ = stake.IsSSRtx(tx); ok {
+		return TransactionTypeRevocation
+	}else if ok, _ = stake.IsAiSSRtx(tx); ok {
 		return TransactionTypeRevocation
 	} else {
 		return TransactionTypeRegular

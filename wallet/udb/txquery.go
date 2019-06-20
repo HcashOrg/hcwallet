@@ -212,7 +212,8 @@ type TicketDetails struct {
 func (s *Store) TicketDetails(ns walletdb.ReadBucket, txDetails *TxDetails) (*TicketDetails, error) {
 	var ticketDetails = &TicketDetails{}
 	ok, _ := stake.IsSStx(&txDetails.MsgTx)
-	if !ok {
+	okAi, _ := stake.IsAiSStx(&txDetails.MsgTx)
+	if !ok && !okAi {
 		return nil, nil
 	}
 	ticketDetails.Ticket = txDetails

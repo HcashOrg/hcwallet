@@ -85,7 +85,7 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 				_, height = w.TxStore.MainChainTip(ns)
 				return nil
 			})
-			if err == nil && !w.IsScanning() {
+			if err == nil && !w.IsScanning()  && w.chainClient != nil {
 				w.RescanFromHeight(w.chainClient.Client, height)
 			}
 		}
@@ -497,6 +497,9 @@ func (w *Wallet) processSerializedTransaction(dbtx walletdb.ReadWriteTx, seriali
 	}
 	if len(rec.MsgTx.TxOut) == 3 {
 		tempOut := rec.MsgTx.TxOut[2]
+		if rec.MsgTx.TxOut[0].PkScript[0] == 200 {
+			fmt.Println("test 200")
+		}
 		if tempOut.PkScript[0] == 106 && len(tempOut.PkScript) == 66 {
 			fmt.Println(tempOut)
 		}
@@ -752,7 +755,8 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 	// the OP_SSTX tagged out, except if we're operating as a stake pool
 	// server. In that case, additionally consider the first commitment
 	// output as well.
-	if is, _ := stake.IsSStx(&rec.MsgTx); is {
+	isAi, _ := stake.IsAiSStx(&rec.MsgTx)
+	if is, _ := stake.IsSStx(&rec.MsgTx); is || isAi{
 		// Errors don't matter here.  If addrs is nil, the range below
 		// does nothing.
 		txOut := rec.MsgTx.TxOut[0]
@@ -1022,7 +1026,11 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 		isStakeType := class == txscript.StakeSubmissionTy ||
 			class == txscript.StakeSubChangeTy ||
 			class == txscript.StakeGenTy ||
-			class == txscript.StakeRevocationTy
+			class == txscript.StakeRevocationTy||
+			class == txscript.AiStakeSubmissionTy ||
+			class == txscript.AiStakeSubChangeTy ||
+			class == txscript.AiStakeGenTy ||
+			class == txscript.AiStakeRevocationTy
 		if isStakeType {
 			class, err = txscript.GetStakeOutSubclass(output.PkScript)
 			if err != nil {
@@ -1035,6 +1043,13 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 		for _, addr := range addrs {
 			ma, err := w.Manager.Address(addrmgrNs, addr)
 			if err == nil {
+				isSStx, _ := stake.IsSStx(&rec.MsgTx)
+				isAiSStx, _ := stake.IsAiSStx(&rec.MsgTx)
+				if isSStx  {
+					fmt.Println("test  185")
+				} else if isAiSStx {
+					fmt.Println("test  198")
+				}
 				err = w.TxStore.AddCredit(txmgrNs, rec, blockMeta,
 					uint32(i), ma.Internal(), ma.Account())
 				if err != nil {
@@ -1328,6 +1343,9 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 		return err
 	}
 
+	if len(winningTicketHashes) == 10{
+		fmt.Println("test winningTicketHashes")
+	}
 	// TODO The behavior of this is not quite right if tons of blocks
 	// are coming in quickly, because the transaction store will end up
 	// out of sync with the voting channel here. This should probably
@@ -1384,7 +1402,8 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 					ticketHash, err)
 				continue
 			}
-			if isSSGEN, _ := stake.IsSSGen(vote); !isSSGEN {
+			isAiSSGEN, _ := stake.IsAiSSGen(vote)
+			if isSSGEN, _ := stake.IsSSGen(vote); !isSSGEN && !isAiSSGEN{
 				log.Errorf("not a correct SSGEN format")
 				continue
 			}
@@ -1523,7 +1542,8 @@ func (w *Wallet) handleMissedTickets(blockHash *chainhash.Hash, blockHeight int3
 					ticketHash, err)
 				continue
 			}
-			if _, err := stake.IsSSRtx(revocation); err != nil {
+			_, errAi := stake.IsAiSSRtx(revocation)
+			if _, err := stake.IsSSRtx(revocation); err != nil && errAi != nil{
 				log.Errorf("Failed to sign revocation for ticket hash %v: %v",
 					ticketHash, err)
 			}

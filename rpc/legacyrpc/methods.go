@@ -128,13 +128,15 @@ func init() {
 		"listunspent":              {handler: listUnspent},
 		"lockunspent":              {handler: lockUnspent},
 		"purchaseticket":           {handler: purchaseTicket},
+		"purchaseaiticket":         {handler: purchaseAITicket},
 		"rescanwallet":             {handlerWithChain: rescanWallet},
 		"revoketickets":            {handlerWithChain: revokeTickets},
+		"revokeaitickets":          {handlerWithChain: revokeAITickets},
 		"sendfrom":                 {handlerWithChain: sendFrom},
 		"sendmany":                 {handler: sendMany},
 		"sendmanyv2":               {handler: sendManyV2},
 		"sendtoaddress":            {handler: sendToAddress},
-		"instantsendtoaddress":    {handler: instantSendToAddress},
+		"instantsendtoaddress":     {handler: instantSendToAddress},
 		"sendfromaddresstoaddress": {handler: sendFromAddressToAddress},
 		"getstraightpubkey":        {handlerWithChain: getStraightPubKey},
 		"sendtomultisig":           {handlerWithChain: sendToMultiSig},
@@ -1849,6 +1851,111 @@ func lockUnspent(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return true, nil
 }
 
+// purchaseAITicket indicates to the wallet that a ticket should be purchased
+// using all currently available funds. If the AIticket could not be purchased
+// because there are not enough eligible funds, an error will be returned.
+func purchaseAITicket(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	// enforce valid and positive spend limit
+	cmd := icmd.(*hcjson.PurchaseAITicketCmd)
+	spendLimit, err := hcutil.NewAmount(cmd.SpendLimit)
+	if err != nil {
+		return nil, err
+	}
+	if spendLimit < 0 {
+		return nil, ErrNeedPositiveSpendLimit
+	}
+	account, err := w.AccountNumber(cmd.FromAccount)
+	log.Tracef("purchase ticket from account:%v", account)
+	if err != nil {
+		return nil, err
+	}
+
+	// Override the minimum number of required confirmations if specified
+	// and enforce it is positive.
+	minConf := int32(1)
+	if cmd.MinConf != nil {
+		minConf = int32(*cmd.MinConf)
+		if minConf < 0 {
+			return nil, ErrNeedPositiveMinconf
+		}
+	}
+
+	// Set ticket address if specified.
+	var ticketAddr hcutil.Address
+	if cmd.TicketAddress != nil {
+		if *cmd.TicketAddress != "" {
+			if bytes.Equal([]byte((*cmd.TicketAddress)[0:2]), []byte("Hb")) {
+				return nil, fmt.Errorf("postquantum addresses not yet supported")
+			}
+			addr, err := decodeAddress(*cmd.TicketAddress, w.ChainParams())
+			if err != nil {
+				return nil, err
+			}
+			ticketAddr = addr
+		}
+	}
+
+	numTickets := 1
+	if cmd.NumTickets != nil {
+		if *cmd.NumTickets > 1 {
+			numTickets = *cmd.NumTickets
+		}
+	}
+
+	// Set pool address if specified.
+	var poolAddr hcutil.Address
+	var poolFee float64
+	if cmd.PoolAddress != nil {
+		if *cmd.PoolAddress != "" {
+			addr, err := decodeAddress(*cmd.PoolAddress, w.ChainParams())
+			if err != nil {
+				return nil, err
+			}
+			poolAddr = addr
+
+			// Attempt to get the amount to send to
+			// the pool after.
+			if cmd.PoolFees == nil {
+				return nil, fmt.Errorf("gave pool address but no pool fee")
+			}
+			poolFee = *cmd.PoolFees
+			err = txrules.IsValidPoolFeeRate(poolFee)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	// Set the expiry if specified.
+	expiry := int32(0)
+	if cmd.Expiry != nil {
+		expiry = int32(*cmd.Expiry)
+	}
+
+	ticketFee := w.TicketFeeIncrement()
+	// Set the ticket fee if specified.
+	if cmd.TicketFee != nil {
+		ticketFee, err = hcutil.NewAmount(*cmd.TicketFee)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	hashes, err := w.PurchaseAITickets(0, spendLimit, minConf, ticketAddr,
+		account, numTickets, poolAddr, poolFee, expiry, w.RelayFee(),
+		ticketFee)
+	if err != nil {
+		return nil, err
+	}
+
+	hashStrs := make([]string, len(hashes))
+	for i := range hashes {
+		hashStrs[i] = hashes[i].String()
+	}
+
+	return hashStrs, err
+}
+
 // purchaseTicket indicates to the wallet that a ticket should be purchased
 // using all currently available funds. If the ticket could not be purchased
 // because there are not enough eligible funds, an error will be returned.
@@ -2190,6 +2297,13 @@ func rescanWallet(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.C
 // revokeTickets initiates the wallet to issue revocations for any missing tickets that
 // not yet been revoked.
 func revokeTickets(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
+	err := w.RevokeTickets(chainClient)
+	return nil, err
+}
+
+// revokeTickets initiates the wallet to issue revocations for any missing tickets that
+// not yet been revoked.
+func revokeAITickets(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
 	err := w.RevokeTickets(chainClient)
 	return nil, err
 }

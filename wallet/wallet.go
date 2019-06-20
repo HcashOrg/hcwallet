@@ -122,6 +122,7 @@ type Wallet struct {
 	createSSGenRequests    chan createSSGenRequest
 	createSSRtxRequests    chan createSSRtxRequest
 	purchaseTicketRequests chan purchaseTicketRequest
+	purchaseAITicketRequests chan purchaseAITicketRequest
 
 	// Internal address handling.
 	addressReuse     bool
@@ -185,6 +186,7 @@ func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Addre
 		createSSGenRequests:      make(chan createSSGenRequest),
 		createSSRtxRequests:      make(chan createSSRtxRequest),
 		purchaseTicketRequests:   make(chan purchaseTicketRequest),
+		purchaseAITicketRequests: make(chan purchaseAITicketRequest),
 		addressReuse:             addressReuse,
 		ticketAddress:            ticketAddress,
 		addressBuffers:           make(map[uint32]*bip0044AccountData),
@@ -1452,6 +1454,21 @@ type (
 		resp        chan purchaseTicketResponse
 	}
 
+	purchaseAITicketRequest struct {
+		minBalance  hcutil.Amount
+		spendLimit  hcutil.Amount
+		minConf     int32
+		ticketAddr  hcutil.Address
+		account     uint32
+		numTickets  int
+		poolAddress hcutil.Address
+		poolFees    float64
+		expiry      int32
+		txFee       hcutil.Amount
+		ticketFee   hcutil.Amount
+		resp        chan purchaseAITicketResponse
+	}
+
 	consolidateResponse struct {
 		txHash *chainhash.Hash
 		err    error
@@ -1479,6 +1496,11 @@ type (
 		err error
 	}
 	purchaseTicketResponse struct {
+		data []*chainhash.Hash
+		err  error
+	}
+
+	purchaseAITicketResponse struct {
 		data []*chainhash.Hash
 		err  error
 	}
@@ -1579,6 +1601,16 @@ out:
 			data, err := w.purchaseTickets(txr)
 			heldUnlock.release()
 			txr.resp <- purchaseTicketResponse{data, err}
+
+		case txr := <-w.purchaseAITicketRequests:
+			heldUnlock, err := w.holdUnlock()
+			if err != nil {
+				txr.resp <- purchaseAITicketResponse{nil, err}
+				continue
+			}
+			data, err := w.purchaseAITickets(txr)
+			heldUnlock.release()
+			txr.resp <- purchaseAITicketResponse{data, err}
 
 		case <-quit:
 			break out
@@ -1696,6 +1728,33 @@ func (w *Wallet) CreateSSRtx(ticketHash chainhash.Hash) (*CreatedTx, error) {
 	resp := <-req.resp
 	return resp.tx, resp.err
 }
+
+// PurchaseAITickets receives a request from the RPC and ships it to txCreator
+// to purchase a new aiticket. It returns a slice of the hashes of the purchased
+// aitickets.
+func (w *Wallet) PurchaseAITickets(minBalance, spendLimit hcutil.Amount,
+	minConf int32, ticketAddr hcutil.Address, account uint32,
+	numTickets int, poolAddress hcutil.Address, poolFees float64,
+	expiry int32, txFee hcutil.Amount, ticketFee hcutil.Amount) ([]*chainhash.Hash, error) {
+	req := purchaseAITicketRequest{
+		minBalance:  minBalance,
+		spendLimit:  spendLimit,
+		minConf:     minConf,
+		ticketAddr:  ticketAddr,
+		account:     account,
+		numTickets:  numTickets,
+		poolAddress: poolAddress,
+		poolFees:    poolFees,
+		expiry:      expiry,
+		txFee:       txFee,
+		ticketFee:   ticketFee,
+		resp:        make(chan purchaseAITicketResponse),
+	}
+	w.purchaseAITicketRequests <- req
+	resp := <-req.resp
+	return resp.data, resp.err
+}
+
 
 // PurchaseTickets receives a request from the RPC and ships it to txCreator
 // to purchase a new ticket. It returns a slice of the hashes of the purchased
@@ -2446,10 +2505,16 @@ func listTransactions(tx walletdb.ReadTx, details *udb.TxDetails, addrMgr *udb.M
 	switch details.TxType {
 	case stake.TxTypeSStx:
 		txTypeStr = hcjson.LTTTTicket
+	case stake.TxTypeAiSStx:
+		txTypeStr = hcjson.LTTTAiTicket
 	case stake.TxTypeSSGen:
 		txTypeStr = hcjson.LTTTVote
+	case stake.TxTypeAiSSGen:
+		txTypeStr = hcjson.LTTTAiVote
 	case stake.TxTypeSSRtx:
 		txTypeStr = hcjson.LTTTRevocation
+	case stake.TxTypeAiSSRtx:
+		txTypeStr = hcjson.LTTTAiRevocation
 	}
 
 	// Fee can only be determined if every input is a debit.
@@ -3192,7 +3257,7 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32, addresses map[string]struct
 			}
 
 			switch details.TxRecord.TxType {
-			case stake.TxTypeSStx:
+			case stake.TxTypeSStx, stake.TxTypeAiSStx:
 				// Ticket commitment, only spendable after ticket maturity.
 				// You can only spent it after TM many blocks has gone past, so
 				// ticket maturity + 1??? Check this HC TODO
@@ -3209,14 +3274,14 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32, addresses map[string]struct
 						continue
 					}
 				}
-			case stake.TxTypeSSGen:
+			case stake.TxTypeSSGen, stake.TxTypeAiSSGen:
 				// All non-OP_RETURN outputs for SSGen tx are only spendable
 				// after coinbase maturity many blocks.
 				if !confirmed(int32(w.chainParams.CoinbaseMaturity),
 					details.Height(), tipHeight) {
 					continue
 				}
-			case stake.TxTypeSSRtx:
+			case stake.TxTypeSSRtx, stake.TxTypeAiSSRtx:
 				// All outputs for SSRtx tx are only spendable
 				// after coinbase maturity many blocks.
 				if !confirmed(int32(w.chainParams.CoinbaseMaturity),
@@ -3502,17 +3567,20 @@ type StakeInfoData struct {
 
 func isTicketPurchase(tx *wire.MsgTx) bool {
 	b, _ := stake.IsSStx(tx)
-	return b
+	bAi, _ := stake.IsAiSStx(tx)
+	return b || bAi
 }
 
 func isVote(tx *wire.MsgTx) bool {
 	b, _ := stake.IsSSGen(tx)
-	return b
+	bAi, _ := stake.IsAiSSGen(tx)
+	return b || bAi
 }
 
 func isRevocation(tx *wire.MsgTx) bool {
 	b, _ := stake.IsSSRtx(tx)
-	return b
+	bAi, _ := stake.IsAiSSRtx(tx)
+	return b || bAi
 }
 
 // hasVotingAuthority returns whether the 0th output of a ticket purchase can be
@@ -4024,7 +4092,8 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 			// and doesn't need to be signed.
 			if i == 0 {
 				isSSGen, err := stake.IsSSGen(tx)
-				if err == nil && isSSGen {
+				isAiSSGen, errAi := stake.IsAiSSGen(tx)
+				if (err == nil && isSSGen ) || (errAi == nil && isAiSSGen ) {
 					// Put some garbage in the signature script.
 					txIn.SignatureScript = []byte{0xDE, 0xAD, 0xBE, 0xEF}
 					continue
@@ -4657,7 +4726,8 @@ func (w *Wallet) CommittedTickets(tickets []*chainhash.Hash) ([]*chainhash.Hash,
 				log.Debugf("%v", err)
 				continue
 			}
-			if isSStx, _ := stake.IsSStx(tx); !isSStx {
+			isAiSStx, _ := stake.IsAiSStx(tx)
+			if isSStx, _ := stake.IsSStx(tx); !isSStx && !isAiSStx{
 				continue
 			}
 
