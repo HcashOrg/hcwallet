@@ -1223,6 +1223,7 @@ func getMasterPubkey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 func getStakeInfo(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
 	// Asynchronously query for the stake difficulty.
 	sdiffFuture := chainClient.GetStakeDifficultyAsync()
+	aiSdiffFuture := chainClient.GetAiStakeDifficultyAsync()
 
 	stakeInfo, err := w.StakeInfo(chainClient)
 	if err != nil {
@@ -1233,13 +1234,28 @@ func getStakeInfo(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.C
 	if float64(stakeInfo.PoolSize) > 0.0 {
 		proportionLive = float64(stakeInfo.Live) / float64(stakeInfo.PoolSize)
 	}
+	aiProportionLive := float64(0.0)
+	if float64(stakeInfo.AiPoolSize) > 0.0 {
+		aiProportionLive = float64(stakeInfo.AiLive) / float64(stakeInfo.AiPoolSize)
+	}
+
 	proportionMissed := float64(0.0)
 	if stakeInfo.Missed > 0 {
 		proportionMissed = float64(stakeInfo.Missed) /
 			(float64(stakeInfo.Voted) + float64(stakeInfo.Missed))
 	}
-
+	aiProportionMissed := float64(0.0)
+	if stakeInfo.Missed > 0 {
+		aiProportionMissed = float64(stakeInfo.AiMissed) /
+			(float64(stakeInfo.AiVoted) + float64(stakeInfo.AiMissed))
+	}
 	sdiff, err := sdiffFuture.Receive()
+
+	if err != nil {
+		return nil, err
+	}
+
+	aiSiff, err := aiSdiffFuture.Receive()
 	if err != nil {
 		return nil, err
 	}
@@ -1259,6 +1275,19 @@ func getStakeInfo(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.C
 		ProportionMissed: proportionMissed,
 		Revoked:          stakeInfo.Revoked,
 		Expired:          stakeInfo.Expired,
+
+		AiPoolSize:         stakeInfo.AiPoolSize,
+		AiDifficulty:       aiSiff.AiNextStakeDifficulty,
+		AiAllMempoolTix:    stakeInfo.AiAllMempoolTix,
+		AiOwnMempoolTix:    stakeInfo.AiOwnMempoolTix,
+		AiImmature:         stakeInfo.AiImmature,
+		AiLive:             stakeInfo.AiLive,
+		AiProportionLive:   aiProportionLive,
+		AiVoted:            stakeInfo.AiVoted,
+		AiMissed:           stakeInfo.AiMissed,
+		AiProportionMissed: aiProportionMissed,
+		AiRevoked:          stakeInfo.AiRevoked,
+		AiExpired:          stakeInfo.AiExpired,
 	}
 
 	return resp, nil

@@ -118,10 +118,10 @@ type Wallet struct {
 	createMultisigTxRequests chan createMultisigTxRequest
 
 	// Channels for stake tx creation requests.
-	createSStxRequests     chan createSStxRequest
-	createSSGenRequests    chan createSSGenRequest
-	createSSRtxRequests    chan createSSRtxRequest
-	purchaseTicketRequests chan purchaseTicketRequest
+	createSStxRequests       chan createSStxRequest
+	createSSGenRequests      chan createSSGenRequest
+	createSSRtxRequests      chan createSSRtxRequest
+	purchaseTicketRequests   chan purchaseTicketRequest
 	purchaseAITicketRequests chan purchaseAITicketRequest
 
 	// Internal address handling.
@@ -659,9 +659,6 @@ func (w *Wallet) SynchronizeRPC(chainClient *chain.RPCClient) {
 		log.Error("Unable to request transaction updates for "+
 			"winning tickets. Error: ", err.Error())
 	}
-
-
-
 
 	// Request notifications for spent and missed tickets.
 	err = chainClient.NotifySpentAndMissedTickets()
@@ -1341,7 +1338,7 @@ func (w *Wallet) GetWalletSyncHeight() (uint32, *chainhash.Hash, error) {
 		rescanHeight = uint32(height)
 	}
 	err = w.RollBackOminiTransaction(rescanHeight, nil)
-	if err != nil{
+	if err != nil {
 		return 0, nil, err
 	}
 	//omni record height
@@ -1754,7 +1751,6 @@ func (w *Wallet) PurchaseAITickets(minBalance, spendLimit hcutil.Amount,
 	resp := <-req.resp
 	return resp.data, resp.err
 }
-
 
 // PurchaseTickets receives a request from the RPC and ships it to txCreator
 // to purchase a new ticket. It returns a slice of the hashes of the purchased
@@ -3563,6 +3559,16 @@ type StakeInfoData struct {
 	Revoked       uint32
 	Expired       uint32
 	TotalSubsidy  hcutil.Amount
+
+	AiPoolSize      uint32
+	AiAllMempoolTix uint32
+	AiOwnMempoolTix uint32
+	AiImmature      uint32
+	AiLive          uint32
+	AiVoted         uint32
+	AiMissed        uint32
+	AiRevoked       uint32
+	AiExpired       uint32
 }
 
 func isTicketPurchase(tx *wire.MsgTx) bool {
@@ -3624,12 +3630,16 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 	// This is only needed for the total count and can be optimized.
 	mempoolTicketsFuture := chainClient.GetRawMempoolAsync(hcjson.GRMTickets)
 
+	aiMempoolTicketsFuture := chainClient.GetRawMempoolAsync(hcjson.GRMAiTickets)
+
 	res := &StakeInfoData{}
 
 	// Wallet does not yet know if/when a ticket was selected.  Keep track of
 	// all tickets that are either live, expired, or missed and determine their
 	// states later by querying the consensus RPC server.
 	var liveOrExpiredOrMissed []*chainhash.Hash
+
+	var aiLiveOrExpiredOrMissed []*chainhash.Hash
 
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
 		addrmgrNs := dbtx.ReadBucket(waddrmgrNamespaceKey)
@@ -3646,10 +3656,22 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 			if !owned {
 				continue
 			}
-
 			// Check for tickets in mempool
 			if it.Block.Height == -1 {
 				res.OwnMempoolTix++
+				continue
+			}
+			// TODO
+			aiOwned, err := w.hasVotingAuthority(addrmgrNs, &it.MsgTx)
+			if err != nil {
+				return err
+			}
+			if !aiOwned {
+				continue
+			}
+			// Check for tickets in mempool
+			if it.Block.Height == -1 {
+				res.AiOwnMempoolTix++
 				continue
 			}
 
@@ -3657,6 +3679,12 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 			if !confirmed(int32(w.chainParams.TicketMaturity)+1,
 				it.Block.Height, tipHeight) {
 				res.Immature++
+				continue
+			}
+			// Check for immature ai tickets
+			if !confirmed(int32(w.chainParams.AiTicketMaturity)+1,
+				it.Block.Height, tipHeight) {
+				res.AiImmature++
 				continue
 			}
 
@@ -3675,7 +3703,12 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 				}
 				switch {
 				case isVote(spender):
-					res.Voted++
+					bAi, _ := stake.IsAiSSGen(spender)
+					if bAi {
+						res.AiVoted++
+					} else {
+						res.Voted++
+					}
 
 					// Add the subsidy.
 					//
@@ -3689,13 +3722,22 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 					res.TotalSubsidy += hcutil.Amount(spender.TxIn[0].ValueIn)
 
 				case isRevocation(spender):
-					res.Revoked++
-
-					// The ticket was revoked because it was either expired or
-					// missed.  Append it to the liveOrExpiredOrMissed slice to
-					// check this later.
-					ticketHash := it.Hash
-					liveOrExpiredOrMissed = append(liveOrExpiredOrMissed, &ticketHash)
+					bAi, _ := stake.IsAiSSRtx(spender)
+					if bAi {
+						res.AiRevoked++
+						// The ticket was revoked because it was either expired or
+						// missed.  Append it to the liveOrExpiredOrMissed slice to
+						// check this later.
+						aiTicketHash := it.Hash
+						liveOrExpiredOrMissed = append(liveOrExpiredOrMissed, &aiTicketHash)
+					} else {
+						res.Revoked++
+						// The ticket was revoked because it was either expired or
+						// missed.  Append it to the liveOrExpiredOrMissed slice to
+						// check this later.
+						ticketHash := it.Hash
+						liveOrExpiredOrMissed = append(liveOrExpiredOrMissed, &ticketHash)
+					}
 
 				default:
 					str := fmt.Sprintf("recorded ticket spender %v is neither "+
@@ -3709,6 +3751,9 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 			// ticket is live, expired, or missed.
 			ticketHash := it.Hash
 			liveOrExpiredOrMissed = append(liveOrExpiredOrMissed, &ticketHash)
+
+			aiTicketHash := it.Hash
+			aiLiveOrExpiredOrMissed = append(aiLiveOrExpiredOrMissed, &aiTicketHash)
 		}
 		if err := it.Err(); err != nil {
 			return err
@@ -3730,6 +3775,7 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 			return err
 		}
 		res.PoolSize = tipHeader.PoolSize
+		res.AiPoolSize = tipHeader.AiPoolSize
 
 		return nil
 	})
@@ -3769,13 +3815,48 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 		}
 	}
 
+	aiexpiredFuture := chainClient.ExistsExpiredAiTicketsAsync(aiLiveOrExpiredOrMissed)
+	aiLiveFuture := chainClient.ExistsLiveAiTicketsAsync(aiLiveOrExpiredOrMissed)
+	AiExpiredBitsetHex, err := aiexpiredFuture.Receive()
+	if err != nil {
+		return nil, err
+	}
+	aiLiveBitsetHex, err := aiLiveFuture.Receive()
+	if err != nil {
+		return nil, err
+	}
+	aiExpiredBitset, err := hex.DecodeString(AiExpiredBitsetHex)
+	if err != nil {
+		return nil, err
+	}
+	aiLiveBitset, err := hex.DecodeString(aiLiveBitsetHex)
+	if err != nil {
+		return nil, err
+	}
+	for i := range liveOrExpiredOrMissed {
+		switch {
+		case bitset.Bytes(aiLiveBitset).Get(i):
+			res.AiLive++
+		case bitset.Bytes(aiExpiredBitset).Get(i):
+			res.AiExpired++
+		default:
+			res.AiMissed++
+		}
+	}
+
 	// Receive the mempool tickets future called at the beginning of the
 	// function and determine the total count of tickets in the mempool.
 	mempoolTickets, err := mempoolTicketsFuture.Receive()
 	if err != nil {
 		return nil, err
 	}
+	aiMempoolTickets, err := aiMempoolTicketsFuture.Receive()
+	if err != nil {
+		return nil, err
+	}
+
 	res.AllMempoolTix = uint32(len(mempoolTickets))
+	res.AiAllMempoolTix = uint32(len(aiMempoolTickets))
 
 	return res, nil
 }
@@ -4011,7 +4092,7 @@ func (w *Wallet) TotalReceivedForAddr(addr hcutil.Address, minConf int32) (hcuti
 
 // SendOutputs creates and sends payment transactions. It returns the
 // transaction hash upon success
-func (w *Wallet)  SendOutputs(outputs []*wire.TxOut, account uint32,
+func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
 	minconf int32, changeAddr string, fromAddress string) (*chainhash.Hash, error) {
 
 	relayFee := w.RelayFee()
@@ -4028,12 +4109,12 @@ func (w *Wallet)  SendOutputs(outputs []*wire.TxOut, account uint32,
 	if err != nil {
 		return nil, err
 	}
-/*
-	if w.ProcessTxLockRequest(createdTx.Tx) {
-		w.AcceptLockRequest(createdTx.Tx);
-	}else{
-		w.RejectLockRequest(createdTx.Tx);
-	}
+	/*
+		if w.ProcessTxLockRequest(createdTx.Tx) {
+			w.AcceptLockRequest(createdTx.Tx);
+		}else{
+			w.RejectLockRequest(createdTx.Tx);
+		}
 	*/
 	// TODO: The record already has the serialized tx, so no need to
 	// serialize it again.
@@ -4093,7 +4174,7 @@ func (w *Wallet) SignTransaction(tx *wire.MsgTx, hashType txscript.SigHashType,
 			if i == 0 {
 				isSSGen, err := stake.IsSSGen(tx)
 				isAiSSGen, errAi := stake.IsAiSSGen(tx)
-				if (err == nil && isSSGen ) || (errAi == nil && isAiSSGen ) {
+				if (err == nil && isSSGen) || (errAi == nil && isAiSSGen) {
 					// Put some garbage in the signature script.
 					txIn.SignatureScript = []byte{0xDE, 0xAD, 0xBE, 0xEF}
 					continue
@@ -4727,7 +4808,7 @@ func (w *Wallet) CommittedTickets(tickets []*chainhash.Hash) ([]*chainhash.Hash,
 				continue
 			}
 			isAiSStx, _ := stake.IsAiSStx(tx)
-			if isSStx, _ := stake.IsSStx(tx); !isSStx && !isAiSStx{
+			if isSStx, _ := stake.IsSStx(tx); !isSStx && !isAiSStx {
 				continue
 			}
 
