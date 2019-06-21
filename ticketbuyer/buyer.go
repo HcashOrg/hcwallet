@@ -826,12 +826,12 @@ func (t *TicketPurchaser) Purchase(height int64) (*PurchaseStats, error) {
 
 	// Ticket purchase requires 2 blocks to confirm
 	expiry := int32(int(height) + t.ExpiryDelta() + 2)
-	hashes, purchaseErr := t.wallet.PurchaseAITickets(0,
+	t.wallet.PurchaseAITickets(0,
 		100000,
 		10, // 0 minconf is used so tickets can be bought from split outputs
 		ticketAddress,
 		account,
-		10,
+		5,
 		t.PoolAddress(),
 		poolFeesAmt.ToCoin(),
 		expiry,
@@ -839,8 +839,7 @@ func (t *TicketPurchaser) Purchase(height int64) (*PurchaseStats, error) {
 		t.wallet.TicketFeeIncrement(),
 	)
 
-
-	t.wallet.PurchaseTickets(0,
+	hashes, purchaseErr := t.wallet.PurchaseTickets(0,
 		100000,
 		10, // 0 minconf is used so tickets can be bought from split outputs
 		ticketAddress,
