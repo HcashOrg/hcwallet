@@ -1618,11 +1618,11 @@ func (w *Wallet) purchaseAITickets(req purchaseAITicketRequest) ([]*chainhash.Ha
 	// address this better and prevent address burning.
 
 	// Get the current ticket price from the daemon.
-	ticketPricesF64, err := w.ChainClient().GetStakeDifficulty()
+	ticketPricesF64, err := w.ChainClient().GetAiStakeDifficulty()
 	if err != nil {
 		return nil, err
 	}
-	ticketPrice, err := hcutil.NewAmount(ticketPricesF64.NextStakeDifficulty)
+	ticketPrice, err := hcutil.NewAmount(ticketPricesF64.NextAiStakeDifficulty)
 	if err != nil {
 		return nil, err
 	}

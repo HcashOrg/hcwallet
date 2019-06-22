@@ -1277,7 +1277,7 @@ func getStakeInfo(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.C
 		Expired:          stakeInfo.Expired,
 
 		AiPoolSize:         stakeInfo.AiPoolSize,
-		AiDifficulty:       aiSiff.AiNextStakeDifficulty,
+		AiDifficulty:       aiSiff.NextAiStakeDifficulty,
 		AiAllMempoolTix:    stakeInfo.AiAllMempoolTix,
 		AiOwnMempoolTix:    stakeInfo.AiOwnMempoolTix,
 		AiImmature:         stakeInfo.AiImmature,

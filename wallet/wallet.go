@@ -3833,7 +3833,7 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 	if err != nil {
 		return nil, err
 	}
-	for i := range liveOrExpiredOrMissed {
+	for i := range aiLiveOrExpiredOrMissed {
 		switch {
 		case bitset.Bytes(aiLiveBitset).Get(i):
 			res.AiLive++
