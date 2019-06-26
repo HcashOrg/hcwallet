@@ -1050,7 +1050,17 @@ func (w *Wallet) LoadActiveDataFilters(chainClient *hcrpcclient.Client) error {
 		"and %v output(s)", addrCount, utxoCount)
 	return nil
 }
-
+func getAvailableData(src []byte)([]byte, error){
+	if len(src) == wire.MaxBlockHeaderPayload * 2{
+		for i:=180 * 2; i<wire.MaxBlockHeaderPayload; i++{
+			if src[i] != 0{
+				return src, nil
+			}
+		}
+		return src[:180 *2], nil
+	}
+	return nil, fmt.Errorf("unknow byte ")
+}
 // createHeaderData creates the header data to process from hex-encoded
 // serialized block headers.
 func createHeaderData(headers []string) ([]udb.BlockHeaderData, error) {
@@ -1060,7 +1070,9 @@ func createHeaderData(headers []string) ([]udb.BlockHeaderData, error) {
 	for i, header := range headers {
 		var headerData udb.BlockHeaderData
 		copy(hexbuf, header)
-		_, err := hex.Decode(headerData.SerializedHeader[:], hexbuf)
+
+		hData, _ := getAvailableData(hexbuf)
+		_, err := hex.Decode(headerData.SerializedHeader[:], hData)
 		if err != nil {
 			return nil, err
 		}
@@ -1071,6 +1083,7 @@ func createHeaderData(headers []string) ([]udb.BlockHeaderData, error) {
 		}
 		headerData.BlockHash = decodedHeader.BlockHash()
 		data[i] = headerData
+	//	log.Error("createHeaderData d%  %v", headerData.SerializedHeader.Height(), headerData.BlockHash )
 	}
 	return data, nil
 }

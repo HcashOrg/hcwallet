@@ -418,7 +418,8 @@ func blockMetaFromHeader(blockHash *chainhash.Hash, header []byte) BlockMeta {
 }
 
 // RawBlockHeader is a 180 byte block header (always true for version 0 blocks).
-type RawBlockHeader [180]byte
+//type RawBlockHeader [180]byte
+type RawBlockHeader [wire.MaxBlockHeaderPayload]byte
 
 // Height extracts the height encoded in a block header.
 func (h *RawBlockHeader) Height() int32 {

@@ -1245,7 +1245,7 @@ func getStakeInfo(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.C
 			(float64(stakeInfo.Voted) + float64(stakeInfo.Missed))
 	}
 	aiProportionMissed := float64(0.0)
-	if stakeInfo.Missed > 0 {
+	if stakeInfo.AiMissed > 0 {
 		aiProportionMissed = float64(stakeInfo.AiMissed) /
 			(float64(stakeInfo.AiVoted) + float64(stakeInfo.AiMissed))
 	}
