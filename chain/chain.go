@@ -214,8 +214,9 @@ type (
 	}
 
 	NewInstantTx struct {
-		Tickets       []*chainhash.Hash
-		InstantTxHash *chainhash.Hash
+		Tickets   []*chainhash.Hash
+		InstantTx []byte
+		Resend    bool
 	}
 
 	InstantTxVote struct {
@@ -292,11 +293,12 @@ func (c *RPCClient) onRelevantTxAccepted(transaction []byte) {
 	}
 }
 
-func (c *RPCClient) onNewInstantTx(instantTxHash *chainhash.Hash, tickets []*chainhash.Hash) {
+func (c *RPCClient) onNewInstantTx(instantTxHash []byte, tickets []*chainhash.Hash, resend bool) {
 	select {
 	case c.enqueueNotification <- NewInstantTx{
-		InstantTxHash: instantTxHash,
-		Tickets:       tickets,
+		InstantTx: instantTxHash,
+		Tickets:   tickets,
+		Resend:    resend,
 	}:
 	case <-c.quit:
 	}

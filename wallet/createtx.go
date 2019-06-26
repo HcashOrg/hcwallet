@@ -567,12 +567,11 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		//deal with instant send
 		isLockTx := false
 		for _, txOut := range atx.Tx.TxOut {
-			if txscript.IsLockTx(txOut.PkScript) {
+			if txscript.HasInstantTxTag(txOut.PkScript) {
 				isLockTx = true
 				break
 			}
 		}
-
 
 		if isLockTx {
 			instantTx := wire.NewMsgInstantTx()
@@ -580,9 +579,11 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 			if err != nil {
 				return err
 			}
+			//send to instant channel
 			chainClient.SendInstantRawTransaction(instantTx, w.AllowHighFees)
 
 		} else {
+			//send to normal channel
 			_, err = chainClient.SendRawTransaction(atx.Tx, w.AllowHighFees)
 		}
 
