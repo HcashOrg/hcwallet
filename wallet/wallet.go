@@ -3874,6 +3874,13 @@ func (w *Wallet) LockOutpoint(op wire.OutPoint) {
 	w.lockedOutpoints[op] = struct{}{}
 }
 
+//might return nil
+func (w *Wallet)GetLotteryBlockHash() *chainhash.Hash {
+	//todo implement
+	blkHash,_:=w.MainChainTip()
+	return &blkHash
+}
+
 // UnlockOutpoint marks an outpoint as unlocked, that is, it may be used as an
 // input for newly created transactions.
 func (w *Wallet) UnlockOutpoint(op wire.OutPoint) {

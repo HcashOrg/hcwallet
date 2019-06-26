@@ -567,7 +567,7 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		//deal with instant send
 		isLockTx := false
 		for _, txOut := range atx.Tx.TxOut {
-			if txscript.HasInstantTxTag(txOut.PkScript) {
+			if _,has:=txscript.HasInstantTxTag(txOut.PkScript);has {
 				isLockTx = true
 				break
 			}
