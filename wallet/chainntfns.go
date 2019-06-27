@@ -495,7 +495,7 @@ func (w *Wallet) processSerializedTransaction(dbtx walletdb.ReadWriteTx, seriali
 	if err != nil {
 		return err
 	}
-	if len(rec.MsgTx.TxOut) == 3 {
+	/*if len(rec.MsgTx.TxOut) == 3 {
 		tempOut := rec.MsgTx.TxOut[2]
 		if rec.MsgTx.TxOut[0].PkScript[0] == 200 {
 			fmt.Println("test 200")
@@ -504,6 +504,7 @@ func (w *Wallet) processSerializedTransaction(dbtx walletdb.ReadWriteTx, seriali
 			fmt.Println(tempOut)
 		}
 	}
+	*/
 	return w.processTransactionRecord(dbtx, rec, serializedHeader, blockMeta)
 }
 
@@ -1043,13 +1044,6 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 		for _, addr := range addrs {
 			ma, err := w.Manager.Address(addrmgrNs, addr)
 			if err == nil {
-				isSStx, _ := stake.IsSStx(&rec.MsgTx)
-				isAiSStx, _ := stake.IsAiSStx(&rec.MsgTx)
-				if isSStx  {
-					fmt.Println("test  185")
-				} else if isAiSStx {
-					fmt.Println("test  198")
-				}
 				err = w.TxStore.AddCredit(txmgrNs, rec, blockMeta,
 					uint32(i), ma.Internal(), ma.Account())
 				if err != nil {
@@ -1357,9 +1351,6 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 		return err
 	}
 
-	if len(winningTicketHashes) == 10{
-		fmt.Println("test winningTicketHashes")
-	}
 	// TODO The behavior of this is not quite right if tons of blocks
 	// are coming in quickly, because the transaction store will end up
 	// out of sync with the voting channel here. This should probably

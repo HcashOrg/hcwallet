@@ -1429,9 +1429,6 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 	index uint32, change bool, account uint32) (bool, error) {
 
 	opCode := getP2PKHOpCode(rec.MsgTx.TxOut[index].PkScript)
-	if opCode >= txscript.OP_AISSTX && opCode <= txscript.OP_AISSTXCHANGE{
-		fmt.Println("test 200200")
-	}
 	isCoinbase := blockchain.IsCoinBaseTx(&rec.MsgTx)
 
 	if block == nil {
