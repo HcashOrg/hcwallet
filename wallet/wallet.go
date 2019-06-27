@@ -1052,7 +1052,7 @@ func (w *Wallet) LoadActiveDataFilters(chainClient *hcrpcclient.Client) error {
 }
 func getAvailableData(src []byte)([]byte, error){
 	if len(src) == wire.MaxBlockHeaderPayload * 2{
-		for i:=180 * 2; i<wire.MaxBlockHeaderPayload; i++{
+		for i:=180 * 2; i<wire.MaxBlockHeaderPayload * 2; i++{
 			if src[i] != 0{
 				return src, nil
 			}
