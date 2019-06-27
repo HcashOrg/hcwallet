@@ -92,6 +92,7 @@ func init() {
 	} else if opts.SimNet {
 		activeNet = &netparams.SimNetParams
 	}
+	wire.AI_UPDATE_HEIGHT = activeNet.AIUpdateHeight
 
 	if opts.RPCConnect == "" {
 		fatalf("RPC hostname[:port] is required")

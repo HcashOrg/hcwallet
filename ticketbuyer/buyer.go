@@ -17,6 +17,7 @@ import (
 	"github.com/HcashOrg/hcd/hcutil"
 	hcrpcclient "github.com/HcashOrg/hcrpcclient"
 	"github.com/HcashOrg/hcwallet/wallet"
+	"github.com/HcashOrg/hcd/wire"
 )
 
 var (
@@ -826,19 +827,21 @@ func (t *TicketPurchaser) Purchase(height int64) (*PurchaseStats, error) {
 
 	// Ticket purchase requires 2 blocks to confirm
 	expiry := int32(int(height) + t.ExpiryDelta() + 2)
-	t.wallet.PurchaseAITickets(0,
-		100000,
-		10, // 0 minconf is used so tickets can be bought from split outputs
-		ticketAddress,
-		account,
-		10,
-		t.PoolAddress(),
-		poolFeesAmt.ToCoin(),
-		expiry,
-		t.wallet.RelayFee(),
-		t.wallet.TicketFeeIncrement(),
-	)
 
+	if uint64(height) >= wire.AI_UPDATE_HEIGHT {
+		t.wallet.PurchaseAITickets(0,
+			100000,
+			10, // 0 minconf is used so tickets can be bought from split outputs
+			ticketAddress,
+			account,
+			10,
+			t.PoolAddress(),
+			poolFeesAmt.ToCoin(),
+			expiry,
+			t.wallet.RelayFee(),
+			t.wallet.TicketFeeIncrement(),
+		)
+	}
 	hashes, purchaseErr := t.wallet.PurchaseTickets(0,
 		100000,
 		10, // 0 minconf is used so tickets can be bought from split outputs
