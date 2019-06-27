@@ -3196,8 +3196,8 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 			copy(cKey[36:68], v[4:36])  // Block hash
 			copy(cKey[68:72], k[32:36]) // Output index
 
-			testHash, _ := chainhash.NewHash(k[0:32])
-			fmt.Println(testHash.String())
+//			testHash, _ := chainhash.NewHash(k[0:32])
+//			fmt.Println(testHash.String())
 
 			cVal := existsRawCredit(ns, cKey)
 

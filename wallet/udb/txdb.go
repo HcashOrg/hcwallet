@@ -936,11 +936,12 @@ func spendCredit(ns walletdb.ReadWriteBucket, k []byte, spender *indexedIncidenc
 	copy(newv, v)
 	v = newv
 	v[8] |= 1 << 0
-
+/*
 	test0 := (((v[8] >> 2) & 0x07) + 0xb9)
 	test1 := (((v[8] >> 2) & 0x0F) + 0xb9)
 	fmt.Println(test0)
 	fmt.Println(test1)
+	*/
 	copy(v[9:41], spender.txHash[:])
 	byteOrder.PutUint32(v[41:45], uint32(spender.block.Height))
 	copy(v[45:77], spender.block.Hash[:])
