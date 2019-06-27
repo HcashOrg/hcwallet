@@ -7,7 +7,6 @@ package wallet
 
 import (
 	"fmt"
-
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcd/hcutil/hdkeychain"
@@ -732,6 +731,8 @@ func (w *Wallet) AccountBranchAddressRange(account, branch, start, end uint32) (
 	}
 	return nil, fmt.Errorf("unknown pubkey type")
 }
+
+
 
 func (w *Wallet) FetchAddressesByAccount(account uint32) ([]string, error) {
 	// Find the next child address indexes for the account.

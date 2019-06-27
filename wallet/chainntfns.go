@@ -67,7 +67,7 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 			}
 		case chain.NewInstantTx:
 			notificationName = "newinstanttx"
-			w.handleNewInstantTx(n.InstantTxHash, n.Tickets)
+			w.handleNewInstantTx(n.InstantTx, n.Tickets,n.Resend)
 		case chain.InstantTxVote:
 			notificationName="instanttxvote"
 			w.handleInstantTxVote(n.InstantTxVoteHash,n.InstantTxHash,n.TickeHash,n.Vote,n.Sig)
@@ -1264,7 +1264,11 @@ func(w *Wallet) handleInstantTxVote(instantTxVoteHash *chainhash.Hash, instantTx
 }
 
 
-func (w *Wallet) handleNewInstantTx(instantTxHash *chainhash.Hash, tickets []*chainhash.Hash) {
+func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.Hash,resend bool) {
+
+
+	msgInstantTx:=wire.NewMsgInstantTx()
+	msgInstantTx.FromBytes(instantTxBytes)
 
 	var ticketHashes []*chainhash.Hash
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
@@ -1275,6 +1279,16 @@ func (w *Wallet) handleNewInstantTx(instantTxHash *chainhash.Hash, tickets []*ch
 		if len(ticketHashes) == 0 {
 			return nil
 		}
+
+		//deal with resend
+		if resend{
+			msgTx:=msgInstantTx.MsgTx
+			//send to normal channel
+			w.chainClient.SendRawTransaction(&msgTx,w.AllowHighFees)
+			return nil
+		}
+
+		//deal with sign
 		for _, ticketHash := range ticketHashes {
 			ticketPurchase, err := w.TxStore.Tx(txmgrNs, ticketHash)
 			if err != nil || ticketPurchase == nil {
@@ -1308,7 +1322,7 @@ func (w *Wallet) handleNewInstantTx(instantTxHash *chainhash.Hash, tickets []*ch
 			instantTxVote := wire.NewMsgInstantTxVote()
 			instantTxVote.Vote=true
 			instantTxVote.TicketHash=*ticketHash
-			instantTxVote.InstantTxHash =*instantTxHash
+			instantTxVote.InstantTxHash =msgInstantTx.TxHash()
 			instantTxVote.PubKey=pk.SerializeCompressed()
 
 			signMsg:=instantTxVote.InstantTxHash.String()+instantTxVote.TicketHash.String()
