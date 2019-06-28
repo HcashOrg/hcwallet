@@ -3687,16 +3687,17 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 				res.AiOwnMempoolTix++
 				continue
 			}
-
+			isSStx,_ := stake.IsSStx(&it.MsgTx)
+			isAiSStx,_ := stake.IsAiSStx(&it.MsgTx)
 			// Check for immature tickets
 			if !confirmed(int32(w.chainParams.TicketMaturity)+1,
-				it.Block.Height, tipHeight) {
+				it.Block.Height, tipHeight) &&  isSStx {
 				res.Immature++
 				continue
 			}
 			// Check for immature ai tickets
 			if !confirmed(int32(w.chainParams.AiTicketMaturity)+1,
-				it.Block.Height, tipHeight) {
+				it.Block.Height, tipHeight) && isAiSStx{
 				res.AiImmature++
 				continue
 			}
