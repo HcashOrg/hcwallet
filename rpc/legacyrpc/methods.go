@@ -137,7 +137,7 @@ func init() {
 		"sendmany":                 {handler: sendMany},
 		"sendmanyv2":               {handler: sendManyV2},
 		"sendtoaddress":            {handler: sendToAddress},
-		"instantsendtoaddress":     {handler: instantSendToAddress},
+		"aisendtoaddress":     {handler: aiSendToAddress},
 		"sendfromaddresstoaddress": {handler: sendFromAddressToAddress},
 		"getstraightpubkey":        {handlerWithChain: getStraightPubKey},
 		"sendtomultisig":           {handlerWithChain: sendToMultiSig},
@@ -2607,13 +2607,13 @@ func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return sendPairs(w, pairs, account, 1, "", []byte{}, "")
 }
 
-// instantSendToAddress handles a instantSendToAddress RPC request by creating a new
+// aiSendToAddress handles a aiSendToAddress RPC request by creating a new
 // transaction spending unspent transaction outputs for a wallet to another
 // payment address.  Leftover inputs not sent to the payment address or a fee
 // for the miner are sent back to a new address in the wallet.  Upon success,
 // the TxID for the created transaction is returned.
-func instantSendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
-	cmd := icmd.(*hcjson.InstantSendToAddressCmd)
+func aiSendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := icmd.(*hcjson.AiSendToAddressCmd)
 
 	// Transaction comments are not yet supported.  Error instead of
 	// pretending to save them.
