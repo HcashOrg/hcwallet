@@ -830,7 +830,7 @@ func (t *TicketPurchaser) Purchase(height int64) (*PurchaseStats, error) {
 
 	if uint64(height) >= wire.AI_UPDATE_HEIGHT {
 		t.wallet.PurchaseAITickets(0,
-			100000,
+			150*100000000,
 			10, // 0 minconf is used so tickets can be bought from split outputs
 			ticketAddress,
 			account,
@@ -843,7 +843,7 @@ func (t *TicketPurchaser) Purchase(height int64) (*PurchaseStats, error) {
 		)
 	}
 	hashes, purchaseErr := t.wallet.PurchaseTickets(0,
-		100000,
+		60*100000000,
 		10, // 0 minconf is used so tickets can be bought from split outputs
 		ticketAddress,
 		account,
