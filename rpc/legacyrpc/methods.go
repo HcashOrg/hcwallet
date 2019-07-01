@@ -737,6 +737,7 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 			Spendable:               bal.Spendable.ToCoin(),
 			Total:                   bal.Total.ToCoin(),
 			Unconfirmed:             bal.Unconfirmed.ToCoin(),
+			AiTxConfirmed:           w.AiTxConfirms[account],
 			VotingAuthority:         bal.VotingAuthority.ToCoin(),
 		}
 		result.Balances = append(result.Balances, json)
@@ -2641,17 +2642,17 @@ func instantSendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, erro
 		cmd.Address: amt,
 	}
 
-	lotteryHash:=w.GetLotteryBlockHash()
-	if lotteryHash==nil{
-		return nil,fmt.Errorf("instant tx get lotterHash  failed")
+	lotteryHash := w.GetLotteryBlockHash()
+	if lotteryHash == nil {
+		return nil, fmt.Errorf("instant tx get lotterHash  failed")
 	}
-	lotteryHashBytes:=lotteryHash.CloneBytes()
+	lotteryHashBytes := lotteryHash.CloneBytes()
 
-	payloadBytes:=make([]byte,0,16+32)
-	payloadBytes=append(payloadBytes,[]byte(instantTxTag)...)
-	payloadBytes=append(payloadBytes,lotteryHashBytes...)
+	payloadBytes := make([]byte, 0, 16+32)
+	payloadBytes = append(payloadBytes, []byte(instantTxTag)...)
+	payloadBytes = append(payloadBytes, lotteryHashBytes...)
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(w, pairs, account, w.ChainParams().InstantSendConfirmationsRequired, "",payloadBytes , "")
+	return sendPairs(w, pairs, account, w.ChainParams().InstantSendConfirmationsRequired, "", payloadBytes, "")
 }
 
 // getStraightPubKey handles a getStraightPubKey RPC request by getting a straight public key

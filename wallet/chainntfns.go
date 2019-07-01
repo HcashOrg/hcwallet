@@ -1264,6 +1264,9 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 	msgInstantTx:=wire.NewMsgInstantTx()
 	msgInstantTx.FromBytes(instantTxBytes)
 
+
+
+
 	var ticketHashes []*chainhash.Hash
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
 		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
@@ -1279,6 +1282,7 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 			msgTx:=msgInstantTx.MsgTx
 			//send to normal channel
 			w.chainClient.SendRawTransaction(&msgTx,w.AllowHighFees)
+
 			return nil
 		}
 
@@ -1331,6 +1335,27 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 		}
 		return nil
 	})
+
+
+
+	if resend{
+		//update confirm
+		go func() {
+			for _,out := range msgInstantTx.MsgTx.TxOut {
+				_,addrs,_,err:=txscript.ExtractPkScriptAddrs(out.Version,out.PkScript,w.chainParams)
+				if err==nil&&len(addrs)>0{
+					account,err:=w.AccountOfAddress(addrs[0])
+					if err!=nil{
+						w.AiTxConfirms[account]+=hcutil.Amount(out.Value).ToCoin()
+					}
+				}
+			}
+
+		}()
+
+	}
+
+
 
 	if err != nil {
 		log.Errorf("db View failed handle instant tx: %v", err)
