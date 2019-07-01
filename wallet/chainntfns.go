@@ -40,6 +40,23 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 		case chain.BlockConnected:
 			notificationName = "blockconnected"
 			err = w.onBlockConnected(n.BlockHeader, n.Transactions)
+			go func(transactions [][]byte) {
+				for _, serializedTx := range transactions {
+					msgTx:=wire.NewMsgTx()
+					err:=msgTx.FromBytes(serializedTx)
+					if err != nil {
+						str := "failed to deserialize transaction"
+						log.Infof(str)
+						return
+					}
+
+					txHash:=msgTx.TxHash()
+					if _,exist:=w.AiTxConfirms[txHash];exist{
+						delete(w.AiTxConfirms,txHash)
+					}
+				}
+
+			}(n.Transactions)
 			if err == nil {
 				err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 					return w.watchFutureAddresses(tx)
@@ -1260,12 +1277,8 @@ func(w *Wallet) handleInstantTxVote(instantTxVoteHash *chainhash.Hash, instantTx
 
 func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.Hash,resend bool) {
 
-
 	msgInstantTx:=wire.NewMsgInstantTx()
 	msgInstantTx.FromBytes(instantTxBytes)
-
-
-
 
 	var ticketHashes []*chainhash.Hash
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
@@ -1339,22 +1352,13 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 
 
 	if resend{
-		//update confirm
+		//update confirm map
 		go func() {
-			for _,out := range msgInstantTx.MsgTx.TxOut {
-				_,addrs,_,err:=txscript.ExtractPkScriptAddrs(out.Version,out.PkScript,w.chainParams)
-				if err==nil&&len(addrs)>0{
-					account,err:=w.AccountOfAddress(addrs[0])
-					if err!=nil{
-						w.AiTxConfirms[account]+=hcutil.Amount(out.Value).ToCoin()
-					}
-				}
-			}
-
+			copy:=*msgInstantTx
+			w.AiTxConfirms[msgInstantTx.TxHash()]=&copy
 		}()
 
 	}
-
 
 
 	if err != nil {

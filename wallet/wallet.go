@@ -52,6 +52,7 @@ const (
 	// NOTE: at time of writing, public encryption only applies to public
 	// data in the waddrmgr namespace.  Transactions are not yet encrypted.
 	InsecurePubPassphrase = "public"
+	defaultConfirmNumber = 6
 )
 
 var (
@@ -131,7 +132,7 @@ type Wallet struct {
 	addressBuffersMu sync.Mutex
 
 	//aitx confirm
-	AiTxConfirms map[uint32]float64
+	AiTxConfirms map[chainhash.Hash]*wire.MsgInstantTx
 
 	// Channels for the manager locker.
 	unlockRequests     chan unlockRequest
@@ -164,6 +165,7 @@ type Wallet struct {
 	enableOmni bool
 }
 
+
 // newWallet creates a new Wallet structure with the provided address manager
 // and transaction store.
 func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Address,
@@ -193,7 +195,7 @@ func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Addre
 		addressReuse:             addressReuse,
 		ticketAddress:            ticketAddress,
 		addressBuffers:           make(map[uint32]*bip0044AccountData),
-		AiTxConfirms:             make(map[uint32]float64),
+		AiTxConfirms:             make(map[chainhash.Hash]*wire.MsgInstantTx),
 		poolAddress:              poolAddress,
 		poolFees:                 pf,
 		gapLimit:                 gapLimit,
@@ -3893,11 +3895,14 @@ func (w *Wallet) LockOutpoint(op wire.OutPoint) {
 	w.lockedOutpoints[op] = struct{}{}
 }
 
-//might return nil
+//return lottery hash
 func (w *Wallet) GetLotteryBlockHash() *chainhash.Hash {
-	//todo implement
-	blkHash, _ := w.MainChainTip()
-	return &blkHash
+	bestHash, height := w.MainChainTip()
+	lotteryHash,err:=w.chainClient.GetBlockHash(int64(height)-defaultConfirmNumber)
+	if err!=nil{
+		return &bestHash
+	}
+	return lotteryHash
 }
 
 // UnlockOutpoint marks an outpoint as unlocked, that is, it may be used as an
