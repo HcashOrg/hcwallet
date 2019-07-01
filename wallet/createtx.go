@@ -580,7 +580,7 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 				return err
 			}
 			//send to instant channel
-			chainClient.SendInstantRawTransaction(instantTx, w.AllowHighFees)
+			_, err = chainClient.SendInstantRawTransaction(instantTx, w.AllowHighFees)
 
 		} else {
 			//send to normal channel
