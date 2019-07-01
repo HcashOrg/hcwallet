@@ -137,7 +137,7 @@ func init() {
 		"sendmany":                 {handler: sendMany},
 		"sendmanyv2":               {handler: sendManyV2},
 		"sendtoaddress":            {handler: sendToAddress},
-		"aisendtoaddress":     {handler: aiSendToAddress},
+		"aisendtoaddress":          {handler: aiSendToAddress},
 		"sendfromaddresstoaddress": {handler: sendFromAddressToAddress},
 		"getstraightpubkey":        {handlerWithChain: getStraightPubKey},
 		"sendtomultisig":           {handlerWithChain: sendToMultiSig},
@@ -669,6 +669,19 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		BlockHash: blockHash.String(),
 	}
 
+	accountAiConfirms :=make(map[uint32]hcutil.Amount)
+	for _, msgTx := range w.AiTxConfirms {
+		for _, out := range msgTx.TxOut {
+			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.Version, out.PkScript,w.ChainParams())
+			if err == nil && len(addrs) > 0 {
+				account, err := w.AccountOfAddress(addrs[0])
+				if err == nil {
+					accountAiConfirms[account] += hcutil.Amount(out.Value)
+				}
+			}
+		}
+	}
+
 	if accountName == "*" {
 		balances, err := w.CalculateAccountBalances(int32(*cmd.MinConf))
 		if err != nil {
@@ -681,6 +694,7 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 			totLocked           hcutil.Amount
 			totSpendable        hcutil.Amount
 			totUnconfirmed      hcutil.Amount
+			totAiTxConfirmed    hcutil.Amount
 			totVotingAuthority  hcutil.Amount
 			cumTot              hcutil.Amount
 		)
@@ -697,6 +711,7 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 			totSpendable += bal.Spendable
 			totUnconfirmed += bal.Unconfirmed
 			totVotingAuthority += bal.VotingAuthority
+			totAiTxConfirmed += accountAiConfirms[bal.Account]
 			cumTot += bal.Total
 
 			json := hcjson.GetAccountBalanceResult{
@@ -707,6 +722,7 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 				Spendable:               bal.Spendable.ToCoin(),
 				Total:                   bal.Total.ToCoin(),
 				Unconfirmed:             bal.Unconfirmed.ToCoin(),
+				AiTxConfirmed:           accountAiConfirms[bal.Account].ToCoin(),
 				VotingAuthority:         bal.VotingAuthority.ToCoin(),
 			}
 			result.Balances = append(result.Balances, json)
@@ -718,6 +734,7 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		result.TotalSpendable = totSpendable.ToCoin()
 		result.TotalUnconfirmed = totUnconfirmed.ToCoin()
 		result.TotalVotingAuthority = totVotingAuthority.ToCoin()
+		result.TotalAiTxConfirmed = totAiTxConfirmed.ToCoin()
 		result.CumulativeTotal = cumTot.ToCoin()
 	} else {
 		account, err := w.AccountNumber(accountName)
@@ -729,6 +746,7 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		json := hcjson.GetAccountBalanceResult{
 			AccountName:             accountName,
 			ImmatureCoinbaseRewards: bal.ImmatureCoinbaseRewards.ToCoin(),
@@ -737,6 +755,7 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 			Spendable:               bal.Spendable.ToCoin(),
 			Total:                   bal.Total.ToCoin(),
 			Unconfirmed:             bal.Unconfirmed.ToCoin(),
+			AiTxConfirmed:           accountAiConfirms[account].ToCoin(),
 			VotingAuthority:         bal.VotingAuthority.ToCoin(),
 		}
 		result.Balances = append(result.Balances, json)
@@ -2641,17 +2660,17 @@ func aiSendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		cmd.Address: amt,
 	}
 
-	lotteryHash:=w.GetLotteryBlockHash()
-	if lotteryHash==nil{
-		return nil,fmt.Errorf("instant tx get lotterHash  failed")
+	lotteryHash := w.GetLotteryBlockHash()
+	if lotteryHash == nil {
+		return nil, fmt.Errorf("instant tx get lotterHash  failed")
 	}
-	lotteryHashBytes:=lotteryHash.CloneBytes()
+	lotteryHashBytes := lotteryHash.CloneBytes()
 
-	payloadBytes:=make([]byte,0,16+32)
-	payloadBytes=append(payloadBytes,[]byte(instantTxTag)...)
-	payloadBytes=append(payloadBytes,lotteryHashBytes...)
+	payloadBytes := make([]byte, 0, 16+32)
+	payloadBytes = append(payloadBytes, []byte(instantTxTag)...)
+	payloadBytes = append(payloadBytes, lotteryHashBytes...)
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(w, pairs, account, w.ChainParams().InstantSendConfirmationsRequired, "",payloadBytes , "")
+	return sendPairs(w, pairs, account, w.ChainParams().InstantSendConfirmationsRequired, "", payloadBytes, "")
 }
 
 // getStraightPubKey handles a getStraightPubKey RPC request by getting a straight public key

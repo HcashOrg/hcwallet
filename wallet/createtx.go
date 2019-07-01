@@ -422,8 +422,23 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32, minconf int3
 		return nil, err
 	}
 
+	isInstantTx :=false
+	totalValue:=int64(0)
+	fee:=w.RelayFee()
+
+	for _,out:=range outputs{
+		totalValue+=out.Value
+		if _,has:=txscript.HasInstantTxTag(out.PkScript);has{
+			isInstantTx=true
+		}
+	}
+
+	if isInstantTx{
+		fee+=hcutil.Amount(totalValue/1000)
+	}
+
 	return w.txToOutputsInternal(outputs, account, minconf, chainClient,
-		randomizeChangeIdx, w.RelayFee(), changeAddr, fromAddress)
+		randomizeChangeIdx, fee, changeAddr, fromAddress)
 }
 
 // txToOutputsInternal creates a signed transaction which includes each output

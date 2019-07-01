@@ -52,6 +52,7 @@ const (
 	// NOTE: at time of writing, public encryption only applies to public
 	// data in the waddrmgr namespace.  Transactions are not yet encrypted.
 	InsecurePubPassphrase = "public"
+	defaultConfirmNumber = 6
 )
 
 var (
@@ -130,6 +131,9 @@ type Wallet struct {
 	addressBuffers   map[uint32]*bip0044AccountData
 	addressBuffersMu sync.Mutex
 
+	//aitx confirm
+	AiTxConfirms map[chainhash.Hash]*wire.MsgInstantTx
+
 	// Channels for the manager locker.
 	unlockRequests     chan unlockRequest
 	lockRequests       chan struct{}
@@ -161,6 +165,7 @@ type Wallet struct {
 	enableOmni bool
 }
 
+
 // newWallet creates a new Wallet structure with the provided address manager
 // and transaction store.
 func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Address,
@@ -190,6 +195,7 @@ func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Addre
 		addressReuse:             addressReuse,
 		ticketAddress:            ticketAddress,
 		addressBuffers:           make(map[uint32]*bip0044AccountData),
+		AiTxConfirms:             make(map[chainhash.Hash]*wire.MsgInstantTx),
 		poolAddress:              poolAddress,
 		poolFees:                 pf,
 		gapLimit:                 gapLimit,
@@ -1050,17 +1056,18 @@ func (w *Wallet) LoadActiveDataFilters(chainClient *hcrpcclient.Client) error {
 		"and %v output(s)", addrCount, utxoCount)
 	return nil
 }
-func getAvailableData(src []byte)([]byte, error){
-	if len(src) == wire.MaxBlockHeaderPayload * 2{
-		for i:=180 * 2; i<wire.MaxBlockHeaderPayload * 2; i++{
-			if src[i] != 0{
+func getAvailableData(src []byte) ([]byte, error) {
+	if len(src) == wire.MaxBlockHeaderPayload*2 {
+		for i := 180 * 2; i < wire.MaxBlockHeaderPayload*2; i++ {
+			if src[i] != 0 {
 				return src, nil
 			}
 		}
-		return src[:180 *2], nil
+		return src[:180*2], nil
 	}
 	return nil, fmt.Errorf("unknow byte ")
 }
+
 // createHeaderData creates the header data to process from hex-encoded
 // serialized block headers.
 func createHeaderData(headers []string) ([]udb.BlockHeaderData, error) {
@@ -1083,7 +1090,7 @@ func createHeaderData(headers []string) ([]udb.BlockHeaderData, error) {
 		}
 		headerData.BlockHash = decodedHeader.BlockHash()
 		data[i] = headerData
-	//	log.Error("createHeaderData d%  %v", headerData.SerializedHeader.Height(), headerData.BlockHash )
+		//	log.Error("createHeaderData d%  %v", headerData.SerializedHeader.Height(), headerData.BlockHash )
 	}
 	return data, nil
 }
@@ -3687,17 +3694,17 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 				res.AiOwnMempoolTix++
 				continue
 			}
-			isSStx,_ := stake.IsSStx(&it.MsgTx)
-			isAiSStx,_ := stake.IsAiSStx(&it.MsgTx)
+			isSStx, _ := stake.IsSStx(&it.MsgTx)
+			isAiSStx, _ := stake.IsAiSStx(&it.MsgTx)
 			// Check for immature tickets
 			if !confirmed(int32(w.chainParams.TicketMaturity)+1,
-				it.Block.Height, tipHeight) &&  isSStx {
+				it.Block.Height, tipHeight) && isSStx {
 				res.Immature++
 				continue
 			}
 			// Check for immature ai tickets
 			if !confirmed(int32(w.chainParams.AiTicketMaturity)+1,
-				it.Block.Height, tipHeight) && isAiSStx{
+				it.Block.Height, tipHeight) && isAiSStx {
 				res.AiImmature++
 				continue
 			}
@@ -3888,11 +3895,14 @@ func (w *Wallet) LockOutpoint(op wire.OutPoint) {
 	w.lockedOutpoints[op] = struct{}{}
 }
 
-//might return nil
-func (w *Wallet)GetLotteryBlockHash() *chainhash.Hash {
-	//todo implement
-	blkHash,_:=w.MainChainTip()
-	return &blkHash
+//return lottery hash
+func (w *Wallet) GetLotteryBlockHash() *chainhash.Hash {
+	bestHash, height := w.MainChainTip()
+	lotteryHash,err:=w.chainClient.GetBlockHash(int64(height)-defaultConfirmNumber)
+	if err!=nil{
+		return &bestHash
+	}
+	return lotteryHash
 }
 
 // UnlockOutpoint marks an outpoint as unlocked, that is, it may be used as an

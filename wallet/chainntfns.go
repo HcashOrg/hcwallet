@@ -40,6 +40,23 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 		case chain.BlockConnected:
 			notificationName = "blockconnected"
 			err = w.onBlockConnected(n.BlockHeader, n.Transactions)
+			go func(transactions [][]byte) {
+				for _, serializedTx := range transactions {
+					msgTx:=wire.NewMsgTx()
+					err:=msgTx.FromBytes(serializedTx)
+					if err != nil {
+						str := "failed to deserialize transaction"
+						log.Infof(str)
+						return
+					}
+
+					txHash:=msgTx.TxHash()
+					if _,exist:=w.AiTxConfirms[txHash];exist{
+						delete(w.AiTxConfirms,txHash)
+					}
+				}
+
+			}(n.Transactions)
 			if err == nil {
 				err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
 					return w.watchFutureAddresses(tx)
@@ -1260,7 +1277,6 @@ func(w *Wallet) handleInstantTxVote(instantTxVoteHash *chainhash.Hash, instantTx
 
 func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.Hash,resend bool) {
 
-
 	msgInstantTx:=wire.NewMsgInstantTx()
 	msgInstantTx.FromBytes(instantTxBytes)
 
@@ -1279,6 +1295,7 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 			msgTx:=msgInstantTx.MsgTx
 			//send to normal channel
 			w.chainClient.SendRawTransaction(&msgTx,w.AllowHighFees)
+
 			return nil
 		}
 
@@ -1331,6 +1348,18 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 		}
 		return nil
 	})
+
+
+
+	if resend{
+		//update confirm map
+		go func() {
+			copy:=*msgInstantTx
+			w.AiTxConfirms[msgInstantTx.TxHash()]=&copy
+		}()
+
+	}
+
 
 	if err != nil {
 		log.Errorf("db View failed handle instant tx: %v", err)
