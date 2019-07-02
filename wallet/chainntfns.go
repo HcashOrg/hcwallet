@@ -1487,7 +1487,6 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 		}(i, vote)
 	}
 
-	log.Error("winning", winning)
 
 	if winning {
 		go func() {
