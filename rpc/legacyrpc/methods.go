@@ -2670,7 +2670,7 @@ func aiSendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	payloadBytes = append(payloadBytes, []byte(instantTxTag)...)
 	payloadBytes = append(payloadBytes, lotteryHashBytes...)
 	// sendtoaddress always spends from the default account, this matches bitcoind
-	return sendPairs(w, pairs, account, w.ChainParams().InstantSendConfirmationsRequired, "", payloadBytes, "")
+	return sendPairs(w, pairs, account, w.ChainParams().AiSendConfirmationsRequired, "", payloadBytes, "")
 }
 
 // getStraightPubKey handles a getStraightPubKey RPC request by getting a straight public key

@@ -834,7 +834,7 @@ func (t *TicketPurchaser) Purchase(height int64) (*PurchaseStats, error) {
 			10, // 0 minconf is used so tickets can be bought from split outputs
 			ticketAddress,
 			account,
-			10,
+			1,
 			t.PoolAddress(),
 			poolFeesAmt.ToCoin(),
 			expiry,
@@ -847,7 +847,7 @@ func (t *TicketPurchaser) Purchase(height int64) (*PurchaseStats, error) {
 		10, // 0 minconf is used so tickets can be bought from split outputs
 		ticketAddress,
 		account,
-		10,
+		1,
 		t.PoolAddress(),
 		poolFeesAmt.ToCoin(),
 		expiry,
