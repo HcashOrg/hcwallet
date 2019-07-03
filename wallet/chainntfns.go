@@ -1496,7 +1496,7 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 				return
 			}
 
-			log.Error("fetchPending", txMsgR)
+			log.Debug("fetchPending", txMsgR)
 			for _, txMsgBytes := range txMsgR.MsgTx {
 				msgtx := wire.MsgTx{}
 				err := msgtx.FromBytes(txMsgBytes)
