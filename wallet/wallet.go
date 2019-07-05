@@ -3770,11 +3770,17 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 
 			// Ticket is matured but unspent.  Possible states are that the
 			// ticket is live, expired, or missed.
-			ticketHash := it.Hash
-			liveOrExpiredOrMissed = append(liveOrExpiredOrMissed, &ticketHash)
+		//	isAiSStx, _ := stake.IsAiSStx(&it.MsgTx)
+			isAiSSGen, _ := stake.IsAiSSGen(&it.MsgTx)
+			isAiSSRtx, _ := stake.IsAiSSRtx(&it.MsgTx)
 
-			aiTicketHash := it.Hash
-			aiLiveOrExpiredOrMissed = append(aiLiveOrExpiredOrMissed, &aiTicketHash)
+			if isAiSStx || isAiSSGen || isAiSSRtx{
+				aiTicketHash := it.Hash
+				aiLiveOrExpiredOrMissed = append(aiLiveOrExpiredOrMissed, &aiTicketHash)
+			}else{
+				ticketHash := it.Hash
+				liveOrExpiredOrMissed = append(liveOrExpiredOrMissed, &ticketHash)
+			}
 		}
 		if err := it.Err(); err != nil {
 			return err
