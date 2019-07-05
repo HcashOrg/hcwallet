@@ -670,6 +670,9 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	accountAiConfirms :=make(map[uint32]hcutil.Amount)
+	w.AiTxConfirmsLock.Lock()
+	defer w.AiTxConfirmsLock.Unlock()
+
 	for _, msgTx := range w.AiTxConfirms {
 		for _, out := range msgTx.TxOut {
 			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.Version, out.PkScript,w.ChainParams())

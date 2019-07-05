@@ -41,6 +41,8 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 			notificationName = "blockconnected"
 			err = w.onBlockConnected(n.BlockHeader, n.Transactions)
 			go func(transactions [][]byte) {
+				w.AiTxConfirmsLock.Lock()
+				defer w.AiTxConfirmsLock.Unlock()
 				for _, serializedTx := range transactions {
 					msgTx:=wire.NewMsgTx()
 					err:=msgTx.FromBytes(serializedTx)
@@ -73,7 +75,7 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 				break
 			}
 
-			log.Error("handleConsensusRPCNotifications:", n.Transaction)
+			log.Infof("handle %v Notifications:%v",notificationName, hex.EncodeToString(n.Transaction))
 			err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
 				return w.processSerializedTransaction(dbtx, n.Transaction, nil, nil)
 			})
@@ -84,9 +86,11 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 			}
 		case chain.NewInstantTx:
 			notificationName = "newinstanttx"
+
 			w.handleNewInstantTx(n.InstantTx, n.Tickets,n.Resend)
 		case chain.InstantTxVote:
 			notificationName="instanttxvote"
+			log.Infof("handle %v Notifications:%v",notificationName, n.InstantTxVoteHash.String())
 			w.handleInstantTxVote(n.InstantTxVoteHash,n.InstantTxHash,n.TickeHash,n.Vote,n.Sig)
 		case chain.MissedTickets:
 			notificationName = "spentandmissedtickets"
@@ -1279,7 +1283,7 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 
 	msgInstantTx:=wire.NewMsgInstantTx()
 	msgInstantTx.FromBytes(instantTxBytes)
-
+	log.Infof("handle newInstantTx Notifications:%v %v",msgInstantTx.TxHash(),resend)
 	var ticketHashes []*chainhash.Hash
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
 		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
@@ -1294,7 +1298,10 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 		if resend{
 			msgTx:=msgInstantTx.MsgTx
 			//send to normal channel
-			w.chainClient.SendRawTransaction(&msgTx,w.AllowHighFees)
+			hash,err:=w.chainClient.SendRawTransaction(&msgTx,w.AllowHighFees)
+			if err!=nil{
+				log.Error("instant tx %v resend to mempool err %v",hash,err)
+			}
 
 			return nil
 		}
@@ -1354,6 +1361,8 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 	if resend{
 		//update confirm map
 		go func() {
+			w.AiTxConfirmsLock.Lock()
+			defer w.AiTxConfirmsLock.Unlock()
 			copy:=*msgInstantTx
 			w.AiTxConfirms[msgInstantTx.TxHash()]=&copy
 		}()
@@ -1490,7 +1499,6 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 
 	if winning {
 		go func() {
-
 			txMsgR, err := chainClient.FetchPendingTxLock(10)
 			if err != nil {
 				return
@@ -1503,7 +1511,10 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 				if err != nil {
 					return
 				}
-				chainClient.SendRawTransaction(&msgtx, true)
+				hash,err:=chainClient.SendRawTransaction(&msgtx, true)
+				if err!=nil{
+					log.Error("resend lock pool pending rawtransaction %v err %v",hash,err)
+				}
 			}
 
 		}()
