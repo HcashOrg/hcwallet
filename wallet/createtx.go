@@ -521,6 +521,9 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		// Randomize change position, if change exists, before signing.  This
 		// doesn't affect the serialize size, so the change amount will still be
 		// valid.
+		if _, ok := txscript.IsInstantTx(atx.Tx); ok{
+			randomizeChangeIdx = false;
+		}
 		if atx.ChangeIndex >= 0 && randomizeChangeIdx {
 			atx.RandomizeChangePosition()
 		}
