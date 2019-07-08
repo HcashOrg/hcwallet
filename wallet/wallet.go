@@ -52,7 +52,7 @@ const (
 	// NOTE: at time of writing, public encryption only applies to public
 	// data in the waddrmgr namespace.  Transactions are not yet encrypted.
 	InsecurePubPassphrase = "public"
-	defaultConfirmNumber = 6
+	defaultConfirmNumber  = 6
 )
 
 var (
@@ -132,7 +132,8 @@ type Wallet struct {
 	addressBuffersMu sync.Mutex
 
 	//aitx confirm
-	AiTxConfirms map[chainhash.Hash]*wire.MsgInstantTx
+	AiTxConfirmsLock sync.Mutex
+	AiTxConfirms     map[chainhash.Hash]*wire.MsgInstantTx
 
 	// Channels for the manager locker.
 	unlockRequests     chan unlockRequest
@@ -164,7 +165,6 @@ type Wallet struct {
 	//Omini  enable omini function
 	enableOmni bool
 }
-
 
 // newWallet creates a new Wallet structure with the provided address manager
 // and transaction store.
@@ -3904,8 +3904,8 @@ func (w *Wallet) LockOutpoint(op wire.OutPoint) {
 //return lottery hash
 func (w *Wallet) GetLotteryBlockHash() *chainhash.Hash {
 	bestHash, height := w.MainChainTip()
-	lotteryHash,err:=w.chainClient.GetBlockHash(int64(height)-defaultConfirmNumber)
-	if err!=nil{
+	lotteryHash, err := w.chainClient.GetBlockHash(int64(height) - defaultConfirmNumber)
+	if err != nil {
 		return &bestHash
 	}
 	return lotteryHash
