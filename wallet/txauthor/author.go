@@ -129,6 +129,9 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcutil.Amount,
 		if err != nil {
 			return nil, err
 		}
+		if isAiTx == false{
+			aiChangeAddress = ""
+		}
 		if inputAmount < targetAmount+targetFee {
 			return nil, InsufficientFundsError{}
 		}
