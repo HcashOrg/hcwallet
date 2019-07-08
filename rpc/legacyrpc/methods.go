@@ -669,13 +669,26 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		BlockHash: blockHash.String(),
 	}
 
-	accountAiConfirms :=make(map[uint32]hcutil.Amount)
+	accountAiConfirms := make(map[uint32]hcutil.Amount)
 	w.AiTxConfirmsLock.Lock()
 	defer w.AiTxConfirmsLock.Unlock()
 
+	AiTxConfirm:
 	for _, msgTx := range w.AiTxConfirms {
+		//skip tx that send from self
+		for _, input := range msgTx.TxIn {
+			addr, err := txscript.AddressFromScriptSig(input.SignatureScript, w.ChainParams())
+			if err == nil {
+				_, err := w.AccountOfAddress(addr)
+				if err == nil {
+					continue AiTxConfirm
+				}
+			}
+		}
+
+		//collect out to
 		for _, out := range msgTx.TxOut {
-			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.Version, out.PkScript,w.ChainParams())
+			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.Version, out.PkScript, w.ChainParams())
 			if err == nil && len(addrs) > 0 {
 				account, err := w.AccountOfAddress(addrs[0])
 				if err == nil {

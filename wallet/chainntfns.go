@@ -1301,8 +1301,10 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 			hash,err:=w.chainClient.SendRawTransaction(&msgTx,w.AllowHighFees)
 			if err!=nil{
 				log.Error("instant tx %v resend to mempool err %v",hash,err)
+				return err
 			}
 
+			log.Infof("instant tx %v resend to mempool",hash)
 			return nil
 		}
 
