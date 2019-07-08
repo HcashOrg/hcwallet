@@ -247,8 +247,8 @@ func (w *Wallet) NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcu
 		case OutputSelectionAlgorithmAll:
 			// Wrap the source with one that always fetches the max amount
 			// available and ignores any returned InputSourceErrors.
-			inputSource = func(hcutil.Amount, string) (hcutil.Amount, []*wire.TxIn, [][]byte, error) {
-				total, inputs, prevScripts, err := sourceImpl.SelectInputs(hcutil.MaxAmount, "")
+			inputSource = func(hcutil.Amount, string, *string) (hcutil.Amount, []*wire.TxIn, [][]byte, error) {
+				total, inputs, prevScripts, err := sourceImpl.SelectInputs(hcutil.MaxAmount, "", nil)
 				switch err.(type) {
 				case txauthor.InputSourceError:
 					err = nil
@@ -748,7 +748,7 @@ func (w *Wallet) txToMultisigInternal(dbtx walletdb.ReadWriteTx, account uint32,
 			"multisig address after accounting for fees"))
 	}
 	if totalInput > amount+feeEst {
-		pkScript, _, err := w.changeSource(w.persistReturnedChild(dbtx), account, nil)(dbtx)
+		pkScript, _, err := w.changeSource(w.persistReturnedChild(dbtx), account, nil)(dbtx, nil)
 		if err != nil {
 			return txToMultisigError(err)
 		}

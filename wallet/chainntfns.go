@@ -264,11 +264,13 @@ func (w *Wallet) switchToSideChain(dbtx walletdb.ReadWriteTx) (*MainTipChangedNo
 		// gap between the existing rescan point (main chain fork point of
 		// the current marker) and the first block attached in this chain
 		// switch.
-		r, err := w.rescanPoint(dbtx)
+	/*	r, err := w.rescanPoint(dbtx)
 		if err != nil {
 			return nil, err
 		}
 		rHeader, err := w.TxStore.GetBlockHeader(dbtx, r)
+
+
 		if err != nil {
 			return nil, err
 		}
@@ -280,6 +282,20 @@ func (w *Wallet) switchToSideChain(dbtx walletdb.ReadWriteTx) (*MainTipChangedNo
 				return nil, err
 			}
 		}
+*/
+		tipHeight, _, err := w.GetWalletSyncHeight()
+		if err != nil {
+			return nil, err
+		}
+		if !(tipHeight < uint32(sideChain[0].headerData.SerializedHeader.Height())) {
+			marker := sideChain[len(sideChain)-1].headerData.BlockHash
+			log.Debugf("Updating processed txs block marker to %v", marker)
+			err := w.TxStore.UpdateProcessedTxsBlockMarker(dbtx, &marker)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 	}
 	return chainTipChanges, nil
 }

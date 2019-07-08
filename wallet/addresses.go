@@ -767,18 +767,28 @@ func (w *Wallet) FetchAddressesByAccount(account uint32) ([]string, error) {
 
 func (w *Wallet) changeSource(persist persistReturnedChildFunc, account uint32, addr hcutil.Address) txauthor.ChangeSource {
 	if addr == nil {
-		return func(dbtx walletdb.ReadWriteTx) ([]byte, uint16, error) {
-			changeAddress, err := w.newChangeAddress(persist, account, dbtx)
-			if err != nil {
-				return nil, 0, err
+		return func(dbtx walletdb.ReadWriteTx, aiChangeAddr hcutil.Address) ([]byte, uint16, error) {
+			if aiChangeAddr != nil{
+				script, err := txscript.PayToAddrScript(aiChangeAddr)
+				return script, txscript.DefaultScriptVersion, err
+			}else{
+				changeAddress, err := w.newChangeAddress(persist, account, dbtx)
+				if err != nil {
+					return nil, 0, err
+				}
+				script, err := txscript.PayToAddrScript(changeAddress)
+				return script, txscript.DefaultScriptVersion, err
 			}
-			script, err := txscript.PayToAddrScript(changeAddress)
-			return script, txscript.DefaultScriptVersion, err
 		}
 	} else {
-		return func(dbtx walletdb.ReadWriteTx) ([]byte, uint16, error) {
-			script, err := txscript.PayToAddrScript(addr)
-			return script, txscript.DefaultScriptVersion, err
+		return func(dbtx walletdb.ReadWriteTx, aiChangeAddr hcutil.Address) ([]byte, uint16, error) {
+			if aiChangeAddr != nil{
+				script, err := txscript.PayToAddrScript(aiChangeAddr)
+				return script, txscript.DefaultScriptVersion, err
+			}else {
+				script, err := txscript.PayToAddrScript(addr)
+				return script, txscript.DefaultScriptVersion, err
+			}
 		}
 	}
 }

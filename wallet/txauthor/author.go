@@ -38,7 +38,7 @@ const (
 // can not be satisified, this can be signaled by returning a total amount less
 // than the target or by returning a more detailed error implementing
 // InputSourceError.
-type InputSource func(target hcutil.Amount, fromAddress string) (total hcutil.Amount,
+type InputSource func(target hcutil.Amount, fromAddress string, aiChangeAddress *string) (total hcutil.Amount,
 	inputs []*wire.TxIn, scripts [][]byte, err error)
 
 // InputSourceError describes the failure to provide enough input value from
@@ -75,7 +75,7 @@ type AuthoredTx struct {
 
 // ChangeSource provides P2PKH change output scripts and versions for
 // transaction creation.
-type ChangeSource func(dbtx walletdb.ReadWriteTx) ([]byte, uint16, error)
+type ChangeSource func(dbtx walletdb.ReadWriteTx, aiChangeAddr hcutil.Address) ([]byte, uint16, error)
 
 // NewUnsignedTransaction creates an unsigned transaction paying to one or more
 // non-change outputs.  An appropriate transaction fee is included based on the
@@ -106,11 +106,26 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcutil.Amount,
 		accType = udb.AcctypeEc
 	}
 
-	estimatedSize, _ := txsizes.EstimateSerializeSizeByAccount(1, outputs, true, accType)
-	targetFee := txrules.FeeForSerializeSize(relayFeePerKb, estimatedSize)
+	isAiTx :=false
+	totalValue := int64(0)
+	aiFee :=int64(0)
 
+	for _,out:=range outputs{
+		totalValue+=out.Value
+		if _,has:=txscript.HasInstantTxTag(out.PkScript);has{
+			isAiTx=true
+		}
+	}
+	if isAiTx {
+		aiFee = totalValue/1000
+	}
+
+	estimatedSize, _ := txsizes.EstimateSerializeSizeByAccount(1, outputs, true, accType)
+	targetFee := txrules.FeeForSerializeSize(relayFeePerKb, estimatedSize) + hcutil.Amount(aiFee)
+
+	var aiChangeAddress string
 	for {
-		inputAmount, inputs, scripts, err := fetchInputs(targetAmount+targetFee, fromAddress)
+		inputAmount, inputs, scripts, err := fetchInputs(targetAmount+targetFee, fromAddress, &aiChangeAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -119,7 +134,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcutil.Amount,
 		}
 
 		maxSignedSize, _ := txsizes.EstimateSerializeSizeByInputStripts(scripts, outputs, true, params, sdb)
-		maxRequiredFee := txrules.FeeForSerializeSize(relayFeePerKb, maxSignedSize)
+		maxRequiredFee := txrules.FeeForSerializeSize(relayFeePerKb, maxSignedSize) + hcutil.Amount(aiFee)
 		remainingAmount := inputAmount - targetAmount
 		if remainingAmount < maxRequiredFee {
 			targetFee = maxRequiredFee
@@ -138,7 +153,14 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcutil.Amount,
 		changeAmount := inputAmount - targetAmount - maxRequiredFee
 		if changeAmount != 0 && !txrules.IsDustAmount(changeAmount,
 			txsizes.P2PKHPkScriptSize, relayFeePerKb) {
-			changeScript, changeScriptVersion, err := fetchChange(nil)
+				var changeAddr hcutil.Address
+				if aiChangeAddress != ""{
+					changeAddr, err = hcutil.DecodeAddress(aiChangeAddress)
+				}
+				if err != nil{
+					changeAddr = nil
+				}
+			changeScript, changeScriptVersion, err := fetchChange(nil, changeAddr)
 			if err != nil {
 				return nil, err
 			}
