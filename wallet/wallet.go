@@ -3770,14 +3770,14 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 
 			// Ticket is matured but unspent.  Possible states are that the
 			// ticket is live, expired, or missed.
-		//	isAiSStx, _ := stake.IsAiSStx(&it.MsgTx)
+			//	isAiSStx, _ := stake.IsAiSStx(&it.MsgTx)
 			isAiSSGen, _ := stake.IsAiSSGen(&it.MsgTx)
 			isAiSSRtx, _ := stake.IsAiSSRtx(&it.MsgTx)
 
-			if isAiSStx || isAiSSGen || isAiSSRtx{
+			if isAiSStx || isAiSSGen || isAiSSRtx {
 				aiTicketHash := it.Hash
 				aiLiveOrExpiredOrMissed = append(aiLiveOrExpiredOrMissed, &aiTicketHash)
-			}else{
+			} else {
 				ticketHash := it.Hash
 				liveOrExpiredOrMissed = append(liveOrExpiredOrMissed, &ticketHash)
 			}
@@ -3956,15 +3956,37 @@ func (w *Wallet) resendUnminedTxs(chainClient *hcrpcclient.Client) {
 	}
 
 	for _, tx := range txs {
-		resp, err := chainClient.SendRawTransaction(tx, w.AllowHighFees)
-		if err != nil {
-			// TODO(jrick): Check error for if this tx is a double spend,
-			// remove it if so.
-			log.Tracef("Could not resend transaction %v: %v",
-				tx.TxHash(), err)
-			continue
+		//deal with instant send
+		isLockTx := false
+		for _, txOut := range tx.TxOut {
+			if _, has := txscript.HasInstantTxTag(txOut.PkScript); has {
+				isLockTx = true
+				break
+			}
 		}
-		log.Tracef("Resent unmined transaction %v", resp)
+
+		if isLockTx {
+			instantTx := wire.NewMsgInstantTx()
+			instantTx.MsgTx = *tx
+			//send to instant channel
+			resp, err := chainClient.SendInstantRawTransaction(instantTx, w.AllowHighFees)
+			if err != nil {
+				log.Errorf("resend unminedTxs %v err: %v",instantTx.TxHash(),err)
+				continue
+			}
+			log.Tracef("Resent unmined transaction %v", resp)
+		} else {
+			resp, err := chainClient.SendRawTransaction(tx, w.AllowHighFees)
+			if err != nil {
+				// TODO(jrick): Check error for if this tx is a double spend,
+				// remove it if so.
+				log.Tracef("Could not resend transaction %v: %v",
+					tx.TxHash(), err)
+				continue
+			}
+			log.Tracef("Resent unmined transaction %v", resp)
+		}
+
 	}
 }
 

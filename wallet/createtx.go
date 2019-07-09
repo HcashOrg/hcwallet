@@ -591,9 +591,6 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		if isLockTx {
 			instantTx := wire.NewMsgInstantTx()
 			instantTx.MsgTx = *atx.Tx
-			if err != nil {
-				return err
-			}
 			//send to instant channel
 			_, err = chainClient.SendInstantRawTransaction(instantTx, w.AllowHighFees)
 
@@ -604,6 +601,7 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 
 		return err
 	})
+
 	if err != nil {
 		return nil, err
 	}
