@@ -301,7 +301,11 @@ func (s *NotificationServer) notifyUnminedTransaction(dbtx walletdb.ReadTx, deta
 		log.Errorf("Cannot determine balances for relevant accounts: %v", err)
 		return
 	}
+
+	_,isAiTx:=txscript.IsInstantTx(&details.MsgTx)
+
 	n := &TransactionNotifications{
+		IsAiConfirmed:isAiTx,
 		UnminedTransactions:      unminedTxs,
 		UnminedTransactionHashes: unminedHashes,
 		NewBalances:              flattenBalanceMap(bals),
@@ -420,6 +424,7 @@ func (s *NotificationServer) sendAttachedBlockNotification() {
 // TODO: Because this includes stuff about blocks and can be fired without any
 // changes to transactions, it needs a better name.
 type TransactionNotifications struct {
+	IsAiConfirmed            bool
 	AttachedBlocks           []Block
 	DetachedBlocks           []*chainhash.Hash
 	UnminedTransactions      []TransactionSummary
