@@ -763,7 +763,7 @@ func condenseOpCode(opCode uint8) byte {
 // credits are created unspent, and are only marked spent later, so there is no
 // value function to create either spent or unspent credits.
 func valueUnspentCredit(cred *credit, scrType scriptType, scrLoc uint32,
-	scrLen uint32, account uint32) []byte {
+	scrLen uint32, account uint32, height uint64) []byte {
 	v := make([]byte, creditValueSize)
 	byteOrder.PutUint64(v, uint64(cred.amount))
 	v[8] = condenseOpCode(cred.opCode)
@@ -771,8 +771,12 @@ func valueUnspentCredit(cred *credit, scrType scriptType, scrLoc uint32,
 		v[8] |= 1 << 1
 	}
 	if cred.isCoinbase {
+		if height < wire.AI_UPDATE_HEIGHT{
+			v[8] |= 1 << 5
+		}else{
+			v[8] |= 1 << 6
+		}
 		//v[8] |= 1 << 5
-		v[8] |= 1 << 6
 	}
 
 	v[81] = byte(scrType)
@@ -797,9 +801,9 @@ func putRawCredit(ns walletdb.ReadWriteBucket, k, v []byte) error {
 // used when the credit is already know to be unspent, or spent by an
 // unconfirmed transaction.
 func putUnspentCredit(ns walletdb.ReadWriteBucket, cred *credit, scrType scriptType,
-	scrLoc uint32, scrLen uint32, account uint32) error {
+	scrLoc uint32, scrLen uint32, account uint32, height uint64) error {
 	k := keyCredit(&cred.outPoint.Hash, cred.outPoint.Index, &cred.block)
-	v := valueUnspentCredit(cred, scrType, scrLoc, scrLen, account)
+	v := valueUnspentCredit(cred, scrType, scrLoc, scrLen, account, height)
 	return putRawCredit(ns, k, v)
 }
 
@@ -876,8 +880,13 @@ func fetchRawCreditUnspentValue(k []byte) ([]byte, error) {
 }
 
 // fetchRawCreditTagOpCode fetches the compressed OP code for a transaction.
-func fetchRawCreditTagOpCode(v []byte) uint8 {
-	return (((v[8] >> 2) & 0x0F) + 0xb9)
+func fetchRawCreditTagOpCode(v []byte, height uint64) uint8 {
+	if height < wire.AI_UPDATE_HEIGHT{
+		return (((v[8] >> 2) & 0x07) + 0xb9)
+	}else{
+		return (((v[8] >> 2) & 0x0F) + 0xb9)
+	}
+
 //	if v[8] == 34 || v[8] == 38 || v[8] == 42 || v[8] == 46{
 //		return (((v[8] >> 2) & 0x0F) + 0xb9)
 //	}
@@ -887,9 +896,13 @@ func fetchRawCreditTagOpCode(v []byte) uint8 {
 
 // fetchRawCreditIsCoinbase returns whether or not the credit is a coinbase
 // output or not.
-func fetchRawCreditIsCoinbase(v []byte) bool {
+func fetchRawCreditIsCoinbase(v []byte, height uint64) bool {
+	if height < wire.AI_UPDATE_HEIGHT{
+		return v[8]&(1<<5) != 0
+	}else{
+		return v[8]&(1<<6) != 0
+	}
 	//return v[8]&(1<<5) != 0
-	return v[8]&(1<<6) != 0
 }
 
 // fetchRawCreditScriptOffset returns the ScriptOffset for the pkScript of this
@@ -1025,9 +1038,9 @@ type creditIterator struct {
 	err    error
 }
 
-func makeReadCreditIterator(ns walletdb.ReadBucket, prefix []byte) creditIterator {
+func makeReadCreditIterator(ns walletdb.ReadBucket, prefix []byte, blockHeight uint32) creditIterator {
 	c := ns.NestedReadBucket(bucketCredits).ReadCursor()
-	return creditIterator{c: readCursor{c}, prefix: prefix}
+	return creditIterator{c: readCursor{c}, prefix: prefix, elem: CreditRecord{Height: uint64(blockHeight)}}
 }
 
 func (it *creditIterator) readElem() error {
@@ -1045,8 +1058,8 @@ func (it *creditIterator) readElem() error {
 	it.elem.Amount = hcutil.Amount(byteOrder.Uint64(it.cv))
 	it.elem.Spent = it.cv[8]&(1<<0) != 0
 	it.elem.Change = it.cv[8]&(1<<1) != 0
-	it.elem.OpCode = fetchRawCreditTagOpCode(it.cv)
-	it.elem.IsCoinbase = fetchRawCreditIsCoinbase(it.cv)
+	it.elem.OpCode = fetchRawCreditTagOpCode(it.cv, it.elem.Height)
+	it.elem.IsCoinbase = fetchRawCreditIsCoinbase(it.cv, it.elem.Height)
 
 	return nil
 }
@@ -1423,7 +1436,7 @@ const (
 
 func valueUnminedCredit(amount hcutil.Amount, change bool, opCode uint8,
 	IsCoinbase bool, scrType scriptType, scrLoc uint32, scrLen uint32,
-	account uint32) []byte {
+	account uint32, height uint64) []byte {
 	v := make([]byte, unconfValueSize)
 	byteOrder.PutUint64(v, uint64(amount))
 	v[8] = condenseOpCode(opCode)
@@ -1431,8 +1444,12 @@ func valueUnminedCredit(amount hcutil.Amount, change bool, opCode uint8,
 		v[8] |= 1 << 1
 	}
 	if IsCoinbase {
+		if height < wire.AI_UPDATE_HEIGHT{
+			v[8] |= 1 << 5
+		}else{
+			v[8] |= 1 << 6
+		}
 		//v[8] |= 1 << 5
-		v[8] |= 1 << 6
 	}
 
 	v[9] = byte(scrType)
@@ -1479,8 +1496,13 @@ func fetchRawUnminedCreditAmountChange(v []byte) (hcutil.Amount, bool, error) {
 	return amt, change, nil
 }
 
-func fetchRawUnminedCreditTagOpcode(v []byte) uint8 {
-	return (((v[8] >> 2) & 0x0F) + 0xb9)
+func fetchRawUnminedCreditTagOpcode(v []byte, height uint64) uint8 {
+	if height < wire.AI_UPDATE_HEIGHT{
+		return (((v[8] >> 2) & 0x07) + 0xb9)
+	}else{
+		return (((v[8] >> 2) & 0x0F) + 0xb9)
+	}
+
 	/*
 	if v[8] == 34 || v[8] == 38 || v[8] == 42 || v[8] == 46{
 		return (((v[8] >> 2) & 0x0F) + 0xb9)
@@ -1489,9 +1511,13 @@ func fetchRawUnminedCreditTagOpcode(v []byte) uint8 {
 	*/
 }
 
-func fetchRawUnminedCreditTagIsCoinbase(v []byte) bool {
+func fetchRawUnminedCreditTagIsCoinbase(v []byte, height uint64) bool {
+	if height <wire.AI_UPDATE_HEIGHT{
+		return v[8]&(1<<5) != 0
+	}else{
+		return v[8]&(1<<6) != 0
+	}
 	//return v[8]&(1<<5) != 0
-	return v[8]&(1<<6) != 0
 }
 
 func fetchRawUnminedCreditScriptType(v []byte) scriptType {
