@@ -1048,7 +1048,7 @@ func (s *Store) moveMinedTx(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.Read
 		if credVal == nil {
 			return fmt.Errorf("missing credit value")
 		}
-		creditOpCode := fetchRawCreditTagOpCode(credVal, uint64(block.Height))
+		creditOpCode := fetchRawCreditTagOpCode(credVal)
 
 		// Do not decrement ticket amounts.
 		if !(creditOpCode == txscript.OP_SSTX ||  creditOpCode == txscript.OP_AISSTX ) {
@@ -1095,8 +1095,8 @@ func (s *Store) moveMinedTx(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.Read
 		cred.outPoint.Index = i
 		cred.amount = amount
 		cred.change = change
-		cred.opCode = fetchRawUnminedCreditTagOpcode(v, uint64(cred.block.Height))
-		cred.isCoinbase = fetchRawUnminedCreditTagIsCoinbase(v, uint64(cred.block.Height))
+		cred.opCode = fetchRawUnminedCreditTagOpcode(v)
+		cred.isCoinbase = fetchRawUnminedCreditTagIsCoinbase(v)
 
 		// Legacy credit output values may be of the wrong
 		// size.
@@ -1120,7 +1120,7 @@ func (s *Store) moveMinedTx(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.Read
 		if err != nil {
 			return err
 		}
-		err = putUnspentCredit(ns, &cred, scrType, scrPos, scrLen, acct, uint64(cred.block.Height))
+		err = putUnspentCredit(ns, &cred, scrType, scrPos, scrLen, acct)
 		if err != nil {
 			return err
 		}
@@ -1348,7 +1348,7 @@ func (s *Store) AddCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 		scTy := pkScriptType(pkScript)
 		scLoc := uint32(rec.MsgTx.PkScriptLocs()[index])
 		v := valueUnspentCredit(&cred, scTy, scLoc, uint32(len(pkScript)),
-			account, uint64(cred.block.Height))
+			account)
 		err := ns.NestedReadWriteBucket(bucketStakeInvalidatedCredits).
 			Put(k, v)
 		if err != nil {
@@ -1450,7 +1450,7 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 
 		v := valueUnminedCredit(hcutil.Amount(rec.MsgTx.TxOut[index].Value),
 			change, opCode, isCoinbase, scrType, uint32(scrLoc),
-			uint32(scrLen), account, uint64(block.Height))
+			uint32(scrLen), account)
 		return true, putRawUnminedCredit(ns, k, v)
 	}
 
@@ -1481,7 +1481,7 @@ func (s *Store) addCredit(ns walletdb.ReadWriteBucket, rec *TxRecord, block *Blo
 	scrLen := len(rec.MsgTx.TxOut[index].PkScript)
 
 	v = valueUnspentCredit(&cred, scrType, uint32(scrLoc), uint32(scrLen),
-		account, uint64(block.Height))
+		account)
 	err := putRawCredit(ns, k, v)
 	if err != nil {
 		return false, err
@@ -1836,7 +1836,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.ReadBuc
 				if credVal == nil {
 					return fmt.Errorf("missing credit value")
 				}
-				creditOpCode := fetchRawCreditTagOpCode(credVal, uint64(it.elem.Height))
+				creditOpCode := fetchRawCreditTagOpCode(credVal)
 
 				// unspendRawCredit does not error in case the no credit exists
 				// for this key, but this behavior is correct.  Since
@@ -1912,8 +1912,8 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.ReadBuc
 				if err != nil {
 					return err
 				}
-				opCode := fetchRawCreditTagOpCode(v, uint64(it.elem.Height))
-				isCoinbase := fetchRawCreditIsCoinbase(v, uint64(it.elem.Height))
+				opCode := fetchRawCreditTagOpCode(v)
+				isCoinbase := fetchRawCreditIsCoinbase(v)
 
 				scrType := pkScriptType(output.PkScript)
 				scrLoc := rec.MsgTx.PkScriptLocs()[i]
@@ -1927,7 +1927,7 @@ func (s *Store) rollback(ns walletdb.ReadWriteBucket, addrmgrNs walletdb.ReadBuc
 				outPointKey := canonicalOutPoint(&rec.Hash, uint32(i))
 				unminedCredVal := valueUnminedCredit(amt, change, opCode,
 					isCoinbase, scrType, uint32(scrLoc), uint32(scrLen),
-					acct, uint64(it.elem.Height))
+					acct)
 				err = putRawUnminedCredit(ns, outPointKey, unminedCredVal)
 				if err != nil {
 					return err
@@ -2076,9 +2076,8 @@ func (s *Store) outputCreditInfo(ns walletdb.ReadBucket, op wire.OutPoint,
 			return nil, err
 		}
 
-		//height := extractRawCreditHeight(unminedCredV)
-		opCode = fetchRawUnminedCreditTagOpcode(unminedCredV, uint64(block.Height))
-		isCoinbase = fetchRawCreditIsCoinbase(unminedCredV, uint64(block.Height))
+		opCode = fetchRawUnminedCreditTagOpcode(unminedCredV)
+		isCoinbase = fetchRawCreditIsCoinbase(unminedCredV)
 
 		// These errors are skipped because they may throw incorrectly
 		// on values recorded in older versions of the wallet. 0-offset
@@ -2094,10 +2093,8 @@ func (s *Store) outputCreditInfo(ns walletdb.ReadBucket, op wire.OutPoint,
 			return nil, err
 		}
 
-		//height := extractRawCreditHeight(minedCredV)
-		//fmt.Println(height)
-		opCode = fetchRawCreditTagOpCode(minedCredV, uint64(block.Height))
-		isCoinbase = fetchRawCreditIsCoinbase(minedCredV, uint64(block.Height))
+		opCode = fetchRawCreditTagOpCode(minedCredV)
+		isCoinbase = fetchRawCreditIsCoinbase(minedCredV)
 
 		// Same error caveat as above.
 		scrLoc = fetchRawCreditScriptOffset(minedCredV)
@@ -2244,7 +2241,7 @@ func (s *Store) unspentOutputs(ns walletdb.ReadBucket) ([]*Credit, error) {
 func (s *Store) UnspentOutpoints(ns walletdb.ReadBucket) ([]wire.OutPoint, error) {
 	var unspent []wire.OutPoint
 	numUtxos := 0
-	block := new(Block)
+
 	err := ns.NestedReadBucket(bucketUnspent).ForEach(func(k, v []byte) error {
 		var op wire.OutPoint
 		err := readCanonicalOutPoint(k, &op)
@@ -2257,6 +2254,7 @@ func (s *Store) UnspentOutpoints(ns walletdb.ReadBucket) ([]wire.OutPoint, error
 			return nil
 		}
 
+		block := new(Block)
 		err = readUnspentBlock(v, block)
 		if err != nil {
 			return err
@@ -2264,7 +2262,7 @@ func (s *Store) UnspentOutpoints(ns walletdb.ReadBucket) ([]wire.OutPoint, error
 
 		kC := keyCredit(&op.Hash, op.Index, block)
 		vC := existsRawCredit(ns, kC)
-		opCode := fetchRawCreditTagOpCode(vC, uint64(block.Height))
+		opCode := fetchRawCreditTagOpCode(vC)
 		op.Tree = wire.TxTreeRegular
 		if opCode != opNonstake {
 			op.Tree = wire.TxTreeStake
@@ -2295,7 +2293,7 @@ func (s *Store) UnspentOutpoints(ns walletdb.ReadBucket) ([]wire.OutPoint, error
 			return err
 		}
 
-		opCode := fetchRawUnminedCreditTagOpcode(v, uint64(block.Height))
+		opCode := fetchRawUnminedCreditTagOpcode(v)
 		op.Tree = wire.TxTreeRegular
 		if opCode != opNonstake {
 			op.Tree = wire.TxTreeStake
@@ -2920,8 +2918,7 @@ func (s *Store) unspentOutputsForAmount(ns, addrmgrNs walletdb.ReadBucket, neede
 		copy(cKey[32:36], v[0:4])   // Block height
 		copy(cKey[36:68], v[4:36])  // Block hash
 		copy(cKey[68:72], k[32:36]) // Output index
-		var blockHeight uint32
-		blockHeight = byteOrder.Uint32(v[0:4])
+
 		cVal := existsRawCredit(ns, cKey)
 		if cVal == nil {
 			return nil
@@ -2953,7 +2950,7 @@ func (s *Store) unspentOutputsForAmount(ns, addrmgrNs walletdb.ReadBucket, neede
 			return nil
 		}
 		// Skip ticket outputs, as only SSGen can spend these.
-		opcode := fetchRawCreditTagOpCode(cVal, uint64(blockHeight))
+		opcode := fetchRawCreditTagOpCode(cVal)
 		if opcode == txscript.OP_SSTX || opcode == txscript.OP_AISSTX {
 			return nil
 		}
@@ -2967,7 +2964,7 @@ func (s *Store) unspentOutputsForAmount(ns, addrmgrNs walletdb.ReadBucket, neede
 		}
 
 		// Skip outputs that are not mature.
-		if opcode == opNonstake && fetchRawCreditIsCoinbase(cVal, uint64(blockHeight)) {
+		if opcode == opNonstake && fetchRawCreditIsCoinbase(cVal) {
 			if !confirmed(int32(s.chainParams.CoinbaseMaturity), txHeight,
 				syncHeight) {
 				return nil
@@ -3029,7 +3026,7 @@ func (s *Store) unspentOutputsForAmount(ns, addrmgrNs walletdb.ReadBucket, neede
 			if existsRawUnminedInput(ns, k) != nil {
 				return nil
 			}
-			height := extractRawCreditHeight(v)
+
 			// Check the account first.
 			if !all {
 				pkScript, err := s.fastCreditPkScriptLookup(ns, nil, k)
@@ -3051,7 +3048,7 @@ func (s *Store) unspentOutputsForAmount(ns, addrmgrNs walletdb.ReadBucket, neede
 			}
 
 			// Skip ticket outputs, as only SSGen can spend these.
-			opcode := fetchRawUnminedCreditTagOpcode(v, uint64(height))
+			opcode := fetchRawUnminedCreditTagOpcode(v)
 			if opcode == txscript.OP_SSTX ||opcode == txscript.OP_AISSTX {
 				return nil
 			}
@@ -3172,9 +3169,7 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 		currentTotal   hcutil.Amount
 		currentInputs  []*wire.TxIn
 		currentScripts [][]byte
-		blockHeight uint32
 	)
-
 
 	f := func(target hcutil.Amount, fromAddress string, aiChangeAddress *string) (hcutil.Amount, []*wire.TxIn, [][]byte, error) {
 		for currentTotal < target || target == 0 {
@@ -3201,7 +3196,6 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 			copy(cKey[36:68], v[4:36])  // Block hash
 			copy(cKey[68:72], k[32:36]) // Output index
 
-			blockHeight = byteOrder.Uint32(v[0:4])
 //			testHash, _ := chainhash.NewHash(k[0:32])
 //			fmt.Println(testHash.String())
 
@@ -3237,7 +3231,7 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 			}
 
 			// Skip ticket outputs, as only SSGen can spend these.
-			opcode := fetchRawCreditTagOpCode(cVal, uint64(blockHeight))
+			opcode := fetchRawCreditTagOpCode(cVal)
 			if opcode == txscript.OP_SSTX || opcode == txscript.OP_AISSTX{
 				continue
 			}
@@ -3251,7 +3245,7 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 			}
 
 			// Skip outputs that are not mature.
-			if opcode == opNonstake && fetchRawCreditIsCoinbase(cVal, uint64(blockHeight)) {
+			if opcode == opNonstake && fetchRawCreditIsCoinbase(cVal) {
 				if !confirmed(int32(s.chainParams.CoinbaseMaturity), txHeight,
 					syncHeight) {
 					continue
@@ -3359,7 +3353,7 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 			}
 
 			// Skip ticket outputs, as only SSGen can spend these.
-			opcode := fetchRawUnminedCreditTagOpcode(v, uint64(blockHeight))
+			opcode := fetchRawUnminedCreditTagOpcode(v)
 			if opcode == txscript.OP_SSTX ||opcode == txscript.OP_AISSTX {
 				continue
 			}
@@ -3406,7 +3400,6 @@ func (s *Store) balanceFullScan(ns, addrmgrNs walletdb.ReadBucket, minConf int32
 	syncHeight int32) (map[uint32]*Balances, error) {
 
 	accountBalances := make(map[uint32]*Balances)
-
 	err := ns.NestedReadBucket(bucketUnspent).ForEach(func(k, v []byte) error {
 		if existsRawUnminedInput(ns, k) != nil {
 			// Output is spent by an unmined transaction.
@@ -3414,14 +3407,12 @@ func (s *Store) balanceFullScan(ns, addrmgrNs walletdb.ReadBucket, minConf int32
 			return nil
 		}
 
-		var blockHeight uint32
-
 		cKey := make([]byte, 72)
 		copy(cKey[0:32], k[0:32])   // Tx hash
 		copy(cKey[32:36], v[0:4])   // Block height
 		copy(cKey[36:68], v[4:36])  // Block hash
 		copy(cKey[68:72], k[32:36]) // Output index
-		blockHeight = byteOrder.Uint32(v[0:4])
+
 		// Skip unmined credits.
 		cVal := existsRawCredit(ns, cKey)
 		if cVal == nil {
@@ -3444,7 +3435,7 @@ func (s *Store) balanceFullScan(ns, addrmgrNs walletdb.ReadBucket, minConf int32
 		}
 
 		height := extractRawCreditHeight(cKey)
-		opcode := fetchRawCreditTagOpCode(cVal, uint64(blockHeight))
+		opcode := fetchRawCreditTagOpCode(cVal)
 
 		ab, ok := accountBalances[thisAcct]
 		if !ok {
@@ -3460,7 +3451,7 @@ func (s *Store) balanceFullScan(ns, addrmgrNs walletdb.ReadBucket, minConf int32
 		switch opcode {
 		case opNonstake:
 			isConfirmed := confirmed(minConf, height, syncHeight)
-			creditFromCoinbase := fetchRawCreditIsCoinbase(cVal, uint64(blockHeight))
+			creditFromCoinbase := fetchRawCreditIsCoinbase(cVal)
 			matureCoinbase := (creditFromCoinbase &&
 				confirmed(int32(s.chainParams.CoinbaseMaturity),
 					height,
@@ -3586,9 +3577,6 @@ func (s *Store) balanceFullScan(ns, addrmgrNs walletdb.ReadBucket, minConf int32
 		if existsRawUnminedInput(ns, k) != nil {
 			return nil
 		}
-		var blockHeight uint32
-		blockHeight = byteOrder.Uint32(v[0:4])
-		//height := extractRawCreditHeight(cKey)
 
 		// Check the account first.
 		pkScript, err := s.fastCreditPkScriptLookup(ns, nil, k)
@@ -3617,13 +3605,13 @@ func (s *Store) balanceFullScan(ns, addrmgrNs walletdb.ReadBucket, minConf int32
 		}
 
 		// Skip ticket outputs, as only SSGen can spend these.
-		opcode := fetchRawUnminedCreditTagOpcode(v, uint64(blockHeight))
+		opcode := fetchRawUnminedCreditTagOpcode(v)
 
 		switch opcode {
 		case opNonstake:
 			if minConf == 0 {
 				ab.Spendable += utxoAmt
-			} else if !fetchRawCreditIsCoinbase(v, uint64(blockHeight)) {
+			} else if !fetchRawCreditIsCoinbase(v) {
 				ab.Unconfirmed += utxoAmt
 			}
 		case txscript.OP_SSTX, txscript.OP_AISSTX:
