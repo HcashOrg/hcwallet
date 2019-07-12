@@ -886,7 +886,7 @@ func fetchRawCreditUnspentValue(k []byte) ([]byte, error) {
 
 // fetchRawCreditTagOpCode fetches the compressed OP code for a transaction.
 func fetchRawCreditTagOpCode(v []byte) uint8 {
-	if v[8] & 0x40 != 0x00{ //version 3
+	if v[8] & 0x40 != 0{ //version 3
 		return (((v[8] >> 2) & 0x07) + 0xc0)
 	}else{ // version 2
 		return (((v[8] >> 2) & 0x07) + 0xb9)
@@ -1534,18 +1534,17 @@ func fetchRawUnminedCreditAmountChange(v []byte) (hcutil.Amount, bool, error) {
 }
 
 func fetchRawUnminedCreditTagOpcode(v []byte) uint8 {
-	return (((v[8] >> 2) & 0x0F) + 0xb9)
-	/*
-	if v[8] == 34 || v[8] == 38 || v[8] == 42 || v[8] == 46{
-		return (((v[8] >> 2) & 0x0F) + 0xb9)
+	if v[8] & 0x40 != 0{ //version 3
+		return (((v[8] >> 2) & 0x07) + 0xc0)
+	}else{ // version 2
+		return (((v[8] >> 2) & 0x07) + 0xb9)
 	}
-	return (((v[8] >> 2) & 0x07) + 0xb9)
-	*/
+
 }
 
 func fetchRawUnminedCreditTagIsCoinbase(v []byte) bool {
-	//return v[8]&(1<<5) != 0
-	return v[8]&(1<<6) != 0
+	return v[8]&(1<<5) != 0
+	//return v[8]&(1<<6) != 0
 }
 
 func fetchRawUnminedCreditScriptType(v []byte) scriptType {
