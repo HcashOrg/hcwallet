@@ -422,10 +422,11 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32, minconf int3
 		return nil, err
 	}
 
-	isInstantTx :=false
-	totalValue:=int64(0)
 	fee:=w.RelayFee()
 
+/*
+	isInstantTx :=false
+	totalValue:=int64(0)
 	for _,out:=range outputs{
 		totalValue+=out.Value
 		if _,has:=txscript.HasInstantTxTag(out.PkScript);has{
@@ -436,7 +437,7 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32, minconf int3
 	if isInstantTx{
 		fee+=hcutil.Amount(totalValue/1000)
 	}
-
+*/
 	return w.txToOutputsInternal(outputs, account, minconf, chainClient,
 		randomizeChangeIdx, fee, changeAddr, fromAddress)
 }
