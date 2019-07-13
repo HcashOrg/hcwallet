@@ -3373,6 +3373,12 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32, addresses map[string]struct
 				spendable = true
 			case txscript.StakeSubChangeTy:
 				spendable = true
+			case txscript.AiStakeGenTy:
+				spendable = true
+			case txscript.AiStakeRevocationTy:
+				spendable = true
+			case txscript.AiStakeSubChangeTy:
+				spendable = true
 			case txscript.MultiSigTy:
 				for _, a := range addrs {
 					_, err := w.Manager.Address(addrmgrNs, a)
