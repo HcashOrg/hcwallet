@@ -3985,7 +3985,7 @@ func (w *Wallet) resendUnminedTxs(chainClient *hcrpcclient.Client) {
 		//deal with ai send
 		isLockTx := false
 		for _, txOut := range tx.TxOut {
-			if _, has := txscript.HasAiTxTag(txOut.PkScript); has {
+			if _, has := txscript.HaveAiTxTag(txOut.PkScript); has {
 				isLockTx = true
 				break
 			}

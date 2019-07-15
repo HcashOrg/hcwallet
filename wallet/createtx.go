@@ -586,7 +586,7 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		//deal with ai send
 		isLockTx := false
 		for _, txOut := range atx.Tx.TxOut {
-			if _,has:=txscript.HasAiTxTag(txOut.PkScript);has {
+			if _,has:=txscript.HaveAiTxTag(txOut.PkScript);has {
 				isLockTx = true
 				break
 			}

@@ -112,7 +112,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcutil.Amount,
 
 	for _,out:=range outputs{
 		totalValue+=out.Value
-		if _,has:=txscript.HasAiTxTag(out.PkScript);has{
+		if _,has:=txscript.HaveAiTxTag(out.PkScript);has{
 			isAiTx=true
 		}
 	}
