@@ -86,16 +86,18 @@ type Wallet struct {
 	StakeMgr *udb.StakeStore
 
 	// Handlers for stake system.
-	stakeSettingsLock       sync.Mutex
-	voteBits                stake.VoteBits
-	ticketPurchasingEnabled bool
-	votingEnabled           bool
-	balanceToMaintain       hcutil.Amount
-	poolAddress             hcutil.Address
-	poolFees                float64
-	stakePoolEnabled        bool
-	stakePoolColdAddrs      map[string]struct{}
-	subsidyCache            *blockchain.SubsidyCache
+	stakeSettingsLock         sync.Mutex
+	voteBits                  stake.VoteBits
+	ticketPurchasingEnabled   bool
+	aiTicketPurchasingEnabled bool // ai ticket
+	votingEnabled             bool
+	aiVotingEnabled           bool // ai vote
+	balanceToMaintain         hcutil.Amount
+	poolAddress               hcutil.Address
+	poolFees                  float64
+	stakePoolEnabled          bool
+	stakePoolColdAddrs        map[string]struct{}
+	subsidyCache              *blockchain.SubsidyCache
 
 	// Start up flags/settings
 	initiallyUnlocked bool
@@ -530,6 +532,24 @@ func (w *Wallet) SetTicketPurchasingEnabled(flag bool) {
 	w.stakeSettingsLock.Lock()
 	w.ticketPurchasingEnabled = flag
 	w.stakeSettingsLock.Unlock()
+}
+
+func (w *Wallet) SetAiTicketPurchasingEnabled(flag bool) {
+	w.stakeSettingsLock.Lock()
+	w.aiTicketPurchasingEnabled = flag
+	w.stakeSettingsLock.Unlock()
+}
+func (w *Wallet) GetAiTicketPurchasingEnabled() bool {
+	return w.aiVotingEnabled
+}
+
+func (w *Wallet) SetAiVotingEnabled(flag bool) {
+	w.stakeSettingsLock.Lock()
+	w.aiVotingEnabled = flag
+	w.stakeSettingsLock.Unlock()
+}
+func (w *Wallet) GetAiVotingEnabled() bool {
+	return w.aiVotingEnabled
 }
 
 // TicketAddress gets the ticket address for the wallet to give the ticket
@@ -3770,14 +3790,14 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 
 			// Ticket is matured but unspent.  Possible states are that the
 			// ticket is live, expired, or missed.
-		//	isAiSStx, _ := stake.IsAiSStx(&it.MsgTx)
+			//	isAiSStx, _ := stake.IsAiSStx(&it.MsgTx)
 			isAiSSGen, _ := stake.IsAiSSGen(&it.MsgTx)
 			isAiSSRtx, _ := stake.IsAiSSRtx(&it.MsgTx)
 
-			if isAiSStx || isAiSSGen || isAiSSRtx{
+			if isAiSStx || isAiSSGen || isAiSSRtx {
 				aiTicketHash := it.Hash
 				aiLiveOrExpiredOrMissed = append(aiLiveOrExpiredOrMissed, &aiTicketHash)
-			}else{
+			} else {
 				ticketHash := it.Hash
 				liveOrExpiredOrMissed = append(liveOrExpiredOrMissed, &ticketHash)
 			}

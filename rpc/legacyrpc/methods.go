@@ -14,7 +14,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -187,6 +190,11 @@ func init() {
 		"listalltransactions":     {handler: listAllTransactions},
 		"renameaccount":           {handler: renameAccount},
 		"walletislocked":          {handler: walletIsLocked},
+
+		"enableaivoting":        {handler: enableAivoting},
+		"enableaiticketbuyer":   {handler: enableAiticketbuyer},
+		"noenableaivoting":      {handler: notEnableAivoting},
+		"noenableaiticketbuyer": {handler: notEnableAiticketbuyer},
 	}
 
 	for k, v := range getOminiMethod() {
@@ -669,13 +677,13 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		BlockHash: blockHash.String(),
 	}
 
-	accountAiConfirms :=make(map[uint32]hcutil.Amount)
+	accountAiConfirms := make(map[uint32]hcutil.Amount)
 	w.AiTxConfirmsLock.Lock()
 	defer w.AiTxConfirmsLock.Unlock()
 
 	for _, msgTx := range w.AiTxConfirms {
 		for _, out := range msgTx.TxOut {
-			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.Version, out.PkScript,w.ChainParams())
+			_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.Version, out.PkScript, w.ChainParams())
 			if err == nil && len(addrs) > 0 {
 				account, err := w.AccountOfAddress(addrs[0])
 				if err == nil {
@@ -2432,6 +2440,112 @@ func ticketsForAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) 
 	return hcjson.TicketsForAddressResult{Tickets: ticketHashStrs}, nil
 }
 
+// "enableaivoting":           {handler: enableaivoting},
+//  "enableaiticketbuyer":      {handler: enableaiticketbuyer},
+func enableAivoting(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	w.SetAiVotingEnabled(true)
+
+	currentConfigFile := filepath.Join(CurrentAppDataDir, CurrentConfigFilename)
+	// write to file
+	input, err := ioutil.ReadFile(currentConfigFile)
+	if err != nil {
+		log.Errorf("read hcwallet.conf failed:%v", err)
+		return nil, err
+	}
+
+	lines := strings.Split(string(input), "\n")
+
+	for i, line := range lines {
+		if strings.Contains(line, "enableaivoting=false") {
+			lines[i] = "enableaivoting=true"
+		}
+	}
+	output := strings.Join(lines, "\n")
+	err = ioutil.WriteFile(currentConfigFile, []byte(output), 0644)
+	if err != nil {
+		log.Errorf("write to %v failed:%v", currentConfigFile, err)
+		return nil, err
+	}
+	return nil, nil
+
+}
+func notEnableAivoting(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	w.SetAiVotingEnabled(false)
+	currentConfigFile := filepath.Join(CurrentAppDataDir, CurrentConfigFilename)
+	// write to file
+	input, err := ioutil.ReadFile(currentConfigFile)
+	if err != nil {
+		log.Errorf("read hcwallet.conf failed:%v", err)
+		return nil, err
+	}
+
+	lines := strings.Split(string(input), "\n")
+
+	for i, line := range lines {
+		if strings.Contains(line, "enableaivoting=true") {
+			lines[i] = "enableaivoting=false"
+		}
+	}
+	output := strings.Join(lines, "\n")
+	err = ioutil.WriteFile(currentConfigFile, []byte(output), 0644)
+	if err != nil {
+		log.Errorf("write to %v failed:%v", currentConfigFile, err)
+		return nil, err
+	}
+	return nil, nil
+
+}
+func enableAiticketbuyer(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	w.SetAiTicketPurchasingEnabled(true)
+	currentConfigFile := filepath.Join(CurrentAppDataDir, CurrentConfigFilename)
+
+	input, err := ioutil.ReadFile(currentConfigFile)
+	if err != nil {
+		log.Errorf("read hcwallet.conf failed:%v", err)
+		return nil, err
+	}
+
+	lines := strings.Split(string(input), "\n")
+
+	for i, line := range lines {
+		if strings.Contains(line, "enableaiticketbuyer=false") {
+			lines[i] = "enableaiticketbuyer=true"
+		}
+	}
+	output := strings.Join(lines, "\n")
+	err = ioutil.WriteFile(currentConfigFile, []byte(output), 0644)
+	if err != nil {
+		log.Errorf("write to %v failed:%v", currentConfigFile, err)
+		return nil, err
+	}
+	return nil, nil
+}
+func notEnableAiticketbuyer(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	w.SetAiTicketPurchasingEnabled(false)
+	currentConfigFile := filepath.Join(CurrentAppDataDir, CurrentConfigFilename)
+
+	input, err := ioutil.ReadFile(currentConfigFile)
+	if err != nil {
+		log.Errorf("read hcwallet.conf failed:%v", err)
+		return nil, err
+	}
+
+	lines := strings.Split(string(input), "\n")
+
+	for i, line := range lines {
+		if strings.Contains(line, "enableaiticketbuyer=true") {
+			lines[i] = "enableaiticketbuyer=false"
+		}
+	}
+	output := strings.Join(lines, "\n")
+	err = ioutil.WriteFile(currentConfigFile, []byte(output), 0644)
+	if err != nil {
+		log.Errorf("write to %v failed:%v", currentConfigFile, err)
+		return nil, err
+	}
+	return nil, nil
+}
+
 func isNilOrEmpty(s *string) bool {
 	return s == nil || *s == ""
 }
@@ -2458,7 +2572,7 @@ func sendFrom(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Clien
 		return nil, err
 	}
 
-	// Check that signed integer parameters are positive.
+	// Check that signed integer parameters arsetbalancetomaintaine positive.
 	if cmd.Amount < 0 {
 		return nil, ErrNeedPositiveAmount
 	}

@@ -9,6 +9,7 @@ package main
 import (
 	"fmt"
 	"github.com/HcashOrg/hcd/wire"
+	"github.com/HcashOrg/hcwallet/rpc/legacyrpc"
 	"net"
 	"os"
 	"os/user"
@@ -24,7 +25,7 @@ import (
 	"github.com/HcashOrg/hcwallet/wallet"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 	"github.com/btcsuite/btclog"
-	flags "github.com/jessevdk/go-flags"
+	"github.com/jessevdk/go-flags"
 )
 
 const (
@@ -36,8 +37,11 @@ const (
 	defaultRPCMaxClients       = 10
 	defaultRPCMaxWebsockets    = 25
 	defaultEnableTicketBuyer   = false
+	defaultEnableAiTicketBuyer = false
+
 	defaultEnableOmni          = false
 	defaultEnableVoting        = false
+	defaultEnableAiVoting      = false
 	defaultReuseAddresses      = false
 	defaultRollbackTest        = false
 	defaultPruneTickets        = false
@@ -163,7 +167,9 @@ type config struct {
 	PruneTickets bool                    `long:"prunetickets" description:"DEPRECATED -- old tickets are always pruned"`
 
 	// Added to assist postquantum functionality
-	createPass string
+	createPass          string
+	EnableAiTicketBuyer bool `long:"enableaiticketbuyer" description:"Enable the automatic ai ticket buyer"`
+	EnableAiVoting      bool `long:"enableaivoting" description:"Enable creation of ai votes and ai revocations for owned tickets"`
 }
 
 type ticketBuyerOptions struct {
@@ -347,8 +353,10 @@ func loadConfig() (*config, []string, error) {
 		LegacyRPCMaxClients:    defaultRPCMaxClients,
 		LegacyRPCMaxWebsockets: defaultRPCMaxWebsockets,
 		EnableTicketBuyer:      defaultEnableTicketBuyer,
+		EnableAiTicketBuyer:    defaultEnableAiTicketBuyer,
 		EnableOmni:             defaultEnableOmni,
 		EnableVoting:           defaultEnableVoting,
+		EnableAiVoting:         defaultEnableAiVoting,
 		ReuseAddresses:         defaultReuseAddresses,
 		RollbackTest:           defaultRollbackTest,
 		PruneTickets:           defaultPruneTickets,
@@ -480,6 +488,11 @@ func loadConfig() (*config, []string, error) {
 		numNets++
 	}
 	wire.AI_UPDATE_HEIGHT = activeNet.AIUpdateHeight
+	// fro auto aiticket buy
+	legacyrpc.CurrentAppDataDir = cfg.AppDataDir.Value
+	legacyrpc.CurrentConfigFilename = cfg.ConfigFile.Value
+	legacyrpc.CurrentConfigFile = filepath.Join(cfg.AppDataDir.Value, cfg.ConfigFile.Value)
+
 	if numNets > 1 {
 		str := "%s: The testnet and simnet params can't be used " +
 			"together -- choose one"
