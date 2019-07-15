@@ -302,7 +302,7 @@ func (s *NotificationServer) notifyUnminedTransaction(dbtx walletdb.ReadTx, deta
 		return
 	}
 
-	_,isAiTx:=txscript.IsInstantTx(&details.MsgTx)
+	_,isAiTx:=txscript.IsAiTx(&details.MsgTx)
 
 	n := &TransactionNotifications{
 		IsAiConfirmed:isAiTx,

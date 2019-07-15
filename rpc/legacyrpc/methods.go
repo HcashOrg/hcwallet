@@ -44,7 +44,7 @@ const (
 	jsonrpcSemverMajor  = 4
 	jsonrpcSemverMinor  = 1
 	jsonrpcSemverPatch  = 0
-	instantTxTag        = "hcashInstantSend"
+	aiTxTag        = "hcashAiSend"
 )
 
 var (
@@ -2792,12 +2792,12 @@ func aiSendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 	lotteryHash := w.GetLotteryBlockHash()
 	if lotteryHash == nil {
-		return nil, fmt.Errorf("instant tx get lotterHash  failed")
+		return nil, fmt.Errorf("ai tx get lotterHash  failed")
 	}
 	lotteryHashBytes := lotteryHash.CloneBytes()
 
 	payloadBytes := make([]byte, 0, 16+32)
-	payloadBytes = append(payloadBytes, []byte(instantTxTag)...)
+	payloadBytes = append(payloadBytes, []byte(aiTxTag)...)
 	payloadBytes = append(payloadBytes, lotteryHashBytes...)
 	// sendtoaddress always spends from the default account, this matches bitcoind
 	return sendPairs(w, pairs, account, w.ChainParams().AiSendConfirmationsRequired, "", payloadBytes, "")

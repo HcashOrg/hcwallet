@@ -84,14 +84,14 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 					return w.watchFutureAddresses(tx)
 				})
 			}
-		case chain.NewInstantTx:
-			notificationName = "newinstanttx"
+		case chain.NewAiTx:
+			notificationName = "newaitx"
 
-			w.handleNewInstantTx(n.InstantTx, n.Tickets,n.Resend)
-		case chain.InstantTxVote:
-			notificationName="instanttxvote"
-			log.Infof("handle %v Notifications:%v",notificationName, n.InstantTxVoteHash.String())
-			w.handleInstantTxVote(n.InstantTxVoteHash,n.InstantTxHash,n.TickeHash,n.Vote,n.Sig)
+			w.handleNewAiTx(n.AiTx, n.Tickets,n.Resend)
+		case chain.AiTxVote:
+			notificationName="aitxvote"
+			log.Infof("handle %v Notifications:%v",notificationName, n.AiTxVoteHash.String())
+			w.handleAiTxVote(n.AiTxVoteHash,n.AiTxHash,n.TickeHash,n.Vote,n.Sig)
 		case chain.MissedTickets:
 			notificationName = "spentandmissedtickets"
 			err = w.handleMissedTickets(n.BlockHash, int32(n.BlockHeight), n.Tickets)
@@ -1291,16 +1291,16 @@ func selectOwnedTickets(w *Wallet, dbtx walletdb.ReadTx, tickets []*chainhash.Ha
 	return owned
 }
 
-func(w *Wallet) handleInstantTxVote(instantTxVoteHash *chainhash.Hash, instantTxHash *chainhash.Hash, tickeHash *chainhash.Hash, vote bool, sig []byte) {
-	log.Debug("handleInstanttxvote")
+func(w *Wallet) handleAiTxVote(aiTxVoteHash *chainhash.Hash, aiTxHash *chainhash.Hash, tickeHash *chainhash.Hash, vote bool, sig []byte) {
+	log.Debug("handleAitxvote")
 }
 
 
-func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.Hash,resend bool) {
+func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash,resend bool) {
 
-	msgInstantTx:=wire.NewMsgInstantTx()
-	msgInstantTx.FromBytes(instantTxBytes)
-	log.Infof("handle newInstantTx Notifications:%v %v",msgInstantTx.TxHash(),resend)
+	msgAiTx:=wire.NewMsgAiTx()
+	msgAiTx.FromBytes(aiTxBytes)
+	log.Infof("handle newAiTx Notifications:%v %v",msgAiTx.TxHash(),resend)
 	var ticketHashes []*chainhash.Hash
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
 		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
@@ -1313,15 +1313,15 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 
 		//deal with resend
 		if resend{
-			msgTx:=msgInstantTx.MsgTx
+			msgTx:=msgAiTx.MsgTx
 			//send to normal channel
 			hash,err:=w.chainClient.SendRawTransaction(&msgTx,w.AllowHighFees)
 			if err!=nil{
-				log.Error("instant tx %v resend to mempool err %v",hash,err)
+				log.Error("ai tx %v resend to mempool err %v",hash,err)
 				return err
 			}
 
-			log.Infof("instant tx %v resend to mempool",hash)
+			log.Infof("ai tx %v resend to mempool",hash)
 			return nil
 		}
 
@@ -1333,7 +1333,7 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 			}
 			if err != nil {
 				log.Errorf("Failed to read ticket purchase transaction for "+
-					"instant ticket %v: %v", ticketHash, err)
+					"ai ticket %v: %v", ticketHash, err)
 				continue
 			}
 
@@ -1344,33 +1344,33 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 
 			if err != nil {
 				log.Errorf("Failed to extract addrs for "+
-					"instant ticket %v: %v", ticketHash, err)
+					"ai ticket %v: %v", ticketHash, err)
 				continue
 			}
 
-			//instanttxvote
+			//aitxvote
 			pk,err:=w.PubKeyForAddress(addrs[0])
 			if err!=nil{
 				log.Errorf("Failed to extract publick for "+
-					"instant ticket %v: %v", ticketHash, err)
+					"ai ticket %v: %v", ticketHash, err)
 				continue
 			}
 
-			instantTxVote := wire.NewMsgInstantTxVote()
-			instantTxVote.Vote=true
-			instantTxVote.TicketHash=*ticketHash
-			instantTxVote.InstantTxHash =msgInstantTx.TxHash()
-			instantTxVote.PubKey=pk.SerializeCompressed()
+			aiTxVote := wire.NewMsgAiTxVote()
+			aiTxVote.Vote=true
+			aiTxVote.TicketHash=*ticketHash
+			aiTxVote.AiTxHash =msgAiTx.TxHash()
+			aiTxVote.PubKey=pk.SerializeCompressed()
 
-			signMsg:=instantTxVote.InstantTxHash.String()+instantTxVote.TicketHash.String()
+			signMsg:=aiTxVote.AiTxHash.String()+aiTxVote.TicketHash.String()
 
 
 			//sign msg
 			sig,err:=w.SignMessage(signMsg,addrs[0])
 
-			instantTxVote.Sig=sig
+			aiTxVote.Sig=sig
 
-			w.chainClient.SendInstantTxVote(instantTxVote)
+			w.chainClient.SendAiTxVote(aiTxVote)
 		}
 		return nil
 	})
@@ -1382,15 +1382,15 @@ func (w *Wallet) handleNewInstantTx(instantTxBytes []byte, tickets []*chainhash.
 		go func() {
 			w.AiTxConfirmsLock.Lock()
 			defer w.AiTxConfirmsLock.Unlock()
-			copy:=*msgInstantTx
-			w.AiTxConfirms[msgInstantTx.TxHash()]=&copy
+			copy:=*msgAiTx
+			w.AiTxConfirms[msgAiTx.TxHash()]=&copy
 		}()
 
 	}
 
 
 	if err != nil {
-		log.Errorf("db View failed handle instant tx: %v", err)
+		log.Errorf("db View failed handle ai tx: %v", err)
 	}
 
 }

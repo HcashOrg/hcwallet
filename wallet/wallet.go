@@ -135,7 +135,7 @@ type Wallet struct {
 
 	//aitx confirm
 	AiTxConfirmsLock sync.Mutex
-	AiTxConfirms     map[chainhash.Hash]*wire.MsgInstantTx
+	AiTxConfirms     map[chainhash.Hash]*wire.MsgAiTx
 
 	// Channels for the manager locker.
 	unlockRequests     chan unlockRequest
@@ -197,7 +197,7 @@ func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Addre
 		addressReuse:             addressReuse,
 		ticketAddress:            ticketAddress,
 		addressBuffers:           make(map[uint32]*bip0044AccountData),
-		AiTxConfirms:             make(map[chainhash.Hash]*wire.MsgInstantTx),
+		AiTxConfirms:             make(map[chainhash.Hash]*wire.MsgAiTx),
 		poolAddress:              poolAddress,
 		poolFees:                 pf,
 		gapLimit:                 gapLimit,
@@ -1301,10 +1301,10 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 		return err
 	}
 
-	//notifications for instanttx
-	err = chainClient.NotifyNewInstantTx()
+	//notifications for aitx
+	err = chainClient.NotifyNewAiTx()
 	if err != nil {
-		log.Error("Unable to request notifynewinstanttx "+
+		log.Error("Unable to request notifynewaitx "+
 			"Error: ", err.Error())
 		return err
 	}
@@ -3982,22 +3982,22 @@ func (w *Wallet) resendUnminedTxs(chainClient *hcrpcclient.Client) {
 	}
 
 	for _, tx := range txs {
-		//deal with instant send
+		//deal with ai send
 		isLockTx := false
 		for _, txOut := range tx.TxOut {
-			if _, has := txscript.HasInstantTxTag(txOut.PkScript); has {
+			if _, has := txscript.HasAiTxTag(txOut.PkScript); has {
 				isLockTx = true
 				break
 			}
 		}
 
 		if isLockTx {
-			instantTx := wire.NewMsgInstantTx()
-			instantTx.MsgTx = *tx
-			//send to instant channel
-			resp, err := chainClient.SendInstantRawTransaction(instantTx, w.AllowHighFees)
+			aiTx := wire.NewMsgAiTx()
+			aiTx.MsgTx = *tx
+			//send to ai channel
+			resp, err := chainClient.SendAiRawTransaction(aiTx, w.AllowHighFees)
 			if err != nil {
-				log.Errorf("resend unminedTxs %v err: %v",instantTx.TxHash(),err)
+				log.Errorf("resend unminedTxs %v err: %v",aiTx.TxHash(),err)
 				continue
 			}
 			log.Tracef("Resent unmined transaction %v", resp)

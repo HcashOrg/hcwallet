@@ -425,16 +425,16 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32, minconf int3
 	fee:=w.RelayFee()
 
 /*
-	isInstantTx :=false
+	isAiTx :=false
 	totalValue:=int64(0)
 	for _,out:=range outputs{
 		totalValue+=out.Value
-		if _,has:=txscript.HasInstantTxTag(out.PkScript);has{
-			isInstantTx=true
+		if _,has:=txscript.HasAiTxTag(out.PkScript);has{
+			isAiTx=true
 		}
 	}
 
-	if isInstantTx{
+	if isAiTx{
 		fee+=hcutil.Amount(totalValue/1000)
 	}
 */
@@ -522,7 +522,7 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		// Randomize change position, if change exists, before signing.  This
 		// doesn't affect the serialize size, so the change amount will still be
 		// valid.
-		if _, ok := txscript.IsInstantTx(atx.Tx); ok{
+		if _, ok := txscript.IsAiTx(atx.Tx); ok{
 			randomizeChangeIdx = false;
 		}
 		if atx.ChangeIndex >= 0 && randomizeChangeIdx {
@@ -583,20 +583,20 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 			return err
 		}
 
-		//deal with instant send
+		//deal with ai send
 		isLockTx := false
 		for _, txOut := range atx.Tx.TxOut {
-			if _,has:=txscript.HasInstantTxTag(txOut.PkScript);has {
+			if _,has:=txscript.HasAiTxTag(txOut.PkScript);has {
 				isLockTx = true
 				break
 			}
 		}
 
 		if isLockTx {
-			instantTx := wire.NewMsgInstantTx()
-			instantTx.MsgTx = *atx.Tx
-			//send to instant channel
-			_, err = chainClient.SendInstantRawTransaction(instantTx, w.AllowHighFees)
+			aiTx := wire.NewMsgAiTx()
+			aiTx.MsgTx = *atx.Tx
+			//send to ai channel
+			_, err = chainClient.SendAiRawTransaction(aiTx, w.AllowHighFees)
 
 		} else {
 			//send to normal channel

@@ -76,8 +76,8 @@ func NewRPCClient(chainParams *chaincfg.Params, connect, user, pass string, cert
 		OnBlockDisconnected:     client.onBlockDisconnected,
 		OnRelevantTxAccepted:    client.onRelevantTxAccepted,
 		OnReorganization:        client.onReorganization,
-		OnNewInstantTx:          client.onNewInstantTx,
-		OnInstantTxVote:         client.onInstantTxVote,
+		OnNewAiTx:          client.onNewAiTx,
+		OnAiTxVote:         client.onAiTxVote,
 		OnWinningTickets:        client.onWinningTickets,
 		OnSpentAndMissedTickets: client.onSpentAndMissedTickets,
 		OnStakeDifficulty:       client.onStakeDifficulty,
@@ -213,15 +213,15 @@ type (
 		Tickets     []*chainhash.Hash
 	}
 
-	NewInstantTx struct {
+	NewAiTx struct {
 		Tickets   []*chainhash.Hash
-		InstantTx []byte
+		AiTx []byte
 		Resend    bool
 	}
 
-	InstantTxVote struct {
-		InstantTxVoteHash *chainhash.Hash
-		InstantTxHash     *chainhash.Hash
+	AiTxVote struct {
+		AiTxVoteHash *chainhash.Hash
+		AiTxHash     *chainhash.Hash
 		TickeHash         *chainhash.Hash
 		Vote              bool
 		Sig               []byte
@@ -293,10 +293,10 @@ func (c *RPCClient) onRelevantTxAccepted(transaction []byte) {
 	}
 }
 
-func (c *RPCClient) onNewInstantTx(instantTxHash []byte, tickets []*chainhash.Hash, resend bool) {
+func (c *RPCClient) onNewAiTx(aiTxHash []byte, tickets []*chainhash.Hash, resend bool) {
 	select {
-	case c.enqueueNotification <- NewInstantTx{
-		InstantTx: instantTxHash,
+	case c.enqueueNotification <- NewAiTx{
+		AiTx: aiTxHash,
 		Tickets:   tickets,
 		Resend:    resend,
 	}:
@@ -304,11 +304,11 @@ func (c *RPCClient) onNewInstantTx(instantTxHash []byte, tickets []*chainhash.Ha
 	}
 }
 
-func (c *RPCClient) onInstantTxVote(instantTxVoteHash *chainhash.Hash, instantTxHash *chainhash.Hash, tickeHash *chainhash.Hash, vote bool, sig []byte) {
+func (c *RPCClient) onAiTxVote(aiTxVoteHash *chainhash.Hash, aiTxHash *chainhash.Hash, tickeHash *chainhash.Hash, vote bool, sig []byte) {
 	select {
-	case c.enqueueNotification <- InstantTxVote{
-		InstantTxVoteHash: instantTxVoteHash,
-		InstantTxHash:     instantTxHash,
+	case c.enqueueNotification <- AiTxVote{
+		AiTxVoteHash: aiTxVoteHash,
+		AiTxHash:     aiTxHash,
 		TickeHash:         tickeHash,
 		Vote:              vote,
 		Sig:               sig,
