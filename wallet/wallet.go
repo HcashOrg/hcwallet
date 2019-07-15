@@ -3393,6 +3393,12 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32, addresses map[string]struct
 				spendable = true
 			case txscript.StakeSubChangeTy:
 				spendable = true
+			case txscript.AiStakeGenTy:
+				spendable = true
+			case txscript.AiStakeRevocationTy:
+				spendable = true
+			case txscript.AiStakeSubChangeTy:
+				spendable = true
 			case txscript.MultiSigTy:
 				for _, a := range addrs {
 					_, err := w.Manager.Address(addrmgrNs, a)
@@ -3976,15 +3982,37 @@ func (w *Wallet) resendUnminedTxs(chainClient *hcrpcclient.Client) {
 	}
 
 	for _, tx := range txs {
-		resp, err := chainClient.SendRawTransaction(tx, w.AllowHighFees)
-		if err != nil {
-			// TODO(jrick): Check error for if this tx is a double spend,
-			// remove it if so.
-			log.Tracef("Could not resend transaction %v: %v",
-				tx.TxHash(), err)
-			continue
+		//deal with instant send
+		isLockTx := false
+		for _, txOut := range tx.TxOut {
+			if _, has := txscript.HasInstantTxTag(txOut.PkScript); has {
+				isLockTx = true
+				break
+			}
 		}
-		log.Tracef("Resent unmined transaction %v", resp)
+
+		if isLockTx {
+			instantTx := wire.NewMsgInstantTx()
+			instantTx.MsgTx = *tx
+			//send to instant channel
+			resp, err := chainClient.SendInstantRawTransaction(instantTx, w.AllowHighFees)
+			if err != nil {
+				log.Errorf("resend unminedTxs %v err: %v",instantTx.TxHash(),err)
+				continue
+			}
+			log.Tracef("Resent unmined transaction %v", resp)
+		} else {
+			resp, err := chainClient.SendRawTransaction(tx, w.AllowHighFees)
+			if err != nil {
+				// TODO(jrick): Check error for if this tx is a double spend,
+				// remove it if so.
+				log.Tracef("Could not resend transaction %v: %v",
+					tx.TxHash(), err)
+				continue
+			}
+			log.Tracef("Resent unmined transaction %v", resp)
+		}
+
 	}
 }
 

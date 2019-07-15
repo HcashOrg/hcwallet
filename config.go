@@ -9,7 +9,6 @@ package main
 import (
 	"fmt"
 	"github.com/HcashOrg/hcd/wire"
-	"github.com/HcashOrg/hcwallet/rpc/legacyrpc"
 	"net"
 	"os"
 	"os/user"
@@ -25,7 +24,7 @@ import (
 	"github.com/HcashOrg/hcwallet/wallet"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 	"github.com/btcsuite/btclog"
-	"github.com/jessevdk/go-flags"
+	flags "github.com/jessevdk/go-flags"
 )
 
 const (
@@ -38,7 +37,6 @@ const (
 	defaultRPCMaxWebsockets    = 25
 	defaultEnableTicketBuyer   = false
 	defaultEnableAiTicketBuyer = false
-
 	defaultEnableOmni          = false
 	defaultEnableVoting        = false
 	defaultEnableAiVoting      = false

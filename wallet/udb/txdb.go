@@ -754,9 +754,18 @@ func keyCredit(txHash *chainhash.Hash, index uint32, block *Block) []byte {
 	byteOrder.PutUint32(k[68:72], index)
 	return k
 }
-
+/* version 2
 func condenseOpCode(opCode uint8) byte {
 	return (opCode - 0xb9) << 2
+}
+*/
+//version 3
+func condenseOpCode(opCode uint8) byte {
+	if opCode >= 193 && opCode <= 196 { //OP_AISSTX OP_AISSGEN OP_AISSRTX OP_AISSTXCHANGE
+		return (opCode - 0xc0/*192*/  + 0x10) << 2
+	}else{
+		return (opCode - 0xb9) << 2
+	}
 }
 
 // valueUnspentCredit creates a new credit value for an unspent credit.  All
@@ -771,8 +780,8 @@ func valueUnspentCredit(cred *credit, scrType scriptType, scrLoc uint32,
 		v[8] |= 1 << 1
 	}
 	if cred.isCoinbase {
-		//v[8] |= 1 << 5
-		v[8] |= 1 << 6
+		v[8] |= 1 << 5
+		//v[8] |= 1 << 6
 	}
 
 	v[81] = byte(scrType)
@@ -877,19 +886,28 @@ func fetchRawCreditUnspentValue(k []byte) ([]byte, error) {
 
 // fetchRawCreditTagOpCode fetches the compressed OP code for a transaction.
 func fetchRawCreditTagOpCode(v []byte) uint8 {
-	return (((v[8] >> 2) & 0x0F) + 0xb9)
-//	if v[8] == 34 || v[8] == 38 || v[8] == 42 || v[8] == 46{
-//		return (((v[8] >> 2) & 0x0F) + 0xb9)
+	if v[8] & 0x40 != 0{ //version 3
+		return (((v[8] >> 2) & 0x07) + 0xc0)
+	}else{ // version 2
+		return (((v[8] >> 2) & 0x07) + 0xb9)
+	}
+
+
+//	if opCode >= 193 && opCode <= 196 { //OP_AISSTX OP_AISSGEN OP_AISSRTX OP_AISSTXCHANGE
+//		return (opCode - 0xc0/*192*/  + 0x10) << 2
+//	}else{
+//		return (opCode - 0xb9) << 2
 //	}
 
-//	return (((v[8] >> 2) & 0x07) + 0xb9)
+
+//	return (((v[8] >> 2) & 0x07) + 0xb9)  version 2
 }
 
 // fetchRawCreditIsCoinbase returns whether or not the credit is a coinbase
 // output or not.
 func fetchRawCreditIsCoinbase(v []byte) bool {
-	//return v[8]&(1<<5) != 0
-	return v[8]&(1<<6) != 0
+	return v[8]&(1<<5) != 0
+	//return v[8]&(1<<6) != 0
 }
 
 // fetchRawCreditScriptOffset returns the ScriptOffset for the pkScript of this
@@ -1407,6 +1425,42 @@ func extractRawUnminedTx(v []byte) []byte {
 //   [14:18] Length of script (4 bytes, uint32)
 //   [18:22] Account (4 bytes, uint32)
 //
+
+//version 3
+// Unmined transaction credits use the canonical serialization format:
+//
+//  [0:32]   Transaction hash (32 bytes)
+//  [32:36]  Output index (4 bytes)
+//
+// The value matches the format used by mined credits, but the spent flag is
+// never set and the optional debit record is never included.  The simplified
+// format is thus:
+//
+//   [0:8]   Amount (8 bytes)
+//   [8]     Flags (1 byte)
+//				[0]: spent
+//             [1]: Change
+//			   [6]: Is AI 0
+//             [2:5]: P2PKH stake flag
+//                 000: None (translates to OP_NOP10)
+//                 001: OP_SSTX
+//                 010: OP_SSGEN
+//                 011: OP_SSRTX
+//                 100: OP_SSTXCHANGE
+//             [5]: Is coinbase
+//             [6]: Is AI 1
+//					[2:5]: P2PKH stake flag
+//                 000: None
+//                 001: OP_AISSTX
+//                 010: OP_AISSGEN
+//                 011: OP_AISSRTX
+//                 100: OP_AISSTXCHANGE
+//   [9] Script type (P2PKH, P2SH, etc) and bit flag for account stored
+//   [10:14] Byte index (4 bytes, uint32)
+//   [14:18] Length of script (4 bytes, uint32)
+//   [18:22] Account (4 bytes, uint32)
+
+
 const (
 	// unconfCreditKeySize is the total size of an unconfirmed credit
 	// key in bytes.
@@ -1431,8 +1485,8 @@ func valueUnminedCredit(amount hcutil.Amount, change bool, opCode uint8,
 		v[8] |= 1 << 1
 	}
 	if IsCoinbase {
-		//v[8] |= 1 << 5
-		v[8] |= 1 << 6
+		v[8] |= 1 << 5
+		//v[8] |= 1 << 6
 	}
 
 	v[9] = byte(scrType)
@@ -1480,18 +1534,17 @@ func fetchRawUnminedCreditAmountChange(v []byte) (hcutil.Amount, bool, error) {
 }
 
 func fetchRawUnminedCreditTagOpcode(v []byte) uint8 {
-	return (((v[8] >> 2) & 0x0F) + 0xb9)
-	/*
-	if v[8] == 34 || v[8] == 38 || v[8] == 42 || v[8] == 46{
-		return (((v[8] >> 2) & 0x0F) + 0xb9)
+	if v[8] & 0x40 != 0{ //version 3
+		return (((v[8] >> 2) & 0x07) + 0xc0)
+	}else{ // version 2
+		return (((v[8] >> 2) & 0x07) + 0xb9)
 	}
-	return (((v[8] >> 2) & 0x07) + 0xb9)
-	*/
+
 }
 
 func fetchRawUnminedCreditTagIsCoinbase(v []byte) bool {
-	//return v[8]&(1<<5) != 0
-	return v[8]&(1<<6) != 0
+	return v[8]&(1<<5) != 0
+	//return v[8]&(1<<6) != 0
 }
 
 func fetchRawUnminedCreditScriptType(v []byte) scriptType {

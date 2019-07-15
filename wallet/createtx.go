@@ -247,8 +247,8 @@ func (w *Wallet) NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb hcu
 		case OutputSelectionAlgorithmAll:
 			// Wrap the source with one that always fetches the max amount
 			// available and ignores any returned InputSourceErrors.
-			inputSource = func(hcutil.Amount, string) (hcutil.Amount, []*wire.TxIn, [][]byte, error) {
-				total, inputs, prevScripts, err := sourceImpl.SelectInputs(hcutil.MaxAmount, "")
+			inputSource = func(hcutil.Amount, string, *string) (hcutil.Amount, []*wire.TxIn, [][]byte, error) {
+				total, inputs, prevScripts, err := sourceImpl.SelectInputs(hcutil.MaxAmount, "", nil)
 				switch err.(type) {
 				case txauthor.InputSourceError:
 					err = nil
@@ -422,10 +422,11 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32, minconf int3
 		return nil, err
 	}
 
-	isInstantTx :=false
-	totalValue:=int64(0)
 	fee:=w.RelayFee()
 
+/*
+	isInstantTx :=false
+	totalValue:=int64(0)
 	for _,out:=range outputs{
 		totalValue+=out.Value
 		if _,has:=txscript.HasInstantTxTag(out.PkScript);has{
@@ -436,7 +437,7 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32, minconf int3
 	if isInstantTx{
 		fee+=hcutil.Amount(totalValue/1000)
 	}
-
+*/
 	return w.txToOutputsInternal(outputs, account, minconf, chainClient,
 		randomizeChangeIdx, fee, changeAddr, fromAddress)
 }
@@ -521,6 +522,9 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		// Randomize change position, if change exists, before signing.  This
 		// doesn't affect the serialize size, so the change amount will still be
 		// valid.
+		if _, ok := txscript.IsInstantTx(atx.Tx); ok{
+			randomizeChangeIdx = false;
+		}
 		if atx.ChangeIndex >= 0 && randomizeChangeIdx {
 			atx.RandomizeChangePosition()
 		}
@@ -591,9 +595,6 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		if isLockTx {
 			instantTx := wire.NewMsgInstantTx()
 			instantTx.MsgTx = *atx.Tx
-			if err != nil {
-				return err
-			}
 			//send to instant channel
 			_, err = chainClient.SendInstantRawTransaction(instantTx, w.AllowHighFees)
 
@@ -604,6 +605,7 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 
 		return err
 	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -748,7 +750,7 @@ func (w *Wallet) txToMultisigInternal(dbtx walletdb.ReadWriteTx, account uint32,
 			"multisig address after accounting for fees"))
 	}
 	if totalInput > amount+feeEst {
-		pkScript, _, err := w.changeSource(w.persistReturnedChild(dbtx), account, nil)(dbtx)
+		pkScript, _, err := w.changeSource(w.persistReturnedChild(dbtx), account, nil)(dbtx, nil)
 		if err != nil {
 			return txToMultisigError(err)
 		}

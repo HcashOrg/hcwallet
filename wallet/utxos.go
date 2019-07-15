@@ -124,7 +124,7 @@ func (w *Wallet) SelectInputs(targetAmount hcutil.Amount, policy OutputSelection
 		sourceImpl := w.TxStore.MakeInputSource(txmgrNs, addrmgrNs, policy.Account,
 			policy.RequiredConfirmations, tipHeight)
 		var err error
-		total, inputs, prevScripts, err = sourceImpl.SelectInputs(targetAmount, "")
+		total, inputs, prevScripts, err = sourceImpl.SelectInputs(targetAmount, "", nil)
 		return err
 	})
 	return
