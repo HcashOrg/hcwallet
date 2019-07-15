@@ -25,6 +25,7 @@ import (
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 	"github.com/btcsuite/btclog"
 	flags "github.com/jessevdk/go-flags"
+	"github.com/HcashOrg/hcwallet/rpc/legacyrpc"
 )
 
 const (
