@@ -665,7 +665,8 @@ func (w *Wallet) ProcessOminiTransaction(rec *udb.TxRecord, blockMeta *udb.Block
 				index = i
 				isSetMultyNull = true
 			} else {
-				return errors.New("not allow more than one nulldata script in omini transaction")
+				log.Error("not allow more than one nulldata script in omini transaction %v", rec.MsgTx.TxHash())
+				return nil;
 			}
 		} else {
 			if !isSetToAddress {
