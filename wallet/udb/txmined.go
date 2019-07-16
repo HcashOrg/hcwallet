@@ -3723,6 +3723,7 @@ type Balances struct {
 	Total                   hcutil.Amount
 	VotingAuthority         hcutil.Amount
 	Unconfirmed             hcutil.Amount
+	AiTxConfirmed 			hcutil.Amount
 }
 
 // AccountBalance returns a Balances struct for some given account at

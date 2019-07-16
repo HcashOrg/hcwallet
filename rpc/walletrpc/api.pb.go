@@ -1343,6 +1343,7 @@ type BalanceResponse struct {
 	LockedByTickets         int64 `protobuf:"varint,5,opt,name=locked_by_tickets,json=lockedByTickets" json:"locked_by_tickets,omitempty"`
 	VotingAuthority         int64 `protobuf:"varint,6,opt,name=voting_authority,json=votingAuthority" json:"voting_authority,omitempty"`
 	Unconfirmed             int64 `protobuf:"varint,7,opt,name=unconfirmed" json:"unconfirmed,omitempty"`
+	AiTxConfirmed           int64 `protobuf:"varint,8,opt,name=aitxconfirmed" json:"aitxconfirmed,omitempty"`
 }
 
 func (m *BalanceResponse) Reset()                    { *m = BalanceResponse{} }

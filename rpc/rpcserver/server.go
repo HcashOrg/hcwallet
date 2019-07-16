@@ -656,6 +656,7 @@ func (s *walletServer) Balance(ctx context.Context, req *pb.BalanceRequest) (
 		LockedByTickets:         int64(bals.LockedByTickets),
 		VotingAuthority:         int64(bals.VotingAuthority),
 		Unconfirmed:             int64(bals.Unconfirmed),
+		AiTxConfirmed:			 int64(bals.AiTxConfirmed),
 	}
 	return resp, nil
 }
