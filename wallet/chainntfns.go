@@ -44,17 +44,17 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 				w.AiTxConfirmsLock.Lock()
 				defer w.AiTxConfirmsLock.Unlock()
 				for _, serializedTx := range transactions {
-					msgTx:=wire.NewMsgTx()
-					err:=msgTx.FromBytes(serializedTx)
+					msgTx := wire.NewMsgTx()
+					err := msgTx.FromBytes(serializedTx)
 					if err != nil {
 						str := "failed to deserialize transaction"
 						log.Infof(str)
 						return
 					}
 
-					txHash:=msgTx.TxHash()
-					if _,exist:=w.AiTxConfirms[txHash];exist{
-						delete(w.AiTxConfirms,txHash)
+					txHash := msgTx.TxHash()
+					if _, exist := w.AiTxConfirms[txHash]; exist {
+						delete(w.AiTxConfirms, txHash)
 					}
 				}
 
@@ -75,7 +75,7 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 				break
 			}
 
-			log.Infof("handle %v Notifications:%v",notificationName, hex.EncodeToString(n.Transaction))
+			log.Infof("handle %v Notifications:%v", notificationName, hex.EncodeToString(n.Transaction))
 			err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
 				return w.processSerializedTransaction(dbtx, n.Transaction, nil, nil)
 			})
@@ -87,11 +87,11 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 		case chain.NewAiTx:
 			notificationName = "newaitx"
 
-			w.handleNewAiTx(n.AiTx, n.Tickets,n.Resend)
+			w.handleNewAiTx(n.AiTx, n.Tickets, n.Resend)
 		case chain.AiTxVote:
-			notificationName="aitxvote"
-			log.Infof("handle %v Notifications:%v",notificationName, n.AiTxVoteHash.String())
-			w.handleAiTxVote(n.AiTxVoteHash,n.AiTxHash,n.TickeHash,n.Vote,n.Sig)
+			notificationName = "aitxvote"
+			log.Infof("handle %v Notifications:%v", notificationName, n.AiTxVoteHash.String())
+			w.handleAiTxVote(n.AiTxVoteHash, n.AiTxHash, n.TickeHash, n.Vote, n.Sig)
 		case chain.MissedTickets:
 			notificationName = "spentandmissedtickets"
 			err = w.handleMissedTickets(n.BlockHash, int32(n.BlockHeight), n.Tickets)
@@ -106,7 +106,7 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 				_, height = w.TxStore.MainChainTip(ns)
 				return nil
 			})
-			if err == nil && !w.IsScanning()  && w.chainClient != nil {
+			if err == nil && !w.IsScanning() && w.chainClient != nil {
 				w.RescanFromHeight(w.chainClient.Client, height)
 			}
 		}
@@ -268,25 +268,25 @@ func (w *Wallet) switchToSideChain(dbtx walletdb.ReadWriteTx) (*MainTipChangedNo
 		// gap between the existing rescan point (main chain fork point of
 		// the current marker) and the first block attached in this chain
 		// switch.
-	/*	r, err := w.rescanPoint(dbtx)
-		if err != nil {
-			return nil, err
-		}
-		rHeader, err := w.TxStore.GetBlockHeader(dbtx, r)
-
-
-		if err != nil {
-			return nil, err
-		}
-		if !(rHeader.Height+1 < uint32(sideChain[0].headerData.SerializedHeader.Height())) {
-			marker := sideChain[len(sideChain)-1].headerData.BlockHash
-			log.Debugf("Updating processed txs block marker to %v", marker)
-			err := w.TxStore.UpdateProcessedTxsBlockMarker(dbtx, &marker)
+		/*	r, err := w.rescanPoint(dbtx)
 			if err != nil {
 				return nil, err
 			}
-		}
-*/
+			rHeader, err := w.TxStore.GetBlockHeader(dbtx, r)
+
+
+			if err != nil {
+				return nil, err
+			}
+			if !(rHeader.Height+1 < uint32(sideChain[0].headerData.SerializedHeader.Height())) {
+				marker := sideChain[len(sideChain)-1].headerData.BlockHash
+				log.Debugf("Updating processed txs block marker to %v", marker)
+				err := w.TxStore.UpdateProcessedTxsBlockMarker(dbtx, &marker)
+				if err != nil {
+					return nil, err
+				}
+			}
+		*/
 		tipHeight, _, err := w.GetWalletSyncHeight()
 		if err != nil {
 			return nil, err
@@ -666,7 +666,7 @@ func (w *Wallet) ProcessOminiTransaction(rec *udb.TxRecord, blockMeta *udb.Block
 				isSetMultyNull = true
 			} else {
 				log.Error("not allow more than one nulldata script in omini transaction %v", rec.MsgTx.TxHash())
-				return nil;
+				return nil
 			}
 		} else {
 			if !isSetToAddress {
@@ -795,7 +795,7 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 	// server. In that case, additionally consider the first commitment
 	// output as well.
 	isAi, _ := stake.IsAiSStx(&rec.MsgTx)
-	if is, _ := stake.IsSStx(&rec.MsgTx); is || isAi{
+	if is, _ := stake.IsSStx(&rec.MsgTx); is || isAi {
 		// Errors don't matter here.  If addrs is nil, the range below
 		// does nothing.
 		txOut := rec.MsgTx.TxOut[0]
@@ -1065,7 +1065,7 @@ func (w *Wallet) processTransactionRecord(dbtx walletdb.ReadWriteTx, rec *udb.Tx
 		isStakeType := class == txscript.StakeSubmissionTy ||
 			class == txscript.StakeSubChangeTy ||
 			class == txscript.StakeGenTy ||
-			class == txscript.StakeRevocationTy||
+			class == txscript.StakeRevocationTy ||
 			class == txscript.AiStakeSubmissionTy ||
 			class == txscript.AiStakeSubChangeTy ||
 			class == txscript.AiStakeGenTy ||
@@ -1291,16 +1291,15 @@ func selectOwnedTickets(w *Wallet, dbtx walletdb.ReadTx, tickets []*chainhash.Ha
 	return owned
 }
 
-func(w *Wallet) handleAiTxVote(aiTxVoteHash *chainhash.Hash, aiTxHash *chainhash.Hash, tickeHash *chainhash.Hash, vote bool, sig []byte) {
+func (w *Wallet) handleAiTxVote(aiTxVoteHash *chainhash.Hash, aiTxHash *chainhash.Hash, tickeHash *chainhash.Hash, vote bool, sig []byte) {
 	log.Debug("handleAitxvote")
 }
 
+func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash, resend bool) {
 
-func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash,resend bool) {
-
-	msgAiTx:=wire.NewMsgAiTx()
+	msgAiTx := wire.NewMsgAiTx()
 	msgAiTx.FromBytes(aiTxBytes)
-	log.Infof("handle newAiTx Notifications:%v %v",msgAiTx.TxHash(),resend)
+	log.Infof("handle newAiTx Notifications:%v %v", msgAiTx.TxHash(), resend)
 	var ticketHashes []*chainhash.Hash
 	err := walletdb.View(w.db, func(dbtx walletdb.ReadTx) error {
 		txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
@@ -1312,16 +1311,16 @@ func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash,resen
 		}
 
 		//deal with resend
-		if resend{
-			msgTx:=msgAiTx.MsgTx
+		if resend {
+			msgTx := msgAiTx.MsgTx
 			//send to normal channel
-			hash,err:=w.chainClient.SendRawTransaction(&msgTx,w.AllowHighFees)
-			if err!=nil{
-				log.Error("ai tx %v resend to mempool err %v",hash,err)
+			hash, err := w.chainClient.SendRawTransaction(&msgTx, w.AllowHighFees)
+			if err != nil {
+				log.Error("ai tx %v resend to mempool err %v", hash, err)
 				return err
 			}
 
-			log.Infof("ai tx %v resend to mempool",hash)
+			log.Infof("ai tx %v resend to mempool", hash)
 			return nil
 		}
 
@@ -1349,45 +1348,75 @@ func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash,resen
 			}
 
 			//aitxvote
-			pk,err:=w.PubKeyForAddress(addrs[0])
-			if err!=nil{
+			pk, err := w.PubKeyForAddress(addrs[0])
+			if err != nil {
 				log.Errorf("Failed to extract publick for "+
 					"ai ticket %v: %v", ticketHash, err)
 				continue
 			}
 
 			aiTxVote := wire.NewMsgAiTxVote()
-			aiTxVote.Vote=true
-			aiTxVote.TicketHash=*ticketHash
-			aiTxVote.AiTxHash =msgAiTx.TxHash()
-			aiTxVote.PubKey=pk.SerializeCompressed()
+			aiTxVote.Vote = true
+			aiTxVote.TicketHash = *ticketHash
+			aiTxVote.AiTxHash = msgAiTx.TxHash()
+			aiTxVote.PubKey = pk.SerializeCompressed()
 
-			signMsg:=aiTxVote.AiTxHash.String()+aiTxVote.TicketHash.String()
-
+			signMsg := aiTxVote.AiTxHash.String() + aiTxVote.TicketHash.String()
 
 			//sign msg
-			sig,err:=w.SignMessage(signMsg,addrs[0])
+			sig, err := w.SignMessage(signMsg, addrs[0])
 
-			aiTxVote.Sig=sig
+			aiTxVote.Sig = sig
 
 			w.chainClient.SendAiTxVote(aiTxVote)
 		}
 		return nil
 	})
 
-
-
-	if resend{
+	if resend {
 		//update confirm map
 		go func() {
 			w.AiTxConfirmsLock.Lock()
 			defer w.AiTxConfirmsLock.Unlock()
-			copy:=*msgAiTx
-			w.AiTxConfirms[msgAiTx.TxHash()]=&copy
+			copyTx := *msgAiTx
+
+			//skip self send to self
+			for _, input := range copyTx.TxIn {
+				addr, err := txscript.AddressFromScriptSig(input.SignatureScript, w.ChainParams())
+				if err == nil {
+					_, err := w.AccountOfAddress(addr)
+					if err == nil {
+						return
+					}
+				}
+			}
+
+			//collect out to
+			for _, out := range copyTx.TxOut {
+				_, addrs, _, err := txscript.ExtractPkScriptAddrs(out.Version, out.PkScript, w.ChainParams())
+				if err == nil && len(addrs) > 0 {
+					_, err := w.AccountOfAddress(addrs[0])
+					if err == nil {
+						w.AiTxConfirms[msgAiTx.TxHash()] = &copyTx
+
+						go func() {
+							err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
+								return w.processSerializedTransaction(dbtx, aiTxBytes, nil, nil)
+							})
+							if err == nil {
+								err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
+									return w.watchFutureAddresses(tx)
+								})
+							}
+						}()
+						return
+					}
+				}
+			}
+
 		}()
 
 	}
-
 
 	if err != nil {
 		log.Errorf("db View failed handle ai tx: %v", err)
@@ -1465,7 +1494,7 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 				continue
 			}
 			isAiSSGEN, _ := stake.IsAiSSGen(vote)
-			if isSSGEN, _ := stake.IsSSGen(vote); !isSSGEN && !isAiSSGEN{
+			if isSSGEN, _ := stake.IsSSGen(vote); !isSSGEN && !isAiSSGEN {
 				log.Errorf("not a correct SSGEN format")
 				continue
 			}
@@ -1515,7 +1544,6 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 		}(i, vote)
 	}
 
-
 	if winning {
 		go func() {
 			txMsgR, err := chainClient.FetchPendingTxLock(10)
@@ -1530,9 +1558,9 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 				if err != nil {
 					return
 				}
-				hash,err:=chainClient.SendRawTransaction(&msgtx, true)
-				if err!=nil{
-					log.Error("resend lock pool pending rawtransaction %v err %v",hash,err)
+				hash, err := chainClient.SendRawTransaction(&msgtx, true)
+				if err != nil {
+					log.Error("resend lock pool pending rawtransaction %v err %v", hash, err)
 				}
 			}
 
@@ -1606,7 +1634,7 @@ func (w *Wallet) handleMissedTickets(blockHash *chainhash.Hash, blockHeight int3
 				continue
 			}
 			_, errAi := stake.IsAiSSRtx(revocation)
-			if _, err := stake.IsSSRtx(revocation); err != nil && errAi != nil{
+			if _, err := stake.IsSSRtx(revocation); err != nil && errAi != nil {
 				log.Errorf("Failed to sign revocation for ticket hash %v: %v",
 					ticketHash, err)
 			}

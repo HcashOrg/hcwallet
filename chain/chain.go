@@ -76,8 +76,8 @@ func NewRPCClient(chainParams *chaincfg.Params, connect, user, pass string, cert
 		OnBlockDisconnected:     client.onBlockDisconnected,
 		OnRelevantTxAccepted:    client.onRelevantTxAccepted,
 		OnReorganization:        client.onReorganization,
-		OnNewAiTx:          client.onNewAiTx,
-		OnAiTxVote:         client.onAiTxVote,
+		OnNewAiTx:               client.onNewAiTx,
+		OnAiTxVote:              client.onAiTxVote,
 		OnWinningTickets:        client.onWinningTickets,
 		OnSpentAndMissedTickets: client.onSpentAndMissedTickets,
 		OnStakeDifficulty:       client.onStakeDifficulty,
@@ -214,17 +214,17 @@ type (
 	}
 
 	NewAiTx struct {
-		Tickets   []*chainhash.Hash
-		AiTx []byte
-		Resend    bool
+		Tickets []*chainhash.Hash
+		AiTx    []byte
+		Resend  bool
 	}
 
 	AiTxVote struct {
 		AiTxVoteHash *chainhash.Hash
 		AiTxHash     *chainhash.Hash
-		TickeHash         *chainhash.Hash
-		Vote              bool
-		Sig               []byte
+		TickeHash    *chainhash.Hash
+		Vote         bool
+		Sig          []byte
 	}
 
 	// MissedTickets is a notifcation for tickets that have been missed.
@@ -296,9 +296,9 @@ func (c *RPCClient) onRelevantTxAccepted(transaction []byte) {
 func (c *RPCClient) onNewAiTx(aiTxHash []byte, tickets []*chainhash.Hash, resend bool) {
 	select {
 	case c.enqueueNotification <- NewAiTx{
-		AiTx: aiTxHash,
-		Tickets:   tickets,
-		Resend:    resend,
+		AiTx:    aiTxHash,
+		Tickets: tickets,
+		Resend:  resend,
 	}:
 	case <-c.quit:
 	}
@@ -309,9 +309,9 @@ func (c *RPCClient) onAiTxVote(aiTxVoteHash *chainhash.Hash, aiTxHash *chainhash
 	case c.enqueueNotification <- AiTxVote{
 		AiTxVoteHash: aiTxVoteHash,
 		AiTxHash:     aiTxHash,
-		TickeHash:         tickeHash,
-		Vote:              vote,
-		Sig:               sig,
+		TickeHash:    tickeHash,
+		Vote:         vote,
+		Sig:          sig,
 	}:
 	case <-c.quit:
 	}
