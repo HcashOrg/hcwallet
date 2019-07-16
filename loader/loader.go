@@ -306,6 +306,14 @@ func (l *Loader) StartTicketPurchase(passphrase []byte, ticketbuyerCfg *ticketbu
 	return nil
 }
 
+// StartTicketPurchase launches the ticketbuyer to start purchasing tickets.
+func (l *Loader) StartAiTicketPurchase(passphrase []byte, ticketbuyerCfg *ticketbuyer.Config) error {
+	defer l.mu.Unlock()
+	l.mu.Lock()
+	l.wallet.SetAiTicketPurchasingEnabled(true)
+	return nil
+}
+
 // stopTicketPurchase stops the ticket purchaser, waiting until it has finished.
 // It must be called with the mutex lock held.
 func (l *Loader) stopTicketPurchase() error {
