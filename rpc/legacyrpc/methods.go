@@ -44,7 +44,7 @@ const (
 	jsonrpcSemverMajor  = 4
 	jsonrpcSemverMinor  = 1
 	jsonrpcSemverPatch  = 0
-	aiTxTag        = "hcashAiSend"
+	aiTxTag             = "hcashAiSend"
 )
 
 var (
@@ -191,10 +191,12 @@ func init() {
 		"renameaccount":           {handler: renameAccount},
 		"walletislocked":          {handler: walletIsLocked},
 
-		"enableaivoting":        {handler: enableAivoting},
-		"enableaiticketbuyer":   {handler: enableAiticketbuyer},
-		"noenableaivoting":      {handler: notEnableAivoting},
-		"noenableaiticketbuyer": {handler: notEnableAiticketbuyer},
+		//"enableaivoting":        {handler: enableAivoting},
+		//"enableaiticketbuyer":   {handler: enableAiticketbuyer},
+		//"noenableaivoting":      {handler: notEnableAivoting},
+		//"noenableaiticketbuyer": {handler: notEnableAiticketbuyer},
+		"registerainode":   {handler: RegisterAiNode},
+		"unregisterainode": {handler: UnregisterAiNode},
 	}
 
 	for k, v := range getOminiMethod() {
@@ -681,7 +683,7 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	w.AiTxConfirmsLock.Lock()
 	defer w.AiTxConfirmsLock.Unlock()
 
-	AiTxConfirm:
+AiTxConfirm:
 	for _, msgTx := range w.AiTxConfirms {
 		//skip tx that send from self
 		for _, input := range msgTx.TxIn {
@@ -2482,6 +2484,53 @@ func enableAivoting(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return nil, nil
 
 }
+func RegisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	w.SetAiTicketPurchasingEnabled(true)
+	w.SetAiVotingEnabled(true)
+	// update config file
+	input, err := ioutil.ReadFile(CurrentConfigFile)
+	if err != nil {
+		log.Errorf("read file:%s failed", CurrentConfigFile, err)
+		return nil, err
+	}
+	lines := strings.Split(string(input), "\n")
+	for i, line := range lines {
+		if strings.Contains(line, "enableaiticketbuyer=false") {
+			lines[i] = "enableaiticketbuyer=true"
+		}
+	}
+	output := strings.Join(lines, "\n")
+	err = ioutil.WriteFile(CurrentConfigFile, []byte(output), 0644)
+	if err != nil {
+		log.Errorf("write to %v failed:%v", CurrentConfigFile, err)
+		return nil, err
+	}
+	return nil, nil
+}
+func UnregisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	w.SetAiTicketPurchasingEnabled(false)
+	w.SetAiVotingEnabled(true)
+	// update config file
+	input, err := ioutil.ReadFile(CurrentConfigFile)
+	if err != nil {
+		log.Errorf("read file:%s failed", CurrentConfigFile, err)
+		return nil, err
+	}
+	lines := strings.Split(string(input), "\n")
+	for i, line := range lines {
+		if strings.Contains(line, "enableaiticketbuyer=true") {
+			lines[i] = "enableaiticketbuyer=false"
+		}
+	}
+	output := strings.Join(lines, "\n")
+	err = ioutil.WriteFile(CurrentConfigFile, []byte(output), 0644)
+	if err != nil {
+		log.Errorf("write to %v failed:%v", CurrentConfigFile, err)
+		return nil, err
+	}
+	return nil, nil
+}
+
 func notEnableAivoting(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	w.SetAiVotingEnabled(false)
 	currentConfigFile := filepath.Join(CurrentAppDataDir, CurrentConfigFilename)
