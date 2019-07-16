@@ -1575,6 +1575,18 @@ out:
 				continue
 			}
 			isRandom := len(txr.fromAddress) == 0
+
+			isAiTx :=false
+			for _,out:=range txr.outputs{
+				if _,has:=txscript.HaveAiTxTag(out.PkScript);has{
+					isAiTx=true
+					break;
+				}
+			}
+			if isAiTx{
+				isRandom = false
+			}
+
 			tx, err := w.txToOutputs(txr.outputs, txr.account,
 				txr.minconf, isRandom, txr.changeAddr, txr.fromAddress)
 			heldUnlock.release()
