@@ -426,8 +426,8 @@ func (w *Wallet) RevokeAITickets(chainClient *hcrpcclient.Client) error {
 	for i := range ticketHashes {
 		ticketHashPtrs[i] = &ticketHashes[i]
 	}
-	expiredFuture := chainClient.ExistsExpiredTicketsAsync(ticketHashPtrs)
-	missedFuture := chainClient.ExistsMissedTicketsAsync(ticketHashPtrs)
+	expiredFuture := chainClient.ExistsExpiredAiTicketsAsync(ticketHashPtrs)
+	missedFuture := chainClient.ExistsMissedAiTicketsAsync(ticketHashPtrs)
 	expiredBitsHex, err := expiredFuture.Receive()
 	if err != nil {
 		return err

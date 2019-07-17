@@ -2543,10 +2543,18 @@ func createUnsignedRevocation(ticketHash *chainhash.Hash, ticketPurchase *wire.M
 
 	// All remaining outputs pay to the output destinations and amounts tagged
 	// by the ticket purchase.
+
+	isAiSSGen,_ := stake.IsAiSStx(ticketPurchase)
 	for i, hash160 := range ticketHash160s {
 		scriptFn := txscript.PayToSSRtxPKHDirect
+		if isAiSSGen{
+			scriptFn = txscript.PayToAiSSRtxPKHDirect
+		}
 		if ticketPayKinds[i] { // P2SH
 			scriptFn = txscript.PayToSSRtxSHDirect
+			if isAiSSGen{
+				scriptFn = txscript.PayToAiSSRtxSHDirect
+			}
 		}
 		// Error is checking for a nil hash160, just ignore it.
 		script, _ := scriptFn(hash160, int(sigTypes[i]))

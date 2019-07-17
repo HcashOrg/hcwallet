@@ -2379,7 +2379,7 @@ func revokeTickets(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.
 // revokeTickets initiates the wallet to issue revocations for any missing tickets that
 // not yet been revoked.
 func revokeAITickets(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
-	err := w.RevokeTickets(chainClient)
+	err := w.RevokeAITickets(chainClient)
 	return nil, err
 }
 
