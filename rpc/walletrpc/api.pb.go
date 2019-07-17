@@ -161,6 +161,7 @@ const (
 	TransactionDetails_TICKET_PURCHASE TransactionDetails_TransactionType = 1
 	TransactionDetails_VOTE            TransactionDetails_TransactionType = 2
 	TransactionDetails_REVOCATION      TransactionDetails_TransactionType = 3
+	TransactionDetails_AITX            TransactionDetails_TransactionType = 5
 )
 
 var TransactionDetails_TransactionType_name = map[int32]string{
@@ -169,6 +170,7 @@ var TransactionDetails_TransactionType_name = map[int32]string{
 	1: "TICKET_PURCHASE",
 	2: "VOTE",
 	3: "REVOCATION",
+	5: "AITX",
 }
 var TransactionDetails_TransactionType_value = map[string]int32{
 	"REGULAR":         0,
@@ -176,6 +178,7 @@ var TransactionDetails_TransactionType_value = map[string]int32{
 	"TICKET_PURCHASE": 1,
 	"VOTE":            2,
 	"REVOCATION":      3,
+	"AITX":            5,
 }
 
 func (x TransactionDetails_TransactionType) String() string {
@@ -465,18 +468,18 @@ func (DecodedTransaction_Output_ScriptClass) EnumDescriptor() ([]byte, []int) {
 type ValidateAddressResponse_ScriptType int32
 
 const (
-	ValidateAddressResponse_NonStandardTy     ValidateAddressResponse_ScriptType = 0
-	ValidateAddressResponse_PubKeyTy          ValidateAddressResponse_ScriptType = 1
-	ValidateAddressResponse_PubKeyHashTy      ValidateAddressResponse_ScriptType = 2
-	ValidateAddressResponse_ScriptHashTy      ValidateAddressResponse_ScriptType = 3
-	ValidateAddressResponse_MultiSigTy        ValidateAddressResponse_ScriptType = 4
-	ValidateAddressResponse_NullDataTy        ValidateAddressResponse_ScriptType = 5
-	ValidateAddressResponse_StakeSubmissionTy ValidateAddressResponse_ScriptType = 6
-	ValidateAddressResponse_StakeGenTy        ValidateAddressResponse_ScriptType = 7
-	ValidateAddressResponse_StakeRevocationTy ValidateAddressResponse_ScriptType = 8
-	ValidateAddressResponse_StakeSubChangeTy  ValidateAddressResponse_ScriptType = 9
-	ValidateAddressResponse_PubkeyAltTy       ValidateAddressResponse_ScriptType = 10
-	ValidateAddressResponse_PubkeyHashAltTy   ValidateAddressResponse_ScriptType = 11
+	ValidateAddressResponse_NonStandardTy       ValidateAddressResponse_ScriptType = 0
+	ValidateAddressResponse_PubKeyTy            ValidateAddressResponse_ScriptType = 1
+	ValidateAddressResponse_PubKeyHashTy        ValidateAddressResponse_ScriptType = 2
+	ValidateAddressResponse_ScriptHashTy        ValidateAddressResponse_ScriptType = 3
+	ValidateAddressResponse_MultiSigTy          ValidateAddressResponse_ScriptType = 4
+	ValidateAddressResponse_NullDataTy          ValidateAddressResponse_ScriptType = 5
+	ValidateAddressResponse_StakeSubmissionTy   ValidateAddressResponse_ScriptType = 6
+	ValidateAddressResponse_StakeGenTy          ValidateAddressResponse_ScriptType = 7
+	ValidateAddressResponse_StakeRevocationTy   ValidateAddressResponse_ScriptType = 8
+	ValidateAddressResponse_StakeSubChangeTy    ValidateAddressResponse_ScriptType = 9
+	ValidateAddressResponse_PubkeyAltTy         ValidateAddressResponse_ScriptType = 10
+	ValidateAddressResponse_PubkeyHashAltTy     ValidateAddressResponse_ScriptType = 11
 	ValidateAddressResponse_AiStakeSubmissionTy ValidateAddressResponse_ScriptType = 12
 	ValidateAddressResponse_AiStakeGenTy        ValidateAddressResponse_ScriptType = 13
 	ValidateAddressResponse_AiStakeRevocationTy ValidateAddressResponse_ScriptType = 14
@@ -496,24 +499,24 @@ var ValidateAddressResponse_ScriptType_name = map[int32]string{
 	9:  "StakeSubChangeTy",
 	10: "PubkeyAltTy",
 	11: "PubkeyHashAltTy",
-	12:  "AiStakeSubmissionTy",
-	13:  "AiStakeGenTy",
-	14:  "AiStakeRevocationTy",
-	15:  "AiStakeSubChangeTy",
+	12: "AiStakeSubmissionTy",
+	13: "AiStakeGenTy",
+	14: "AiStakeRevocationTy",
+	15: "AiStakeSubChangeTy",
 }
 var ValidateAddressResponse_ScriptType_value = map[string]int32{
-	"NonStandardTy":     0,
-	"PubKeyTy":          1,
-	"PubKeyHashTy":      2,
-	"ScriptHashTy":      3,
-	"MultiSigTy":        4,
-	"NullDataTy":        5,
-	"StakeSubmissionTy": 6,
-	"StakeGenTy":        7,
-	"StakeRevocationTy": 8,
-	"StakeSubChangeTy":  9,
-	"PubkeyAltTy":       10,
-	"PubkeyHashAltTy":   11,
+	"NonStandardTy":       0,
+	"PubKeyTy":            1,
+	"PubKeyHashTy":        2,
+	"ScriptHashTy":        3,
+	"MultiSigTy":          4,
+	"NullDataTy":          5,
+	"StakeSubmissionTy":   6,
+	"StakeGenTy":          7,
+	"StakeRevocationTy":   8,
+	"StakeSubChangeTy":    9,
+	"PubkeyAltTy":         10,
+	"PubkeyHashAltTy":     11,
 	"AiStakeSubmissionTy": 12,
 	"AiStakeGenTy":        13,
 	"AiStakeRevocationTy": 14,
@@ -2768,6 +2771,7 @@ func (m *SignMessagesResponse_SignReply) GetError() string {
 	}
 	return ""
 }
+
 type TransactionNotificationsRequest struct {
 }
 
@@ -4595,7 +4599,6 @@ func (m *BestBlockResponse) GetHash() []byte {
 	}
 	return nil
 }
-
 
 type CommittedTicketsRequest struct {
 	Tickets              [][]byte `protobuf:"bytes,1,rep,name=tickets,proto3" json:"tickets,omitempty"`

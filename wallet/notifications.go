@@ -302,10 +302,8 @@ func (s *NotificationServer) notifyUnminedTransaction(dbtx walletdb.ReadTx, deta
 		return
 	}
 
-	_,isAiTx:=txscript.IsAiTx(&details.MsgTx)
 
 	n := &TransactionNotifications{
-		IsAiConfirmed:isAiTx,
 		UnminedTransactions:      unminedTxs,
 		UnminedTransactionHashes: unminedHashes,
 		NewBalances:              flattenBalanceMap(bals),
@@ -424,7 +422,6 @@ func (s *NotificationServer) sendAttachedBlockNotification() {
 // TODO: Because this includes stuff about blocks and can be fired without any
 // changes to transactions, it needs a better name.
 type TransactionNotifications struct {
-	IsAiConfirmed            bool
 	AttachedBlocks           []Block
 	DetachedBlocks           []*chainhash.Hash
 	UnminedTransactions      []TransactionSummary
@@ -504,6 +501,8 @@ const (
 	// TransactionTypeRevocation transaction type for all transactions that consume a
 	// ticket, but offer no stake base reward.
 	TransactionTypeRevocation
+
+	TransactionTypeAiTx
 )
 
 // TxTransactionType returns the correct TransactionType given a wire transaction
@@ -522,7 +521,9 @@ func TxTransactionType(tx *wire.MsgTx) TransactionType {
 		return TransactionTypeRevocation
 	}else if ok, _ = stake.IsAiSSRtx(tx); ok {
 		return TransactionTypeRevocation
-	} else {
+	} else if _,ok=txscript.IsAiTx(tx);ok{
+		return TransactionTypeAiTx
+	}else{
 		return TransactionTypeRegular
 	}
 }
