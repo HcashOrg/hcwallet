@@ -3356,21 +3356,34 @@ func (w *Wallet) ListUnspent(minconf, maxconf int32, addresses map[string]struct
 						continue
 					}
 				}
-			case stake.TxTypeSSGen, stake.TxTypeAiSSGen:
+			case stake.TxTypeSSGen:
 				// All non-OP_RETURN outputs for SSGen tx are only spendable
 				// after coinbase maturity many blocks.
 				if !confirmed(int32(w.chainParams.CoinbaseMaturity),
 					details.Height(), tipHeight) {
 					continue
 				}
-			case stake.TxTypeSSRtx, stake.TxTypeAiSSRtx:
+			case stake.TxTypeAiSSGen:
+				// All non-OP_RETURN outputs for SSGen tx are only spendable
+				// after coinbase maturity many blocks.
+				if !confirmed(int32(w.chainParams.AiTicketMaturity),
+					details.Height(), tipHeight) {
+					continue
+				}
+			case stake.TxTypeSSRtx:
 				// All outputs for SSRtx tx are only spendable
 				// after coinbase maturity many blocks.
 				if !confirmed(int32(w.chainParams.CoinbaseMaturity),
 					details.Height(), tipHeight) {
 					continue
 				}
-
+			case stake.TxTypeAiSSRtx:
+				// All outputs for SSRtx tx are only spendable
+				// after coinbase maturity many blocks.
+				if !confirmed(int32(w.chainParams.AiTicketMaturity),
+					details.Height(), tipHeight) {
+					continue
+				}
 			}
 
 			// Exclude locked outputs from the result set.

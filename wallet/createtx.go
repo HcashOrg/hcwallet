@@ -2202,13 +2202,23 @@ func (w *Wallet) findEligibleOutputs(dbtx walletdb.ReadTx, account uint32, minco
 		switch {
 		case class == txscript.StakeSubmissionTy, class == txscript.AiStakeSubmissionTy:
 			continue
-		case class == txscript.StakeGenTy, class == txscript.AiStakeGenTy:
+		case class == txscript.StakeGenTy:
 			target := int32(w.chainParams.CoinbaseMaturity)
 			if !confirmed(target, output.Height, currentHeight) {
 				continue
 			}
-		case class == txscript.StakeRevocationTy, class == txscript.AiStakeRevocationTy:
+		case class == txscript.AiStakeGenTy:
+			target := int32(w.chainParams.AiTicketMaturity)
+			if !confirmed(target, output.Height, currentHeight) {
+				continue
+			}
+		case class == txscript.StakeRevocationTy:
 			target := int32(w.chainParams.CoinbaseMaturity)
+			if !confirmed(target, output.Height, currentHeight) {
+				continue
+			}
+		case class == txscript.AiStakeRevocationTy:
+			target := int32(w.chainParams.AiTicketMaturity)
 			if !confirmed(target, output.Height, currentHeight) {
 				continue
 			}
@@ -2544,15 +2554,15 @@ func createUnsignedRevocation(ticketHash *chainhash.Hash, ticketPurchase *wire.M
 	// All remaining outputs pay to the output destinations and amounts tagged
 	// by the ticket purchase.
 
-	isAiSSGen,_ := stake.IsAiSStx(ticketPurchase)
+	isAiSStx,_ := stake.IsAiSStx(ticketPurchase)
 	for i, hash160 := range ticketHash160s {
 		scriptFn := txscript.PayToSSRtxPKHDirect
-		if isAiSSGen{
+		if isAiSStx{
 			scriptFn = txscript.PayToAiSSRtxPKHDirect
 		}
 		if ticketPayKinds[i] { // P2SH
 			scriptFn = txscript.PayToSSRtxSHDirect
-			if isAiSSGen{
+			if isAiSStx{
 				scriptFn = txscript.PayToAiSSRtxSHDirect
 			}
 		}

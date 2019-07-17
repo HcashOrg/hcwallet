@@ -2970,13 +2970,19 @@ func (s *Store) unspentOutputsForAmount(ns, addrmgrNs walletdb.ReadBucket, neede
 				return nil
 			}
 		}
-		if opcode == txscript.OP_SSGEN || opcode == txscript.OP_SSRTX ||
-			opcode == txscript.OP_AISSGEN || opcode == txscript.OP_AISSRTX {
+		if opcode == txscript.OP_SSGEN || opcode == txscript.OP_SSRTX {
 			if !confirmed(int32(s.chainParams.CoinbaseMaturity), txHeight,
 				syncHeight) {
 				return nil
 			}
 		}
+		if opcode == txscript.OP_AISSGEN || opcode == txscript.OP_AISSRTX {
+			if !confirmed(int32(s.chainParams.AiTicketMaturity), txHeight,
+				syncHeight) {
+				return nil
+			}
+		}
+
 		if opcode == txscript.OP_SSTXCHANGE || opcode == txscript.OP_AISSTXCHANGE {
 			if !confirmed(int32(s.chainParams.SStxChangeMaturity), txHeight,
 				syncHeight) {
@@ -3251,13 +3257,19 @@ func (s *Store) MakeInputSource(ns, addrmgrNs walletdb.ReadBucket, account uint3
 					continue
 				}
 			}
-			if opcode == txscript.OP_SSGEN || opcode == txscript.OP_SSRTX ||
-				opcode == txscript.OP_AISSGEN || opcode == txscript.OP_AISSRTX{
+			if opcode == txscript.OP_SSGEN || opcode == txscript.OP_SSRTX {
 				if !confirmed(int32(s.chainParams.CoinbaseMaturity), txHeight,
 					syncHeight) {
 					continue
 				}
 			}
+			if opcode == txscript.OP_AISSGEN || opcode == txscript.OP_AISSRTX{
+				if !confirmed(int32(s.chainParams.AiTicketMaturity), txHeight,
+					syncHeight) {
+					continue
+				}
+			}
+
 			if opcode == txscript.OP_SSTXCHANGE ||
 				opcode == txscript.OP_AISSTXCHANGE{
 				if !confirmed(int32(s.chainParams.SStxChangeMaturity), txHeight,
@@ -3546,13 +3558,21 @@ func (s *Store) balanceFullScan(ns, addrmgrNs walletdb.ReadBucket, minConf int32
 		case txscript.OP_SSGEN, txscript.OP_AISSGEN:
 			fallthrough
 		case txscript.OP_SSRTX, txscript.OP_AISSRTX:
-			if confirmed(int32(s.chainParams.CoinbaseMaturity),
-				height, syncHeight) {
-				ab.Spendable += utxoAmt
-			} else {
-				ab.ImmatureStakeGeneration += utxoAmt
+			if opcode == txscript.OP_SSRTX || opcode == txscript.OP_SSGEN{
+				if confirmed(int32(s.chainParams.CoinbaseMaturity),
+					height, syncHeight) {
+					ab.Spendable += utxoAmt
+				} else {
+					ab.ImmatureStakeGeneration += utxoAmt
+				}
+			}else if opcode == txscript.OP_AISSRTX || opcode == txscript.OP_AISSGEN{
+				if confirmed(int32(s.chainParams.AiTicketMaturity),
+					height, syncHeight) {
+					ab.Spendable += utxoAmt
+				} else {
+					ab.ImmatureStakeGeneration += utxoAmt
+				}
 			}
-
 		case txscript.OP_SSTXCHANGE, txscript.OP_AISSTXCHANGE:
 			if confirmed(int32(s.chainParams.SStxChangeMaturity),
 				height, syncHeight) {
