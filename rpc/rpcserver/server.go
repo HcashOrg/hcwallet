@@ -1517,6 +1517,8 @@ func marshalTxType(walletTxType wallet.TransactionType) pb.TransactionDetails_Tr
 		return pb.TransactionDetails_VOTE
 	case wallet.TransactionTypeRevocation:
 		return pb.TransactionDetails_REVOCATION
+	case wallet.TransactionTypeAiTx:
+		return pb.TransactionDetails_AITX
 	default:
 		return pb.TransactionDetails_REGULAR
 	}
