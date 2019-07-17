@@ -2493,13 +2493,23 @@ func RegisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		log.Errorf("read file:%s failed", CurrentConfigFile, err)
 		return nil, err
 	}
+	exist := false
 	lines := strings.Split(string(input), "\n")
 	for i, line := range lines {
-		if strings.Contains(line, "enableaiticketbuyer=false") {
+		if strings.Contains(line, "enableaiticketbuyer") {
+			exist = true
 			lines[i] = "enableaiticketbuyer=true"
+			break
 		}
 	}
-	output := strings.Join(lines, "\n")
+	// if not exist,add this to config file
+	res := make([]string, 0, len(lines)+1)
+	if !exist {
+		res = append(res, lines[0:30]...)
+		res[30] = "enableaiticketbuyer=true"
+		res = append(res, lines[30:]...)
+	}
+	output := strings.Join(res, "\n")
 	err = ioutil.WriteFile(CurrentConfigFile, []byte(output), 0644)
 	if err != nil {
 		log.Errorf("write to %v failed:%v", CurrentConfigFile, err)
@@ -2516,13 +2526,23 @@ func UnregisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 		log.Errorf("read file:%s failed", CurrentConfigFile, err)
 		return nil, err
 	}
+	exist := false
 	lines := strings.Split(string(input), "\n")
 	for i, line := range lines {
-		if strings.Contains(line, "enableaiticketbuyer=true") {
+		if strings.Contains(line, "enableaiticketbuyer") {
+			exist = true
 			lines[i] = "enableaiticketbuyer=false"
+			break
 		}
 	}
-	output := strings.Join(lines, "\n")
+	res := make([]string, 0, len(lines)+1)
+	if !exist {
+		res = append(res, lines[0:30]...)
+		res[30] = "enableaiticketbuyer=false"
+		res = append(res, lines[30:]...)
+	}
+
+	output := strings.Join(res, "\n")
 	err = ioutil.WriteFile(CurrentConfigFile, []byte(output), 0644)
 	if err != nil {
 		log.Errorf("write to %v failed:%v", CurrentConfigFile, err)
