@@ -170,7 +170,7 @@ type Wallet struct {
 
 // newWallet creates a new Wallet structure with the provided address manager
 // and transaction store.
-func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Address,
+func newWallet(votingEnabled bool, aiVotingEnabled bool, addressReuse bool, ticketAddress hcutil.Address,
 	poolAddress hcutil.Address, pf float64, relayFee, ticketFee hcutil.Amount,
 	gapLimit int, stakePoolColdAddrs map[string]struct{}, AllowHighFees bool,
 	mgr *udb.Manager, txs *udb.Store, smgr *udb.StakeStore, db *walletdb.DB,
@@ -182,6 +182,7 @@ func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Addre
 		TxStore:                  txs,
 		StakeMgr:                 smgr,
 		votingEnabled:            votingEnabled,
+		aiVotingEnabled:          aiVotingEnabled,
 		lockedOutpoints:          map[wire.OutPoint]struct{}{},
 		relayFee:                 relayFee,
 		ticketFeeIncrement:       ticketFee,
@@ -540,7 +541,7 @@ func (w *Wallet) SetAiTicketPurchasingEnabled(flag bool) {
 	w.stakeSettingsLock.Unlock()
 }
 func (w *Wallet) GetAiTicketPurchasingEnabled() bool {
-	return w.aiVotingEnabled
+	return w.aiTicketPurchasingEnabled
 }
 
 func (w *Wallet) SetAiVotingEnabled(flag bool) {
@@ -1576,14 +1577,14 @@ out:
 			}
 			isRandom := len(txr.fromAddress) == 0
 
-			isAiTx :=false
-			for _,out:=range txr.outputs{
-				if _,has:=txscript.HaveAiTxTag(out.PkScript);has{
-					isAiTx=true
-					break;
+			isAiTx := false
+			for _, out := range txr.outputs {
+				if _, has := txscript.HaveAiTxTag(out.PkScript); has {
+					isAiTx = true
+					break
 				}
 			}
-			if isAiTx{
+			if isAiTx {
 				isRandom = false
 			}
 
@@ -2036,7 +2037,6 @@ func (w *Wallet) CalculateAccountBalance(account uint32, confirms int32) (udb.Ba
 		return err
 	})
 
-
 	//get aitxconfirmed
 	accountAiConfirms := make(map[uint32]hcutil.Amount)
 	w.AiTxConfirmsLock.Lock()
@@ -2067,7 +2067,7 @@ AiTxConfirm:
 		}
 	}
 
-	balance.AiTxConfirmed=accountAiConfirms[account]
+	balance.AiTxConfirmed = accountAiConfirms[account]
 
 	return balance, err
 }
@@ -4056,7 +4056,7 @@ func (w *Wallet) resendUnminedTxs(chainClient *hcrpcclient.Client) {
 			//send to ai channel
 			resp, err := chainClient.SendAiRawTransaction(aiTx, w.AllowHighFees)
 			if err != nil {
-				log.Errorf("resend unminedTxs %v err: %v",aiTx.TxHash(),err)
+				log.Errorf("resend unminedTxs %v err: %v", aiTx.TxHash(), err)
 				continue
 			}
 			log.Tracef("Resent unmined transaction %v", resp)
@@ -4716,7 +4716,7 @@ func decodeStakePoolColdExtKey(encStr string, params *chaincfg.Params) (map[stri
 }
 
 // Open loads an already-created wallet from the passed database and namespaces.
-func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, addressReuse bool,
+func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, aiVotingEnable bool, addressReuse bool,
 	ticketAddress hcutil.Address, poolAddress hcutil.Address, poolFees float64, ticketFee float64,
 	gapLimit int, stakePoolColdExtKey string, allowHighFees bool,
 	relayFee float64, enableOmni bool, params *chaincfg.Params) (*Wallet, error) {
@@ -4764,6 +4764,7 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 
 	w, err := newWallet(
 		votingEnabled,
+		aiVotingEnable,
 		addressReuse,
 		ticketAddress,
 		poolAddress,

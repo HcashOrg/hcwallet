@@ -54,12 +54,14 @@ type Loader struct {
 type StakeOptions struct {
 	TicketPurchasingEnabled bool
 	VotingEnabled           bool
-	TicketFee               float64
-	AddressReuse            bool
-	TicketAddress           hcutil.Address
-	PoolAddress             hcutil.Address
-	PoolFees                float64
-	StakePoolColdExtKey     string
+	AiVotingEnabled         bool
+
+	TicketFee           float64
+	AddressReuse        bool
+	TicketAddress       hcutil.Address
+	PoolAddress         hcutil.Address
+	PoolFees            float64
+	StakePoolColdExtKey string
 }
 
 // NewLoader constructs a Loader.
@@ -167,7 +169,7 @@ func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase, seed []byte) (w 
 
 	// Open the newly-created wallet.
 	so := l.stakeOptions
-	w, err = wallet.Open(db, pubPassphrase, privPassphrase, so.VotingEnabled, so.AddressReuse,
+	w, err = wallet.Open(db, pubPassphrase, privPassphrase, so.VotingEnabled, so.AiVotingEnabled, so.AddressReuse,
 		so.TicketAddress, so.PoolAddress, so.PoolFees, so.TicketFee,
 		l.addrIdxScanLen, so.StakePoolColdExtKey, l.allowHighFees,
 		l.relayFee, l.enableOmni, l.chainParams)
@@ -210,7 +212,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, privPassphrase []byte)
 	}()
 
 	so := l.stakeOptions
-	w, err = wallet.Open(db, pubPassphrase, privPassphrase, so.VotingEnabled, so.AddressReuse,
+	w, err = wallet.Open(db, pubPassphrase, privPassphrase, so.VotingEnabled, so.AiVotingEnabled, so.AddressReuse,
 		so.TicketAddress, so.PoolAddress, so.PoolFees, so.TicketFee,
 		l.addrIdxScanLen, so.StakePoolColdExtKey, l.allowHighFees,
 		l.relayFee, l.enableOmni, l.chainParams)
