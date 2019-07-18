@@ -20,12 +20,12 @@ import (
 	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/HcashOrg/hcwallet/internal/cfgutil"
 	"github.com/HcashOrg/hcwallet/netparams"
+	"github.com/HcashOrg/hcwallet/rpc/legacyrpc"
 	"github.com/HcashOrg/hcwallet/ticketbuyer"
 	"github.com/HcashOrg/hcwallet/wallet"
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 	"github.com/btcsuite/btclog"
 	flags "github.com/jessevdk/go-flags"
-	"github.com/HcashOrg/hcwallet/rpc/legacyrpc"
 )
 
 const (
@@ -488,9 +488,7 @@ func loadConfig() (*config, []string, error) {
 	}
 	wire.AI_UPDATE_HEIGHT = activeNet.AIUpdateHeight
 	// fro auto aiticket buy
-	legacyrpc.CurrentAppDataDir = cfg.AppDataDir.Value
-	legacyrpc.CurrentConfigFilename = cfg.ConfigFile.Value
-	legacyrpc.CurrentConfigFile = filepath.Join(cfg.AppDataDir.Value, cfg.ConfigFile.Value)
+	legacyrpc.CurrentConfigFile = cfg.ConfigFile.Value
 
 	if numNets > 1 {
 		str := "%s: The testnet and simnet params can't be used " +

@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -197,6 +196,7 @@ func init() {
 		//"noenableaiticketbuyer": {handler: notEnableAiticketbuyer},
 		"registerainode":   {handler: RegisterAiNode},
 		"unregisterainode": {handler: UnregisterAiNode},
+		"ifainoderegisted": {handler: IfAiNodeRegisted},
 	}
 
 	for k, v := range getOminiMethod() {
@@ -2455,12 +2455,10 @@ func ticketsForAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) 
 	return hcjson.TicketsForAddressResult{Tickets: ticketHashStrs}, nil
 }
 
-// "enableaivoting":           {handler: enableaivoting},
-//  "enableaiticketbuyer":      {handler: enableaiticketbuyer},
 func enableAivoting(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	w.SetAiVotingEnabled(true)
 
-	currentConfigFile := filepath.Join(CurrentAppDataDir, CurrentConfigFilename)
+	currentConfigFile := CurrentConfigFile
 	// write to file
 	input, err := ioutil.ReadFile(currentConfigFile)
 	if err != nil {
@@ -2502,11 +2500,21 @@ func RegisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 			break
 		}
 	}
+	if exist {
+		output := strings.Join(lines, "\n")
+		err = ioutil.WriteFile(CurrentConfigFile, []byte(output), 0644)
+		if err != nil {
+			log.Errorf("write to %v failed:%v", CurrentConfigFile, err)
+			return nil, err
+		}
+		return nil, nil
+	}
+
 	// if not exist,add this to config file
 	res := make([]string, 0, len(lines)+1)
 	if !exist {
 		res = append(res, lines[0:30]...)
-		res[30] = "enableaiticketbuyer=true"
+		res = append(res, "enableaiticketbuyer=true")
 		res = append(res, lines[30:]...)
 	}
 	output := strings.Join(res, "\n")
@@ -2535,10 +2543,21 @@ func UnregisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 			break
 		}
 	}
+	if exist {
+		output := strings.Join(lines, "\n")
+		err = ioutil.WriteFile(CurrentConfigFile, []byte(output), 0644)
+		if err != nil {
+			log.Errorf("write to %v failed:%v", CurrentConfigFile, err)
+			return nil, err
+		}
+		return nil, nil
+
+	}
+
 	res := make([]string, 0, len(lines)+1)
 	if !exist {
 		res = append(res, lines[0:30]...)
-		res[30] = "enableaiticketbuyer=false"
+		res = append(res, "enableaiticketbuyer=false")
 		res = append(res, lines[30:]...)
 	}
 
@@ -2550,10 +2569,13 @@ func UnregisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 	return nil, nil
 }
+func IfAiNodeRegisted(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	return w.GetAiTicketPurchasingEnabled(), nil
+}
 
 func notEnableAivoting(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	w.SetAiVotingEnabled(false)
-	currentConfigFile := filepath.Join(CurrentAppDataDir, CurrentConfigFilename)
+	currentConfigFile := CurrentConfigFile
 	// write to file
 	input, err := ioutil.ReadFile(currentConfigFile)
 	if err != nil {
@@ -2579,7 +2601,7 @@ func notEnableAivoting(icmd interface{}, w *wallet.Wallet) (interface{}, error) 
 }
 func enableAiticketbuyer(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	w.SetAiTicketPurchasingEnabled(true)
-	currentConfigFile := filepath.Join(CurrentAppDataDir, CurrentConfigFilename)
+	currentConfigFile := CurrentConfigFile
 
 	input, err := ioutil.ReadFile(currentConfigFile)
 	if err != nil {
@@ -2604,7 +2626,7 @@ func enableAiticketbuyer(icmd interface{}, w *wallet.Wallet) (interface{}, error
 }
 func notEnableAiticketbuyer(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	w.SetAiTicketPurchasingEnabled(false)
-	currentConfigFile := filepath.Join(CurrentAppDataDir, CurrentConfigFilename)
+	currentConfigFile := CurrentConfigFile
 
 	input, err := ioutil.ReadFile(currentConfigFile)
 	if err != nil {
