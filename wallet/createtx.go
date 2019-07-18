@@ -1117,7 +1117,7 @@ func makeAITicket(params *chaincfg.Params, inputPool *extendedOutPoint,
 
 		// Create a new script which pays to the provided address with an
 		// SStx change tagged output.
-		pkScript, err = txscript.PayToSStxChange(addrZeroed)
+		pkScript, err = txscript.PayToAISStxChange(addrZeroed)
 		if err != nil {
 			return nil, err
 		}
