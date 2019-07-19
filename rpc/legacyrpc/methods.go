@@ -2515,9 +2515,9 @@ func RegisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	// if not exist,add this to config file
 	res := make([]string, 0, len(lines)+1)
 	if !exist {
-		res = append(res, lines[0:30]...)
+		res = append(res, lines[0:1]...)
 		res = append(res, "enableaiticketbuyer=true")
-		res = append(res, lines[30:]...)
+		res = append(res, lines[1:]...)
 	}
 	output := strings.Join(res, "\n")
 	err = ioutil.WriteFile(CurrentConfigFile, []byte(output), 0644)
@@ -2558,9 +2558,9 @@ func UnregisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 	res := make([]string, 0, len(lines)+1)
 	if !exist {
-		res = append(res, lines[0:30]...)
+		res = append(res, lines[0:1]...)
 		res = append(res, "enableaiticketbuyer=false")
-		res = append(res, lines[30:]...)
+		res = append(res, lines[1:]...)
 	}
 
 	output := strings.Join(res, "\n")
