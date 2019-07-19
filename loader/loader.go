@@ -6,6 +6,7 @@ package loader
 
 import (
 	"fmt"
+	"github.com/HcashOrg/hcwallet/aiticketbuyer"
 	"os"
 	"path/filepath"
 	"sync"
@@ -40,7 +41,9 @@ type Loader struct {
 	mu          sync.Mutex
 
 	purchaseManager *ticketbuyer.PurchaseManager
+	aiPurchaseManager *aiticketbuyer.PurchaseManager
 	ntfnClient      wallet.MainTipChangedNotificationsClient
+	ntfnAiClient      wallet.MainTipChangedNotificationsClient
 	stakeOptions    *StakeOptions
 	addrIdxScanLen  int
 	allowHighFees   bool
@@ -309,9 +312,33 @@ func (l *Loader) StartTicketPurchase(passphrase []byte, ticketbuyerCfg *ticketbu
 }
 
 // StartTicketPurchase launches the ticketbuyer to start purchasing tickets.
-func (l *Loader) StartAiTicketPurchase(passphrase []byte, ticketbuyerCfg *ticketbuyer.Config) error {
+func (l *Loader) StartAiTicketPurchase(passphrase []byte, ticketbuyerCfg *aiticketbuyer.Config) error {
 	defer l.mu.Unlock()
 	l.mu.Lock()
+
+	// Already running?
+	if l.aiPurchaseManager != nil {
+		return ErrTicketBuyerStarted
+	}
+
+	if l.wallet == nil {
+		return ErrWalletNotLoaded
+	}
+
+	if l.chainClient == nil {
+		return ErrNoChainClient
+	}
+
+	w := l.wallet
+	p, err := aiticketbuyer.NewTicketPurchaser(ticketbuyerCfg, l.chainClient, w, l.chainParams)
+	if err != nil {
+		return err
+	}
+	n := w.NtfnServer.MainTipChangedNotifications()
+	pm := aiticketbuyer.NewPurchaseManager(w, p, n.C, passphrase)
+	l.ntfnAiClient = n
+	l.aiPurchaseManager = pm
+	pm.Start()
 	l.wallet.SetAiTicketPurchasingEnabled(true)
 	return nil
 }
@@ -331,6 +358,19 @@ func (l *Loader) stopTicketPurchase() error {
 	return nil
 }
 
+func (l *Loader) stopAiTicketPurchase() error {
+	if l.aiPurchaseManager == nil {
+		return ErrTicketBuyerStopped
+	}
+
+	l.ntfnAiClient.Done()
+	l.aiPurchaseManager.Stop()
+	l.aiPurchaseManager.WaitForShutdown()
+	l.aiPurchaseManager = nil
+	l.wallet.SetAiTicketPurchasingEnabled(false)
+	return nil
+}
+
 // StopTicketPurchase stops the ticket purchaser, waiting until it has finished.
 // If no ticket purchaser is running, it returns ErrTicketBuyerStopped.
 func (l *Loader) StopTicketPurchase() error {
@@ -340,11 +380,25 @@ func (l *Loader) StopTicketPurchase() error {
 	return l.stopTicketPurchase()
 }
 
+func (l *Loader) StopAiTicketPurchase() error {
+	defer l.mu.Unlock()
+	l.mu.Lock()
+
+	return l.stopAiTicketPurchase()
+}
+
 // PurchaseManager returns the ticket purchaser instance. If ticket purchasing
 // has been disabled, it returns nil.
 func (l *Loader) PurchaseManager() *ticketbuyer.PurchaseManager {
 	l.mu.Lock()
 	pm := l.purchaseManager
+	l.mu.Unlock()
+	return pm
+}
+
+func (l *Loader) AiPurchaseManager() *aiticketbuyer.PurchaseManager {
+	l.mu.Lock()
+	pm := l.aiPurchaseManager
 	l.mu.Unlock()
 	return pm
 }

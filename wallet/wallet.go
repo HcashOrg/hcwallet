@@ -112,6 +112,7 @@ type Wallet struct {
 	relayFeeMu             sync.Mutex
 	ticketFeeIncrementLock sync.Mutex
 	ticketFeeIncrement     hcutil.Amount
+	aiticketFeeIncrement     hcutil.Amount
 	DisallowFree           bool
 	AllowHighFees          bool
 
@@ -321,6 +322,25 @@ func (w *Wallet) StakeDifficulty() (hcutil.Amount, error) {
 	return sd, nil
 }
 
+func (w *Wallet) AiStakeDifficulty() (hcutil.Amount, error) {
+	chainClient, err := w.requireChainClient()
+	if err != nil {
+		return 0, err
+	}
+
+	sdResp, err := chainClient.GetAiStakeDifficulty()
+	if err != nil {
+		return 0, err
+	}
+
+	sd, err := hcutil.NewAmount(sdResp.NextAiStakeDifficulty)
+	if err != nil {
+		return 0, err
+	}
+
+	return sd, nil
+}
+
 // BalanceToMaintain is used to get the current balancetomaintain for the wallet.
 func (w *Wallet) BalanceToMaintain() hcutil.Amount {
 	w.stakeSettingsLock.Lock()
@@ -341,6 +361,13 @@ func (w *Wallet) SetBalanceToMaintain(balance hcutil.Amount) {
 func (w *Wallet) TicketPurchasingEnabled() bool {
 	w.stakeSettingsLock.Lock()
 	enabled := w.ticketPurchasingEnabled
+	w.stakeSettingsLock.Unlock()
+	return enabled
+}
+
+func (w *Wallet) AiTicketPurchasingEnabled() bool {
+	w.stakeSettingsLock.Lock()
+	enabled := w.aiTicketPurchasingEnabled
 	w.stakeSettingsLock.Unlock()
 	return enabled
 }
@@ -707,6 +734,20 @@ func (w *Wallet) SynchronizeRPC(chainClient *chain.RPCClient) {
 		log.Infof("Please ensure your wallet remains unlocked so it may " +
 			"create stake transactions")
 	}
+	//ai tickets
+	aiTicketPurchasingEnabled := w.AiTicketPurchasingEnabled()
+	if aiTicketPurchasingEnabled {
+		vb := w.VoteBits()
+		log.Infof("Wallet ai ticket purchasing enabled: vote bits = %#04x, "+
+			"extended vote bits = %x", vb.Bits, vb.ExtendedBits)
+	}
+	if w.aiVotingEnabled {
+		log.Infof("Wallet ai voting enabled")
+	}
+	if aiTicketPurchasingEnabled || w.aiVotingEnabled {
+		log.Infof("Please ensure your wallet remains unlocked so it may " +
+			"create ai stake transactions")
+	}
 }
 
 // requireChainClient marks that a wallet method can only be completed when the
@@ -770,6 +811,22 @@ func (w *Wallet) SetTicketFeeIncrement(fee hcutil.Amount) {
 	w.ticketFeeIncrement = fee
 	w.ticketFeeIncrementLock.Unlock()
 }
+
+func (w *Wallet) AiTicketFeeIncrement() hcutil.Amount {
+	w.ticketFeeIncrementLock.Lock()
+	fee := w.aiticketFeeIncrement
+	w.ticketFeeIncrementLock.Unlock()
+
+	return fee
+}
+
+// SetTicketFeeIncrement is used to set the current w.ticketFeeIncrement for the wallet.
+func (w *Wallet) SetAiTicketFeeIncrement(fee hcutil.Amount) {
+	w.ticketFeeIncrementLock.Lock()
+	w.aiticketFeeIncrement = fee
+	w.ticketFeeIncrementLock.Unlock()
+}
+
 
 // quitChan atomically reads the quit channel.
 func (w *Wallet) quitChan() <-chan struct{} {

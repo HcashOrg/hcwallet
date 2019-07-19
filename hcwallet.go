@@ -387,7 +387,10 @@ func rpcClientConnectLoop(passphrase []byte, legacyRPCServer *legacyrpc.Server, 
 				}
 			}
 			if cfg.EnableAiTicketBuyer {
-				err = loader.StartAiTicketPurchase(passphrase, &cfg.tbCfg)
+				err = loader.StartAiTicketPurchase(passphrase, &cfg.aitbCfg)
+				if err != nil {
+					log.Errorf("Unable to start ai ticket buyer: %v", err)
+				}
 			}
 		}
 		mu := new(sync.Mutex)
@@ -404,6 +407,7 @@ func rpcClientConnectLoop(passphrase []byte, legacyRPCServer *legacyrpc.Server, 
 		// The only possible err here is ErrTicketBuyerStopped, which can be
 		// safely ignored.
 		_ = loader.StopTicketPurchase()
+		_ = loader.StopAiTicketPurchase()
 
 		mu.Lock()
 		associateRPCClient = nil

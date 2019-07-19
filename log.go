@@ -8,6 +8,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/HcashOrg/hcwallet/aiticketbuyer"
 	"os"
 	"path/filepath"
 
@@ -55,6 +56,7 @@ var (
 	loaderLog    = backendLog.Logger("LODR")
 	walletLog    = backendLog.Logger("WLLT")
 	tkbyLog      = backendLog.Logger("TKBY")
+	aitkbyLog      = backendLog.Logger("AITKBY")
 	chainLog     = backendLog.Logger("CHNS")
 	grpcLog      = backendLog.Logger("GRPC")
 	legacyRPCLog = backendLog.Logger("RPCS")
@@ -66,6 +68,7 @@ func init() {
 	wallet.UseLogger(walletLog)
 	udb.UseLogger(walletLog)
 	ticketbuyer.UseLogger(tkbyLog)
+	aiticketbuyer.UseLogger(aitkbyLog)
 	chain.UseLogger(chainLog)
 	hcrpcclient.UseLogger(chainLog)
 	rpcserver.UseLogger(grpcLog)
@@ -78,6 +81,7 @@ var subsystemLoggers = map[string]btclog.Logger{
 	"LODR": loaderLog,
 	"WLLT": walletLog,
 	"TKBY": tkbyLog,
+	"AITKBY": aitkbyLog,
 	"CHNS": chainLog,
 	"GRPC": grpcLog,
 	"RPCS": legacyRPCLog,

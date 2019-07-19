@@ -9,6 +9,7 @@ package main
 import (
 	"fmt"
 	"github.com/HcashOrg/hcd/wire"
+	"github.com/HcashOrg/hcwallet/aiticketbuyer"
 	"net"
 	"os"
 	"os/user"
@@ -39,8 +40,8 @@ const (
 	defaultEnableTicketBuyer   = false
 	defaultEnableAiTicketBuyer = false
 	defaultEnableOmni          = true
-	defaultEnableVoting        = false
-	defaultEnableAiVoting      = false
+	defaultEnableVoting        = true
+	defaultEnableAiVoting      = true
 	defaultReuseAddresses      = false
 	defaultRollbackTest        = false
 	defaultPruneTickets        = false
@@ -59,6 +60,7 @@ const (
 	defaultMaxPriceScale                           = 0.0
 	defaultAvgVWAPPriceDelta                       = 2880
 	defaultMaxPerBlock                             = 1
+	defaultAiMaxPerBlock                             = 20
 	defaultBlocksToAvg                             = 11
 	defaultFeeTargetScaling                        = 1.0
 	defaultMaxInMempool                            = 40
@@ -160,6 +162,7 @@ type config struct {
 
 	TBOpts ticketBuyerOptions `group:"Ticket Buyer Options" namespace:"ticketbuyer"`
 	tbCfg  ticketbuyer.Config
+	aitbCfg  aiticketbuyer.Config
 
 	// Deprecated options
 	DataDir      *cfgutil.ExplicitString `short:"b" long:"datadir" default-mask:"-" description:"DEPRECATED -- use appdata instead"`
@@ -178,6 +181,7 @@ type ticketBuyerOptions struct {
 	MinFee                    *cfgutil.AmountFlag `long:"minfee" description:"Minimum ticket fee per KB"`
 	FeeSource                 string              `long:"feesource" description:"The fee source to use for ticket fee per KB (median or mean)"`
 	MaxPerBlock               int                 `long:"maxperblock" description:"Maximum tickets per block, with negative numbers indicating buy one ticket every 1-in-n blocks"`
+	AiMaxPerBlock               int                 `long:"aimaxperblock" description:"Maximum ai tickets per block, with negative numbers indicating buy one ticket every 1-in-n blocks"`
 	BlocksToAvg               int                 `long:"blockstoavg" description:"Number of blocks to average for fees calculation"`
 	FeeTargetScaling          float64             `long:"feetargetscaling" description:"Scaling factor for setting the ticket fee, multiplies by the average fee"`
 	MaxInMempool              int                 `long:"maxinmempool" description:"The maximum number of your tickets allowed in mempool before purchasing more tickets"`
@@ -383,6 +387,7 @@ func loadConfig() (*config, []string, error) {
 			MinFee:                    cfgutil.NewAmountFlag(defaultMinFee),
 			FeeSource:                 defaultFeeSource,
 			MaxPerBlock:               defaultMaxPerBlock,
+			AiMaxPerBlock:               defaultAiMaxPerBlock,
 			BlocksToAvg:               defaultBlocksToAvg,
 			FeeTargetScaling:          defaultFeeTargetScaling,
 			MaxInMempool:              defaultMaxInMempool,
@@ -937,6 +942,30 @@ func loadConfig() (*config, []string, error) {
 		MinFee:                    int64(cfg.TBOpts.MinFee.Amount),
 		MaxFee:                    int64(cfg.TBOpts.MaxFee.Amount),
 		MaxPerBlock:               cfg.TBOpts.MaxPerBlock,
+		MaxPriceAbsolute:          int64(cfg.TBOpts.MaxPriceAbsolute.Amount),
+		MaxPriceRelative:          cfg.TBOpts.MaxPriceRelative,
+		MaxInMempool:              cfg.TBOpts.MaxInMempool,
+		PoolAddress:               cfg.PoolAddress.Address,
+		PoolFees:                  cfg.PoolFees,
+		NoSpreadTicketPurchases:   cfg.TBOpts.NoSpreadTicketPurchases,
+		TicketAddress:             cfg.TicketAddress.Address,
+		TxFee:                     int64(cfg.RelayFee.Amount),
+	}
+
+	cfg.aitbCfg = aiticketbuyer.Config{
+		AccountName:               cfg.PurchaseAccount,
+		AvgPriceMode:              cfg.TBOpts.AvgPriceMode,
+		AvgPriceVWAPDelta:         cfg.TBOpts.AvgPriceVWAPDelta,
+		BalanceToMaintainAbsolute: int64(cfg.TBOpts.BalanceToMaintainAbsolute.Amount),
+		BalanceToMaintainRelative: cfg.TBOpts.BalanceToMaintainRelative,
+		BlocksToAvg:               cfg.TBOpts.BlocksToAvg,
+		DontWaitForTickets:        cfg.TBOpts.DontWaitForTickets,
+		ExpiryDelta:               cfg.TBOpts.ExpiryDelta,
+		FeeSource:                 cfg.TBOpts.FeeSource,
+		FeeTargetScaling:          cfg.TBOpts.FeeTargetScaling,
+		MinFee:                    int64(cfg.TBOpts.MinFee.Amount),
+		MaxFee:                    int64(cfg.TBOpts.MaxFee.Amount),
+		MaxPerBlock:               cfg.TBOpts.AiMaxPerBlock,
 		MaxPriceAbsolute:          int64(cfg.TBOpts.MaxPriceAbsolute.Amount),
 		MaxPriceRelative:          cfg.TBOpts.MaxPriceRelative,
 		MaxInMempool:              cfg.TBOpts.MaxInMempool,

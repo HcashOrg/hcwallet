@@ -1428,7 +1428,7 @@ func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash, rese
 // and submits it to the wstakemgr to handle SSGen production.
 func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int32, winningTicketHashes []*chainhash.Hash) error {
 
-	if !w.votingEnabled || blockHeight < int32(w.chainParams.StakeValidationHeight)-1 {
+	if (!w.votingEnabled && !w.aiVotingEnabled)|| blockHeight < int32(w.chainParams.StakeValidationHeight)-1 {
 		return nil
 	}
 

@@ -22,6 +22,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"github.com/HcashOrg/hcwallet/aiticketbuyer"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -2114,6 +2115,14 @@ func (t *ticketbuyerServer) requirePurchaseManager() (*ticketbuyer.PurchaseManag
 	pm := t.loader.PurchaseManager()
 	if pm == nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "ticket buyer is not running")
+	}
+	return pm, nil
+}
+
+func (t *ticketbuyerServer) requireAiPurchaseManager() (*aiticketbuyer.PurchaseManager, error) {
+	pm := t.loader.AiPurchaseManager()
+	if pm == nil {
+		return nil, status.Errorf(codes.FailedPrecondition, "ai ticket buyer is not running")
 	}
 	return pm, nil
 }

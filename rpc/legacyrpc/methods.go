@@ -147,6 +147,7 @@ func init() {
 		"sendtossgen":              {handler: sendToSSGen},
 		"sendtossrtx":              {handlerWithChain: sendToSSRtx},
 		"setticketfee":             {handler: setTicketFee},
+		"setaiticketfee":             {handler: setAiTicketFee},
 		"settxfee":                 {handler: setTxFee},
 		"setvotechoice":            {handler: setVoteChoice},
 		"signmessage":              {handler: signMessage},
@@ -3195,6 +3196,23 @@ func setTicketFee(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return true, nil
 }
 
+func setAiTicketFee(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := icmd.(*hcjson.SetAiTicketFeeCmd)
+
+	// Check that amount is not negative.
+	if cmd.Fee < 0 {
+		return nil, ErrNeedPositiveAmount
+	}
+
+	incr, err := hcutil.NewAmount(cmd.Fee)
+	if err != nil {
+		return nil, err
+	}
+	w.SetAiTicketFeeIncrement(incr)
+
+	// A boolean true result is returned upon success.
+	return true, nil
+}
 // setTxFee sets the transaction fee per kilobyte added to transactions.
 func setTxFee(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*hcjson.SetTxFeeCmd)
@@ -3745,6 +3763,7 @@ func walletInfo(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Cli
 	fi := w.RelayFee()
 	tfi := w.TicketFeeIncrement()
 	tp := w.TicketPurchasingEnabled()
+	aitp := w.AiTicketPurchasingEnabled()
 	voteBits := w.VoteBits()
 	var voteVersion uint32
 	_ = binary.Read(bytes.NewBuffer(voteBits.ExtendedBits[0:4]), binary.LittleEndian, &voteVersion)
@@ -3756,6 +3775,7 @@ func walletInfo(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Cli
 		TxFee:            fi.ToCoin(),
 		TicketFee:        tfi.ToCoin(),
 		TicketPurchasing: tp,
+		AiTicketPurchasing: aitp,
 		VoteBits:         voteBits.Bits,
 		VoteBitsExtended: hex.EncodeToString(voteBits.ExtendedBits),
 		VoteVersion:      voteVersion,
