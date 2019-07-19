@@ -47,9 +47,6 @@ func (p *PurchaseManager) purchase(height int64) {
 		log.Errorf("Failed to purchase tickets this round: %v", err)
 		return
 	}
-	if p.w.GetAiTicketPurchasingEnabled() {
-		go p.purchaser.AiPurchase(height)
-	}
 	// Since we don't know if the wallet had been unlocked before we unlocked
 	// it, avoid locking it here, even though we don't need it to remain
 	// unlocked.
