@@ -72,6 +72,7 @@ const (
 	defaultPriceTarget                             = 0
 	defaultBalanceToMaintainAbsolute               = 0
 	defaultBalanceToMaintainRelative               = 0.3
+	defaultAiBalanceToMaintainRelative               = 0.0
 
 	walletDbName = "wallet.db"
 )
@@ -190,6 +191,7 @@ type ticketBuyerOptions struct {
 	MaxPriceRelative          float64             `long:"maxpricerelative" description:"Scaling factor for setting the maximum price, multiplies by the average price"`
 	BalanceToMaintainAbsolute *cfgutil.AmountFlag `long:"balancetomaintainabsolute" description:"Amount of funds to keep in wallet when stake mining"`
 	BalanceToMaintainRelative float64             `long:"balancetomaintainrelative" description:"Proportion of funds to leave in wallet when stake mining"`
+	AiBalanceToMaintainRelative float64             `long:"aibalancetomaintainrelative" description:"Proportion of funds to leave in wallet when stake mining"`
 	NoSpreadTicketPurchases   bool                `long:"nospreadticketpurchases" description:"Do not spread ticket purchases evenly throughout the window"`
 	DontWaitForTickets        bool                `long:"dontwaitfortickets" description:"Don't wait until your last round of tickets have entered the blockchain to attempt to purchase more"`
 
@@ -397,6 +399,7 @@ func loadConfig() (*config, []string, error) {
 			PriceTarget:               cfgutil.NewAmountFlag(defaultPriceTarget),
 			BalanceToMaintainAbsolute: cfgutil.NewAmountFlag(defaultBalanceToMaintainAbsolute),
 			BalanceToMaintainRelative: defaultBalanceToMaintainRelative,
+			AiBalanceToMaintainRelative: defaultAiBalanceToMaintainRelative,
 		},
 	}
 
@@ -957,7 +960,7 @@ func loadConfig() (*config, []string, error) {
 		AvgPriceMode:              cfg.TBOpts.AvgPriceMode,
 		AvgPriceVWAPDelta:         cfg.TBOpts.AvgPriceVWAPDelta,
 		BalanceToMaintainAbsolute: int64(cfg.TBOpts.BalanceToMaintainAbsolute.Amount),
-		BalanceToMaintainRelative: cfg.TBOpts.BalanceToMaintainRelative,
+		BalanceToMaintainRelative: cfg.TBOpts.AiBalanceToMaintainRelative,
 		BlocksToAvg:               cfg.TBOpts.BlocksToAvg,
 		DontWaitForTickets:        cfg.TBOpts.DontWaitForTickets,
 		ExpiryDelta:               cfg.TBOpts.ExpiryDelta,
