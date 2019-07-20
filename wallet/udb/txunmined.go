@@ -294,7 +294,7 @@ func (s *Store) unminedTxHashes(ns walletdb.ReadBucket) ([]*chainhash.Hash, erro
 //   * Ticket purchases with a different ticket price than the passed stake
 //     difficulty
 //   * Votes that do not vote on the tip block
-func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff int64) error {
+func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff, aistakeDiff int64) error {
 	ns := dbtx.ReadWriteBucket(wtxmgrBucketKey)
 
 	_, tipHeight := s.MainChainTip(ns)
@@ -322,9 +322,14 @@ func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff int64) error {
 		switch {
 		case tx.Expiry != wire.NoExpiryValue && tx.Expiry <= uint32(tipHeight):
 			expired = true
-		case isSStx, isSStxAi:
+		case isSStx:
 			isTicketPurchase = true
 			if tx.TxOut[0].Value == stakeDiff {
+				continue
+			}
+		case isSStxAi:
+			isTicketPurchase = true
+			if tx.TxOut[0].Value == aistakeDiff {
 				continue
 			}
 		case isSSGen, isSSGenAi:

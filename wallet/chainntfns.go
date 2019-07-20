@@ -405,7 +405,7 @@ func (w *Wallet) onBlockConnected(serializedBlockHeader []byte, transactions [][
 	err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
 		//	txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
 		//	return w.TxStore.PruneUnconfirmed(txmgrNs, height, blockHeader.SBits)
-		return w.TxStore.PruneUnmined(dbtx, blockHeader.SBits)
+		return w.TxStore.PruneUnmined(dbtx, blockHeader.SBits, blockHeader.AiSBits)
 	})
 	if err != nil {
 		log.Errorf("Failed to prune unconfirmed transactions when "+
