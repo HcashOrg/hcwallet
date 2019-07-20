@@ -147,7 +147,7 @@ func init() {
 		"sendtossgen":              {handler: sendToSSGen},
 		"sendtossrtx":              {handlerWithChain: sendToSSRtx},
 		"setticketfee":             {handler: setTicketFee},
-		"setaiticketfee":             {handler: setAiTicketFee},
+		"setaiticketfee":           {handler: setAiTicketFee},
 		"settxfee":                 {handler: setTxFee},
 		"setvotechoice":            {handler: setVoteChoice},
 		"signmessage":              {handler: signMessage},
@@ -198,6 +198,7 @@ func init() {
 		"registerainode":   {handler: RegisterAiNode},
 		"unregisterainode": {handler: UnregisterAiNode},
 		"ifainoderegisted": {handler: IfAiNodeRegisted},
+		"getconfigfile":    {handler: GetConfigFile},
 	}
 
 	for k, v := range getOminiMethod() {
@@ -2514,9 +2515,9 @@ func RegisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	// if not exist,add this to config file
 	res := make([]string, 0, len(lines)+1)
 	if !exist {
-		res = append(res, lines[0:30]...)
+		res = append(res, lines[0:1]...)
 		res = append(res, "enableaiticketbuyer=true")
-		res = append(res, lines[30:]...)
+		res = append(res, lines[1:]...)
 	}
 	output := strings.Join(res, "\n")
 	err = ioutil.WriteFile(CurrentConfigFile, []byte(output), 0644)
@@ -2557,9 +2558,9 @@ func UnregisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
 	res := make([]string, 0, len(lines)+1)
 	if !exist {
-		res = append(res, lines[0:30]...)
+		res = append(res, lines[0:1]...)
 		res = append(res, "enableaiticketbuyer=false")
-		res = append(res, lines[30:]...)
+		res = append(res, lines[1:]...)
 	}
 
 	output := strings.Join(res, "\n")
@@ -2572,6 +2573,10 @@ func UnregisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 }
 func IfAiNodeRegisted(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return w.GetAiTicketPurchasingEnabled(), nil
+}
+
+func GetConfigFile(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	return CurrentConfigFile, nil
 }
 
 func notEnableAivoting(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
@@ -3213,6 +3218,7 @@ func setAiTicketFee(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	// A boolean true result is returned upon success.
 	return true, nil
 }
+
 // setTxFee sets the transaction fee per kilobyte added to transactions.
 func setTxFee(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*hcjson.SetTxFeeCmd)
@@ -3770,16 +3776,16 @@ func walletInfo(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Cli
 	voting := w.VotingEnabled()
 
 	return &hcjson.WalletInfoResult{
-		DaemonConnected:  connected,
-		Unlocked:         unlocked,
-		TxFee:            fi.ToCoin(),
-		TicketFee:        tfi.ToCoin(),
-		TicketPurchasing: tp,
+		DaemonConnected:    connected,
+		Unlocked:           unlocked,
+		TxFee:              fi.ToCoin(),
+		TicketFee:          tfi.ToCoin(),
+		TicketPurchasing:   tp,
 		AiTicketPurchasing: aitp,
-		VoteBits:         voteBits.Bits,
-		VoteBitsExtended: hex.EncodeToString(voteBits.ExtendedBits),
-		VoteVersion:      voteVersion,
-		Voting:           voting,
+		VoteBits:           voteBits.Bits,
+		VoteBitsExtended:   hex.EncodeToString(voteBits.ExtendedBits),
+		VoteVersion:        voteVersion,
+		Voting:             voting,
 	}, nil
 }
 
