@@ -682,9 +682,8 @@ func getBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	accountAiConfirms := make(map[uint32]hcutil.Amount)
-	w.AiTxConfirmsLock.Lock()
-	defer w.AiTxConfirmsLock.Unlock()
 
+	w.AiTxConfirmsLock.Lock()
 AiTxConfirm:
 	for _, msgTx := range w.AiTxConfirms {
 		//skip tx that send from self
@@ -709,6 +708,8 @@ AiTxConfirm:
 			}
 		}
 	}
+
+	w.AiTxConfirmsLock.Unlock()
 
 	if accountName == "*" {
 		balances, err := w.CalculateAccountBalances(int32(*cmd.MinConf))

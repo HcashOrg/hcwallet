@@ -41,8 +41,7 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 			notificationName = "blockconnected"
 			err = w.onBlockConnected(n.BlockHeader, n.Transactions)
 			go func(transactions [][]byte) {
-				w.AiTxConfirmsLock.Lock()
-				defer w.AiTxConfirmsLock.Unlock()
+
 				for _, serializedTx := range transactions {
 					msgTx := wire.NewMsgTx()
 					err := msgTx.FromBytes(serializedTx)
@@ -53,9 +52,11 @@ func (w *Wallet) handleConsensusRPCNotifications(chainClient *chain.RPCClient) {
 					}
 
 					txHash := msgTx.TxHash()
+					w.AiTxConfirmsLock.Lock()
 					if _, exist := w.AiTxConfirms[txHash]; exist {
 						delete(w.AiTxConfirms, txHash)
 					}
+					w.AiTxConfirmsLock.Unlock()
 				}
 
 			}(n.Transactions)
@@ -1376,8 +1377,7 @@ func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash, rese
 	if resend {
 		//update confirm map
 		go func() {
-			w.AiTxConfirmsLock.Lock()
-			defer w.AiTxConfirmsLock.Unlock()
+
 			copyTx := *msgAiTx
 
 			//skip self send to self
@@ -1397,7 +1397,9 @@ func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash, rese
 				if err == nil && len(addrs) > 0 {
 					_, err := w.AccountOfAddress(addrs[0])
 					if err == nil {
+						w.AiTxConfirmsLock.Lock()
 						w.AiTxConfirms[msgAiTx.TxHash()] = &copyTx
+						w.AiTxConfirmsLock.Unlock()
 
 						go func() {
 							err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {

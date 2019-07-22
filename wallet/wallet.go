@@ -2097,8 +2097,6 @@ func (w *Wallet) CalculateAccountBalance(account uint32, confirms int32) (udb.Ba
 	//get aitxconfirmed
 	accountAiConfirms := make(map[uint32]hcutil.Amount)
 	w.AiTxConfirmsLock.Lock()
-	defer w.AiTxConfirmsLock.Unlock()
-
 AiTxConfirm:
 	for _, msgTx := range w.AiTxConfirms {
 		//skip tx that send from self
@@ -2123,6 +2121,8 @@ AiTxConfirm:
 			}
 		}
 	}
+
+	w.AiTxConfirmsLock.Unlock()
 
 	balance.AiTxConfirmed = accountAiConfirms[account]
 
