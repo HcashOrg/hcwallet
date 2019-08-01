@@ -2355,8 +2355,7 @@ func (s *Store) UnspentTickets(dbtx walletdb.ReadTx, syncHeight int32, includeIm
 				const str = "unmined tx decode failed"
 				return nil, apperrors.Wrap(err, apperrors.ErrData, str)
 			}
-			isAiVote, _ := stake.IsAiSSGen(&spender)
-			if isVote, _ := stake.IsSSGen(&spender); isVote || isAiVote{
+			if isVote, _ := stake.IsSSGen(&spender); isVote{
 				voteBlock, _, _ := stake.SSGenBlockVotedOn(&spender)
 				if voteBlock != tipBlock {
 					goto Include
@@ -2373,11 +2372,21 @@ func (s *Store) UnspentTickets(dbtx walletdb.ReadTx, syncHeight int32, includeIm
 			if txRecKey == nil {
 				continue
 			}
+
 			var height int32
 			err := readRawTxRecordBlockHeight(txRecKey, &height)
 			if err != nil {
 				return nil, err
 			}
+
+			credKey := existsRawUnspent(ns, opKey)
+			if credKey != nil {
+				v := existsRawCredit(ns, credKey)
+				if isAIStake(v){
+					continue
+				}
+			}
+
 			if !confirmed(int32(s.chainParams.TicketMaturity)+1, height, syncHeight) {
 				continue
 			}
@@ -2388,6 +2397,85 @@ func (s *Store) UnspentTickets(dbtx walletdb.ReadTx, syncHeight int32, includeIm
 	}
 	return tickets, nil
 }
+
+
+func (s *Store) UnspentAiTickets(dbtx walletdb.ReadTx, syncHeight int32, includeImmature bool) ([]chainhash.Hash, error) {
+	ns := dbtx.ReadBucket(wtxmgrBucketKey)
+	tipBlock, _ := s.MainChainTip(ns)
+	var tickets []chainhash.Hash
+	c := ns.NestedReadBucket(bucketTickets).ReadCursor()
+	var hash chainhash.Hash
+	for ticketHash, _ := c.First(); ticketHash != nil; ticketHash, _ = c.Next() {
+		copy(hash[:], ticketHash)
+
+		// Skip over tickets that are spent by votes or revocations.  As long as
+		// the ticket is relevant to the wallet, output zero is recorded as a
+		// credit.  Use the credit's spent tracking to determine if the ticket
+		// is spent or not.
+		opKey := canonicalOutPoint(&hash, 0)
+		if existsRawUnspent(ns, opKey) == nil {
+			// No unspent record indicates the output was spent by a mined
+			// transaction.
+			continue
+		}
+		if spenderHash := existsRawUnminedInput(ns, opKey); spenderHash != nil {
+			// A non-nil record for the outpoint indicates that there exists an
+			// unmined transaction that spends the output.  Determine if the
+			// spender is a vote, and append the hash if the vote is not for the
+			// tip block height.  Otherwise continue to the next ticket.
+			serializedSpender := extractRawUnminedTx(existsRawUnmined(ns, spenderHash))
+			if serializedSpender == nil {
+				continue
+			}
+			var spender wire.MsgTx
+			err := spender.Deserialize(bytes.NewReader(serializedSpender))
+			if err != nil {
+				const str = "unmined tx decode failed"
+				return nil, apperrors.Wrap(err, apperrors.ErrData, str)
+			}
+			if isAiVote, _ := stake.IsAiSSGen(&spender); isAiVote{
+				voteBlock, _, _ := stake.SSGenBlockVotedOn(&spender)
+				if voteBlock != tipBlock {
+					goto Include
+				}
+			}
+
+			continue
+		}
+
+		// When configured to exclude immature tickets, skip the transaction if
+		// is unmined or has not reached ticket maturity yet.
+		if !includeImmature {
+			txRecKey, _ := latestTxRecord(ns, ticketHash)
+			if txRecKey == nil {
+				continue
+			}
+
+			var height int32
+			err := readRawTxRecordBlockHeight(txRecKey, &height)
+			if err != nil {
+				return nil, err
+			}
+
+			credKey := existsRawUnspent(ns, opKey)
+			if credKey != nil {
+				v := existsRawCredit(ns, credKey)
+				if !isAIStake(v){
+					continue
+				}
+			}
+			//fmt.Println(hash.String())
+			if !confirmed(int32(s.chainParams.AiTicketMaturity)+1, height, syncHeight) {
+				continue
+			}
+		}
+
+	Include:
+		tickets = append(tickets, hash)
+	}
+	return tickets, nil
+}
+
 
 // OwnTicket returns whether ticketHash is the hash of a ticket purchase
 // transaction managed by the wallet.

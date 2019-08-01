@@ -607,6 +607,10 @@ func readRawTxRecordBlockHeight(k []byte, height *int32) error {
 	return nil
 }
 
+func isAIStake(k []byte) bool{
+	return k[8]&(1<<6) != 0
+}
+
 func readRawTxRecordBlock(k []byte, block *Block) error {
 	if len(k) < 68 {
 		str := fmt.Sprintf("%s: short key (expected %d bytes, read %d)",
@@ -717,13 +721,20 @@ func latestTxRecord(ns walletdb.ReadBucket, txHash []byte) (k, v []byte) {
 //   [8]     Flags (1 byte)
 //             [0]: Spent
 //             [1]: Change
-//             [2:5]: P2PKH stake flag
+//             [2:5]: P2PKH stake flag   [6] =  0
 //                 000: None (translates to OP_NOP10)
 //                 001: OP_SSTX
 //                 010: OP_SSGEN
 //                 011: OP_SSRTX
 //                 100: OP_SSTXCHANGE
-//             [6]: IsCoinbase
+//             [5]: IsCoinbase
+//             [6]: IsAIStake  							//version 3 support
+//             [2:5]: P2PKH aistake flag [6] =  1		//version 3 support
+//                 000: None 							//version 3 support
+//                 001: OP_AISSTX						//version 3 support
+//                 010: OP_AISSGEN						//version 3 support
+//                 011: OP_AISSRTX						//version 3 support
+//                 100: OP_AISSTXCHANGE					//version 3 support
 //   [9:81]  OPTIONAL Debit bucket key (72 bytes)
 //             [9:41]  Spender transaction hash (32 bytes)
 //             [41:45] Spender block height (4 bytes)

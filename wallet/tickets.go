@@ -415,7 +415,7 @@ func (w *Wallet) RevokeAITickets(chainClient *hcrpcclient.Client) error {
 		ns := tx.ReadBucket(wtxmgrNamespaceKey)
 		var err error
 		tipHash, tipHeight = w.TxStore.MainChainTip(ns)
-		ticketHashes, err = w.TxStore.UnspentTickets(tx, tipHeight, false)
+		ticketHashes, err = w.TxStore.UnspentAiTickets(tx, tipHeight, false)
 		return err
 	})
 	if err != nil {
