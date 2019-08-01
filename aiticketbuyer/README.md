@@ -1,7 +1,7 @@
-ticketbuyer
+aiticketbuyer
 ===========
 
-Package aiticketbuyer provides automatic purchase of tickets from a Hcd wallet.
+Package aiticketbuyer provides automatic purchase of ai tickets from a Hcd wallet.
 
 ## Documentation
 

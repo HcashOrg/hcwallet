@@ -39,18 +39,18 @@ func NewPurchaseManager(w *wallet.Wallet, purchaser *TicketPurchaser,
 func (p *PurchaseManager) purchase(height int64) {
 	err := p.w.Unlock(p.passphrase, nil)
 	if err != nil {
-		log.Errorf("Failed to purchase tickets this round: %v", err)
+		log.Errorf("Failed to purchase ai tickets this round: %v", err)
 		return
 	}
 	purchaseInfo, err := p.purchaser.Purchase(height)
 	if err != nil {
-		log.Errorf("Failed to purchase tickets this round: %v", err)
+		log.Errorf("Failed to purchase ai tickets this round: %v", err)
 		return
 	}
 	// Since we don't know if the wallet had been unlocked before we unlocked
 	// it, avoid locking it here, even though we don't need it to remain
 	// unlocked.
-	log.Debugf("Purchased %v tickets this round", purchaseInfo.Purchased)
+	log.Debugf("Purchased %v ai tickets this round", purchaseInfo.Purchased)
 }
 
 // Purchaser returns the ticket buyer instance associated with the purchase
@@ -119,7 +119,7 @@ func (p *PurchaseManager) Stop() {
 	p.quitMtx.Lock()
 	quit := p.quit
 
-	log.Infof("Stopping ticket buyer")
+	log.Infof("Stopping ai ticket buyer")
 
 	select {
 	case <-quit:

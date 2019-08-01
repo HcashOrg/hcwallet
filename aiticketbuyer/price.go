@@ -106,7 +106,7 @@ func (t *TicketPurchaser) calcAverageTicketPrice(height int64) (hcutil.Amount, e
 			ticketVWAP, err = t.hcdChainSvr.AiTicketVWAP(&startVWAPHeight,
 				&endVWAPHeight)
 			if err != nil && containsVWAPHeightOffsetError(err) {
-				log.Tracef("Failed to fetch ticket VWAP "+
+				log.Tracef("Failed to fetch ai ticket VWAP "+
 					"on attempt %v: %v", i, err.Error())
 				err = nil
 				time.Sleep(vwapReqTryDelay)

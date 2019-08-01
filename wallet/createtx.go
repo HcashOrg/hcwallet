@@ -422,22 +422,22 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32, minconf int3
 		return nil, err
 	}
 
-	fee:=w.RelayFee()
+	fee := w.RelayFee()
 
-/*
-	isAiTx :=false
-	totalValue:=int64(0)
-	for _,out:=range outputs{
-		totalValue+=out.Value
-		if _,has:=txscript.HasAiTxTag(out.PkScript);has{
-			isAiTx=true
+	/*
+		isAiTx :=false
+		totalValue:=int64(0)
+		for _,out:=range outputs{
+			totalValue+=out.Value
+			if _,has:=txscript.HasAiTxTag(out.PkScript);has{
+				isAiTx=true
+			}
 		}
-	}
 
-	if isAiTx{
-		fee+=hcutil.Amount(totalValue/1000)
-	}
-*/
+		if isAiTx{
+			fee+=hcutil.Amount(totalValue/1000)
+		}
+	*/
 	return w.txToOutputsInternal(outputs, account, minconf, chainClient,
 		randomizeChangeIdx, fee, changeAddr, fromAddress)
 }
@@ -522,8 +522,8 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		// Randomize change position, if change exists, before signing.  This
 		// doesn't affect the serialize size, so the change amount will still be
 		// valid.
-		if _, ok := txscript.IsAiTx(atx.Tx); ok{
-			randomizeChangeIdx = false;
+		if _, ok := txscript.IsAiTx(atx.Tx); ok {
+			randomizeChangeIdx = false
 		}
 		if atx.ChangeIndex >= 0 && randomizeChangeIdx {
 			atx.RandomizeChangePosition()
@@ -558,14 +558,14 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 	if err != nil {
 		return nil, err
 	}
-/*
-	if w.ProcessTxLockRequest(&rec.MsgTx) {
-		w.AcceptLockRequest(&rec.MsgTx);
-	}else{
-		w.RejectLockRequest(&rec.MsgTx);
-		return nil, fmt.Errorf("tx lock conflict")
-	}
-*/
+	/*
+		if w.ProcessTxLockRequest(&rec.MsgTx) {
+			w.AcceptLockRequest(&rec.MsgTx);
+		}else{
+			w.RejectLockRequest(&rec.MsgTx);
+			return nil, fmt.Errorf("tx lock conflict")
+		}
+	*/
 	// Use a single DB update to store and publish the transaction.  If the
 	// transaction is rejected, the update is rolled back.
 	err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
@@ -586,7 +586,7 @@ func (w *Wallet) txToOutputsInternal(outputs []*wire.TxOut, account uint32, minc
 		//deal with ai send
 		isLockTx := false
 		for _, txOut := range atx.Tx.TxOut {
-			if _,has:=txscript.HaveAiTxTag(txOut.PkScript);has {
+			if _, has := txscript.HaveAiTxTag(txOut.PkScript); has {
 				isLockTx = true
 				break
 			}
@@ -1158,7 +1158,6 @@ func makeAITicket(params *chaincfg.Params, inputPool *extendedOutPoint,
 
 	return mtx, nil
 }
-
 
 func (w *Wallet) getTicketFeeAndNeededTicketPrice(account uint32, poolAddressExist bool, ticketPrice, ticketFeeIncrement hcutil.Amount) (hcutil.Amount, hcutil.Amount, error) {
 	var ticketFee, neededPerTicket hcutil.Amount
@@ -1844,7 +1843,10 @@ func (w *Wallet) purchaseAITickets(req purchaseAITicketRequest) ([]*chainhash.Ha
 					}
 				}
 			}
-			addrSubsidy, err = addrFunc(w.persistReturnedChild(dbtx), req.account, dbtx)
+			addrSubsidy = w.ticketAddress
+			if addrSubsidy == nil {
+				addrSubsidy, err = addrFunc(w.persistReturnedChild(dbtx), req.account, dbtx)
+			}
 			return err
 		})
 		if err != nil {
@@ -1918,7 +1920,6 @@ func (w *Wallet) purchaseAITickets(req purchaseAITicketRequest) ([]*chainhash.Ha
 
 	return ticketHashes, nil
 }
-
 
 // txToSStx creates a raw SStx transaction sending the amounts for each
 // address/amount pair and fee to each address and the miner.  minconf
@@ -2222,7 +2223,7 @@ func (w *Wallet) findEligibleOutputs(dbtx walletdb.ReadTx, account uint32, minco
 			if !confirmed(target, output.Height, currentHeight) {
 				continue
 			}
-		case class == txscript.StakeSubChangeTy,  class == txscript.AiStakeSubChangeTy:
+		case class == txscript.StakeSubChangeTy, class == txscript.AiStakeSubChangeTy:
 			target := int32(w.chainParams.SStxChangeMaturity)
 			if !confirmed(target, output.Height, currentHeight) {
 				continue
@@ -2554,15 +2555,15 @@ func createUnsignedRevocation(ticketHash *chainhash.Hash, ticketPurchase *wire.M
 	// All remaining outputs pay to the output destinations and amounts tagged
 	// by the ticket purchase.
 
-	isAiSStx,_ := stake.IsAiSStx(ticketPurchase)
+	isAiSStx, _ := stake.IsAiSStx(ticketPurchase)
 	for i, hash160 := range ticketHash160s {
 		scriptFn := txscript.PayToSSRtxPKHDirect
-		if isAiSStx{
+		if isAiSStx {
 			scriptFn = txscript.PayToAiSSRtxPKHDirect
 		}
 		if ticketPayKinds[i] { // P2SH
 			scriptFn = txscript.PayToSSRtxSHDirect
-			if isAiSStx{
+			if isAiSStx {
 				scriptFn = txscript.PayToAiSSRtxSHDirect
 			}
 		}
