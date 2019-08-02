@@ -386,12 +386,12 @@ func rpcClientConnectLoop(passphrase []byte, legacyRPCServer *legacyrpc.Server, 
 					log.Errorf("Unable to start ticket buyer: %v", err)
 				}
 			}
-			if cfg.EnableAiTicketBuyer {
-				err = loader.StartAiTicketPurchase(passphrase, &cfg.aitbCfg)
-				if err != nil {
-					log.Errorf("Unable to start ai ticket buyer: %v", err)
-				}
+			//if cfg.EnableAiTicketBuyer {
+			err = loader.StartAiTicketPurchase(passphrase, &cfg.aitbCfg)
+			if err != nil {
+				log.Errorf("Unable to start ai ticket buyer: %v", err)
 			}
+			//}
 		}
 		mu := new(sync.Mutex)
 		loader.RunAfterLoad(func(w *wallet.Wallet) {

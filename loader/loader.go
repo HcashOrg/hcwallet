@@ -40,14 +40,14 @@ type Loader struct {
 	db          walletdb.DB
 	mu          sync.Mutex
 
-	purchaseManager *ticketbuyer.PurchaseManager
+	purchaseManager   *ticketbuyer.PurchaseManager
 	aiPurchaseManager *aiticketbuyer.PurchaseManager
-	ntfnClient      wallet.MainTipChangedNotificationsClient
+	ntfnClient        wallet.MainTipChangedNotificationsClient
 	ntfnAiClient      wallet.MainTipChangedNotificationsClient
-	stakeOptions    *StakeOptions
-	addrIdxScanLen  int
-	allowHighFees   bool
-	relayFee        float64
+	stakeOptions      *StakeOptions
+	addrIdxScanLen    int
+	allowHighFees     bool
+	relayFee          float64
 
 	//omini
 	enableOmni bool
@@ -339,7 +339,7 @@ func (l *Loader) StartAiTicketPurchase(passphrase []byte, ticketbuyerCfg *aitick
 	l.ntfnAiClient = n
 	l.aiPurchaseManager = pm
 	pm.Start()
-	l.wallet.SetAiTicketPurchasingEnabled(true)
+	//	l.wallet.SetAiTicketPurchasingEnabled(true)
 	return nil
 }
 
