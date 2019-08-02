@@ -3892,7 +3892,7 @@ func (w *Wallet) StakeInfo(chainClient *hcrpcclient.Client) (*StakeInfoData, err
 						// missed.  Append it to the liveOrExpiredOrMissed slice to
 						// check this later.
 						aiTicketHash := it.Hash
-						liveOrExpiredOrMissed = append(liveOrExpiredOrMissed, &aiTicketHash)
+						aiLiveOrExpiredOrMissed = append(aiLiveOrExpiredOrMissed, &aiTicketHash)
 					} else {
 						res.Revoked++
 						// The ticket was revoked because it was either expired or
