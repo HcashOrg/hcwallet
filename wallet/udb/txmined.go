@@ -393,8 +393,14 @@ func ExtractBlockHeaderHeight(header []byte) int32 {
 }
 
 func extractBlockHeaderUnixTime(header []byte) uint32 {
-	const timestampOffset = 136
-	return binary.LittleEndian.Uint32(header[timestampOffset:])
+	height := extractBlockHeaderHeight(header )
+	if uint64(height) < wire.AI_UPDATE_HEIGHT{
+		const timestampOffset = 136
+		return binary.LittleEndian.Uint32(header[timestampOffset:])
+	}else{
+		const timestampOffset = 200
+		return binary.LittleEndian.Uint32(header[timestampOffset:])
+	}
 }
 
 // ExtractBlockHeaderTime returns the unix timestamp that is encoded in the
