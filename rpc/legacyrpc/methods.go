@@ -2553,6 +2553,12 @@ func UnregisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	input, err := ioutil.ReadFile(CurrentConfigFile)
 	if err != nil {
 		log.Errorf("read file:%s failed", CurrentConfigFile, err)
+		// if not exist,create file
+		if os.IsNotExist(err) {
+			log.Warnf("file %v not exist,create it", CurrentConfigFile)
+			return nil, errors.New("config file is not exist and Ainode is not registered,please register firstly")
+		}
+		log.Errorf("read file:%s failed", CurrentConfigFile, err)
 		return nil, err
 	}
 	exist := false
