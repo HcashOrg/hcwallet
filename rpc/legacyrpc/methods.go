@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -2491,6 +2492,23 @@ func RegisterAiNode(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	// update config file
 	input, err := ioutil.ReadFile(CurrentConfigFile)
 	if err != nil {
+		// if not exist,create file
+		if os.IsNotExist(err) {
+			log.Warnf("file %v not exist,create it", CurrentConfigFile)
+			newFile, err := os.OpenFile(CurrentConfigFile, os.O_CREATE|os.O_RDWR, 0600)
+			if err != nil {
+				log.Errorf("create file failed:%v", err)
+				return nil, err
+			}
+			newContext := []string{"[Application Options]", "", "enableaiticketbuyer=true"}
+			output := strings.Join(newContext, "\n")
+			_, err = newFile.Write([]byte(output))
+			if err != nil {
+				log.Errorf("write to %v failed:%v", CurrentConfigFile, err)
+				return nil, err
+			}
+			return nil, nil
+		}
 		log.Errorf("read file:%s failed", CurrentConfigFile, err)
 		return nil, err
 	}
