@@ -387,7 +387,7 @@ func rpcClientConnectLoop(passphrase []byte, legacyRPCServer *legacyrpc.Server, 
 				}
 			}
 			//if cfg.EnableAiTicketBuyer {
-			err = loader.StartAiTicketPurchase(passphrase, &cfg.aitbCfg)
+			err = loader.StartAiTicketPurchase(passphrase, &cfg.aitbCfg, cfg.EnableAiTicketBuyer)
 			if err != nil {
 				log.Errorf("Unable to start ai ticket buyer: %v", err)
 			}

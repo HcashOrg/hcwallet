@@ -312,7 +312,7 @@ func (l *Loader) StartTicketPurchase(passphrase []byte, ticketbuyerCfg *ticketbu
 }
 
 // StartTicketPurchase launches the ticketbuyer to start purchasing tickets.
-func (l *Loader) StartAiTicketPurchase(passphrase []byte, ticketbuyerCfg *aiticketbuyer.Config) error {
+func (l *Loader) StartAiTicketPurchase(passphrase []byte, ticketbuyerCfg *aiticketbuyer.Config, enableAiTicketbuy bool) error {
 	defer l.mu.Unlock()
 	l.mu.Lock()
 
@@ -339,7 +339,9 @@ func (l *Loader) StartAiTicketPurchase(passphrase []byte, ticketbuyerCfg *aitick
 	l.ntfnAiClient = n
 	l.aiPurchaseManager = pm
 	pm.Start()
-	//	l.wallet.SetAiTicketPurchasingEnabled(true)
+	if enableAiTicketbuy {
+		l.wallet.SetAiTicketPurchasingEnabled(true)
+	}
 	return nil
 }
 
