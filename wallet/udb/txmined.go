@@ -398,8 +398,8 @@ func extractBlockHeaderUnixTime(header []byte) uint32 {
 		const timestampOffset = 136
 		return binary.LittleEndian.Uint32(header[timestampOffset:])
 	}else{
-		const timestampOffset = 200
-		return binary.LittleEndian.Uint32(header[timestampOffset:])
+		const timestampOffsetV3 = 200
+		return binary.LittleEndian.Uint32(header[timestampOffsetV3:])
 	}
 }
 
