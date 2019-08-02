@@ -399,6 +399,9 @@ type PurchaseStats struct {
 // TODO Not make this an inlined pile of crap.
 func (t *TicketPurchaser) Purchase(height int64) (*PurchaseStats, error) {
 
+	t.wallet.TicketBuyerLock.Lock()
+	defer t.wallet.TicketBuyerLock.Unlock()
+
 	ps := &PurchaseStats{Height: height}
 	// Check to make sure that the current height has not already been seen
 	// for a reorg or a fork

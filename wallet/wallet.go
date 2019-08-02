@@ -112,7 +112,7 @@ type Wallet struct {
 	relayFeeMu             sync.Mutex
 	ticketFeeIncrementLock sync.Mutex
 	ticketFeeIncrement     hcutil.Amount
-	aiticketFeeIncrement     hcutil.Amount
+	aiticketFeeIncrement   hcutil.Amount
 	DisallowFree           bool
 	AllowHighFees          bool
 
@@ -167,6 +167,9 @@ type Wallet struct {
 
 	//Omini  enable omini function
 	enableOmni bool
+
+	//ticket
+	TicketBuyerLock sync.Mutex
 }
 
 // newWallet creates a new Wallet structure with the provided address manager
@@ -827,7 +830,6 @@ func (w *Wallet) SetAiTicketFeeIncrement(fee hcutil.Amount) {
 	w.ticketFeeIncrementLock.Unlock()
 }
 
-
 // quitChan atomically reads the quit channel.
 func (w *Wallet) quitChan() <-chan struct{} {
 	w.quitMu.Lock()
@@ -1386,6 +1388,9 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 
 	rescanHeight, rescanPoint, err := w.GetWalletSyncHeight()
 	if err != nil {
+		for true {
+			w.GetWalletSyncHeight()
+		}
 		return err
 	}
 	w.RollBackOminiTransaction(rescanHeight, nil)
