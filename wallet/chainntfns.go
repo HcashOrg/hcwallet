@@ -630,7 +630,7 @@ func (w *Wallet) ProcessOminiTransaction(rec *udb.TxRecord, blockMeta *udb.Block
 	}
 	sendIn := rec.MsgTx.TxIn[0]
 
-	if (sendIn.PreviousOutPoint.Hash == chainhash.Hash{}) {
+	if (sendIn.PreviousOutPoint.Hash == chainhash.Hash{} || w.chainClient == nil) {
 		return nil
 	}
 
@@ -1298,6 +1298,9 @@ func (w *Wallet) handleAiTxVote(aiTxVoteHash *chainhash.Hash, aiTxHash *chainhas
 
 func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash, resend bool) {
 
+	if w.chainClient == nil{
+		return
+	}
 	msgAiTx := wire.NewMsgAiTx()
 	msgAiTx.FromBytes(aiTxBytes)
 	log.Infof("handle newAiTx Notifications:%v %v", msgAiTx.TxHash(), resend)
@@ -1369,7 +1372,9 @@ func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash, rese
 
 			aiTxVote.Sig = sig
 
-			w.chainClient.SendAiTxVote(aiTxVote)
+			if w.chainClient != nil{
+				w.chainClient.SendAiTxVote(aiTxVote)
+			}
 		}
 		return nil
 	})

@@ -40,6 +40,7 @@ import (
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 	"github.com/HcashOrg/hcwallet/walletdb"
+	bs "github.com/HcashOrg/hcd/crypto/bliss"
 )
 
 const (
@@ -2247,12 +2248,38 @@ func (w *Wallet) SignMessage(msg string, addr hcutil.Address) (sig []byte, err e
 	if err != nil {
 		return nil, err
 	}
-	pkCast, ok := privKey.(*secp256k1.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf("Unable to create secp256k1.PrivateKey" +
-			"from chainec.PrivateKey")
+
+	ainfo, err := w.AddressInfo(addr)
+	if err != nil {
+		return nil, err
 	}
-	return secp256k1.SignCompact(secp256k1.S256(), pkCast, messageHash, true)
+	acctName, err := w.AccountName(ainfo.Account())
+	if err != nil {
+		return nil, fmt.Errorf("Unknow account %d", ainfo.Account())
+	}
+
+	if ainfo.Account() == 0{
+		pkCast, ok := privKey.(*secp256k1.PrivateKey)
+		if !ok {
+			return nil, fmt.Errorf("Unable to create secp256k1.PrivateKey" +
+				"from chainec.PrivateKey")
+		}
+		return secp256k1.SignCompact(secp256k1.S256(), pkCast, messageHash, true)
+	}else if ainfo.Account() == 1{
+		pkCast, ok := privKey.(bs.PrivateKey)//hxcrypto.PrivateKey
+		if !ok {
+			return nil, fmt.Errorf("Unable to create bliss.PrivateKey" +
+				"from chainec.PrivateKey")
+		}
+
+		sig, err := bs.Bliss.Sign(pkCast, messageHash)
+		if err != nil {
+			return nil, fmt.Errorf("cannot sign tx input: %s", err)
+		}
+		return sig.Serialize(), err
+
+	}
+	return nil,  fmt.Errorf("Unknow account %s", acctName)
 }
 
 // VerifyMessage verifies that sig is a valid signature of msg and was created
