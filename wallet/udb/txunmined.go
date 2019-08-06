@@ -165,6 +165,10 @@ func (s *Store) removeDoubleSpends(ns walletdb.ReadWriteBucket, rec *TxRecord) e
 	return nil
 }
 
+func (s *Store)RemoveUnconfirmed(ns walletdb.ReadWriteBucket, tx *wire.MsgTx, txHash *chainhash.Hash) error {
+	return s.removeUnconfirmed(ns,tx,txHash)
+}
+
 // removeUnconfirmed removes an unmined transaction record and all spend chains
 // deriving from it from the store.  This is designed to remove transactions
 // that would otherwise result in double spend conflicts if left in the store,
