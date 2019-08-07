@@ -4078,7 +4078,7 @@ func (w *Wallet) LockOutpoint(op wire.OutPoint) {
 //return lottery hash
 func (w *Wallet) GetLotteryBlockHash() *chainhash.Hash {
 	bestHash, height := w.MainChainTip()
-	lotteryHash, err := w.chainClient.GetBlockHash(int64(height) - defaultConfirmNumber)
+	lotteryHash, err := w.chainClient.GetBlockHash(int64(height) -  defaultConfirmNumber)
 	if err != nil {
 		return &bestHash
 	}
@@ -4131,40 +4131,8 @@ func (w *Wallet) resendUnminedTxs(chainClient *hcrpcclient.Client) {
 
 	for _, tx := range txs {
 		//deal with ai send
-
-		blockHash,isLockTx:=txscript.IsAiTx(tx)
-
+		_,isLockTx:=txscript.IsAiTx(tx)
 		if isLockTx {
-			block,err:=chainClient.GetBlock(blockHash)
-			if err!=nil{
-				log.Errorf("resend unminedTxs %v err: %v",tx.TxHash(), err)
-				continue
-			}
-
-			_, mainHeight := w.MainChainTip()
-			//release unconfirmed aitx
-			if block!=nil&&int32(block.Header.Height)+defaultConfirmNumber<mainHeight{
-				err := walletdb.Update(w.db, func(rwtx walletdb.ReadWriteTx) error {
-					txmgrNs := rwtx.ReadWriteBucket(wtxmgrNamespaceKey)
-					var err error
-					txHash:=tx.TxHash()
-					w.TxStore.RemoveUnconfirmed(txmgrNs,tx,&txHash)
-					return err
-				})
-				if err != nil {
-					log.Errorf("Cannot load unmined transactions for resending: %v", err)
-					continue
-				}
-
-			}
-
-			////send to ai channel
-			//resp, err := chainClient.SendAiRawTransaction(aiTx, w.AllowHighFees)
-			//if err != nil {
-			//	log.Errorf("resend unminedTxs %v err: %v", aiTx.TxHash(), err)
-			//	continue
-			//}
-			//log.Tracef("Resent unmined transaction %v", resp)
 		} else {
 			resp, err := chainClient.SendRawTransaction(tx, w.AllowHighFees)
 			if err != nil {

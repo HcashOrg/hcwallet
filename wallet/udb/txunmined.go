@@ -9,6 +9,8 @@ package udb
 import (
 	"bytes"
 	"fmt"
+	"github.com/HcashOrg/hcd/txscript"
+	"github.com/HcashOrg/hcwallet/chain"
 
 	"github.com/HcashOrg/hcd/blockchain/stake"
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
@@ -298,7 +300,7 @@ func (s *Store) unminedTxHashes(ns walletdb.ReadBucket) ([]*chainhash.Hash, erro
 //   * Ticket purchases with a different ticket price than the passed stake
 //     difficulty
 //   * Votes that do not vote on the tip block
-func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff, aistakeDiff int64) error {
+func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff, aistakeDiff int64,chainClient *chain.RPCClient) error {
 	ns := dbtx.ReadWriteBucket(wtxmgrBucketKey)
 
 	_, tipHeight := s.MainChainTip(ns)
@@ -317,6 +319,30 @@ func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff, aistakeDiff i
 			str := fmt.Sprintf("deserialize error")
 			return apperrors.Wrap(err, apperrors.ErrData, str)
 		}
+
+
+		blockHash,isLockTx:=txscript.IsAiTx(&tx)
+
+		if isLockTx {
+			block, err := chainClient.GetBlock(blockHash)
+			if err != nil {
+				log.Errorf("prune unminedTxs %v err: %v", tx.TxHash(), err)
+				continue
+			}
+
+			//release unconfirmed aitx
+			if block != nil && int32(block.Header.Height)+6*2 < tipHeight {
+				txHash, err := chainhash.NewHash(k)
+				if err != nil {
+					str := fmt.Sprintf("unexpected hash string")
+					return apperrors.Wrap(err, apperrors.ErrData, str)
+				}
+				toRemove = append(toRemove, &removeTx{tx, txHash})
+				continue
+			}
+
+		}
+
 
 		var expired, isTicketPurchase, isVote bool
 		isSStx, _ := stake.IsSStx(&tx)
