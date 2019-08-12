@@ -4133,6 +4133,19 @@ func (w *Wallet) resendUnminedTxs(chainClient *hcrpcclient.Client) {
 		//deal with ai send
 		_,isLockTx:=txscript.IsAiTx(tx)
 		if isLockTx {
+			//err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
+			//	//	txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
+			//	//	return w.TxStore.PruneUnconfirmed(txmgrNs, height, blockHeader.SBits)
+			//	//return w.TxStore.PruneUnmined(dbtx, blockHeader.SBits, blockHeader.AiSBits,w.chainClient)
+			//	wtxmgrBucketKey    := []byte("wtxmgr")
+			//	ns := dbtx.ReadWriteBucket(wtxmgrBucketKey)
+			//	hash:=tx.TxHash()
+			//	return w.TxStore.RemoveUnconfirmed(ns,tx,&hash)
+			//})
+			//if err!=nil{
+			//	log.Tracef("remove unmined ai transaction %v", tx.TxHash())
+			//}
+
 		} else {
 			resp, err := chainClient.SendRawTransaction(tx, w.AllowHighFees)
 			if err != nil {
