@@ -600,7 +600,7 @@ func (w *Wallet) ProcessOminiTransaction(rec *udb.TxRecord, blockMeta *udb.Block
 	if len(vout.ScriptPubKey.Addresses) > 1 {
 		return errors.New("multiaddress not support")
 	}
-	sendor := vout.ScriptPubKey.Addresses[0] //多签未考虑
+	sendor := vout.ScriptPubKey.Addresses[0]
 	var toAddress string
 	index := int(0)
 	isSetMultyNull := false
@@ -628,7 +628,7 @@ func (w *Wallet) ProcessOminiTransaction(rec *udb.TxRecord, blockMeta *udb.Block
 					continue
 				}
 				if pubkeyAddrs[0].String() != w.chainParams.OmniMoneyReceive {
-					toAddress = pubkeyAddrs[0].String() //多签未考虑
+					toAddress = pubkeyAddrs[0].String()
 					isSetToAddress = true
 				}
 			}
@@ -1510,7 +1510,7 @@ func (w *Wallet) omniProcessPayment(rec *udb.TxRecord, sendor string, blockMeta 
 		if pubkeyAddrs[0].String() == w.chainParams.OmniMoneyReceive {
 			continue
 		}
-		seller := pubkeyAddrs[0].String() //多签未考虑
+		seller := pubkeyAddrs[0].String()
 		params := []interface{}{
 			seller,
 			sendor,
