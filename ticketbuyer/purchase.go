@@ -86,6 +86,7 @@ out:
 				// update to the main chain.  This is probably not optimal but
 				// it matches how hcticketbuyer worked.
 				for h := v.NewHeight - int32(len(v.AttachedBlocks)) + 1; h <= v.NewHeight; h++ {
+					log.Info("purchasing ...")
 					p.purchase(int64(h))
 				}
 

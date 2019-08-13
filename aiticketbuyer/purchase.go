@@ -85,7 +85,8 @@ out:
 				// Purchase tickets for each attached block, not just for the
 				// update to the main chain.  This is probably not optimal but
 				// it matches how hcticketbuyer worked.
-				if p.w.GetAiTicketPurchasingEnabled() {
+				if p.w.GetAiTicketPurchasingEnabled() && uint64(v.NewHeight) >= p.w.ChainParams().AIUpdateHeight {
+					log.Info("purchasing ...")
 					for h := v.NewHeight - int32(len(v.AttachedBlocks)) + 1; h <= v.NewHeight; h++ {
 						p.purchase(int64(h))
 					}
