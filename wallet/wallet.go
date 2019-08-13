@@ -26,6 +26,7 @@ import (
 	"github.com/HcashOrg/hcd/chaincfg"
 	"github.com/HcashOrg/hcd/chaincfg/chainec"
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
+	bs "github.com/HcashOrg/hcd/crypto/bliss"
 	"github.com/HcashOrg/hcd/hcec/secp256k1"
 	"github.com/HcashOrg/hcd/hcjson"
 	"github.com/HcashOrg/hcd/hcutil"
@@ -40,7 +41,6 @@ import (
 	"github.com/HcashOrg/hcwallet/wallet/txrules"
 	"github.com/HcashOrg/hcwallet/wallet/udb"
 	"github.com/HcashOrg/hcwallet/walletdb"
-	bs "github.com/HcashOrg/hcd/crypto/bliss"
 )
 
 const (
@@ -1389,9 +1389,6 @@ func (w *Wallet) syncWithChain(chainClient *hcrpcclient.Client) error {
 
 	rescanHeight, rescanPoint, err := w.GetWalletSyncHeight()
 	if err != nil {
-		for true {
-			w.GetWalletSyncHeight()
-		}
 		return err
 	}
 	w.RollBackOminiTransaction(rescanHeight, nil)
@@ -2258,15 +2255,15 @@ func (w *Wallet) SignMessage(msg string, addr hcutil.Address) (sig []byte, err e
 		return nil, fmt.Errorf("Unknow account %d", ainfo.Account())
 	}
 
-	if ainfo.Account() == 0{
+	if ainfo.Account() == 0 {
 		pkCast, ok := privKey.(*secp256k1.PrivateKey)
 		if !ok {
 			return nil, fmt.Errorf("Unable to create secp256k1.PrivateKey" +
 				"from chainec.PrivateKey")
 		}
 		return secp256k1.SignCompact(secp256k1.S256(), pkCast, messageHash, true)
-	}else if ainfo.Account() == 1{
-		pkCast, ok := privKey.(bs.PrivateKey)//hxcrypto.PrivateKey
+	} else if ainfo.Account() == 1 {
+		pkCast, ok := privKey.(bs.PrivateKey) //hxcrypto.PrivateKey
 		if !ok {
 			return nil, fmt.Errorf("Unable to create bliss.PrivateKey" +
 				"from chainec.PrivateKey")
@@ -2279,7 +2276,7 @@ func (w *Wallet) SignMessage(msg string, addr hcutil.Address) (sig []byte, err e
 		return sig.Serialize(), err
 
 	}
-	return nil,  fmt.Errorf("Unknow account %s", acctName)
+	return nil, fmt.Errorf("Unknow account %s", acctName)
 }
 
 // VerifyMessage verifies that sig is a valid signature of msg and was created
@@ -4078,7 +4075,7 @@ func (w *Wallet) LockOutpoint(op wire.OutPoint) {
 //return lottery hash
 func (w *Wallet) GetLotteryBlockHash() *chainhash.Hash {
 	bestHash, height := w.MainChainTip()
-	lotteryHash, err := w.chainClient.GetBlockHash(int64(height) -  defaultConfirmNumber)
+	lotteryHash, err := w.chainClient.GetBlockHash(int64(height) - defaultConfirmNumber)
 	if err != nil {
 		return &bestHash
 	}
@@ -4131,7 +4128,7 @@ func (w *Wallet) resendUnminedTxs(chainClient *hcrpcclient.Client) {
 
 	for _, tx := range txs {
 		//deal with ai send
-		_,isLockTx:=txscript.IsAiTx(tx)
+		_, isLockTx := txscript.IsAiTx(tx)
 		if isLockTx {
 			//err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
 			//	//	txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
