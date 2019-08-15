@@ -406,7 +406,12 @@ func (w *Wallet) onBlockConnected(serializedBlockHeader []byte, transactions [][
 	err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
 		//	txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
 		//	return w.TxStore.PruneUnconfirmed(txmgrNs, height, blockHeader.SBits)
-		return w.TxStore.PruneUnmined(dbtx, blockHeader.SBits, blockHeader.AiSBits,w.chainClient)
+		aiToRm,err:=w.TxStore.PruneUnmined(dbtx, blockHeader.SBits, blockHeader.AiSBits,w.chainClient)
+		if err!=nil{
+			return err
+		}
+		w.NtfnServer.NotifyRemoveTransaction(aiToRm)
+		return nil
 	})
 	if err != nil {
 		log.Errorf("Failed to prune unconfirmed transactions when "+
@@ -1329,7 +1334,12 @@ func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash, rese
 		}
 
 		//deal with sign
+		//ttt:=0
 		for _, ticketHash := range ticketHashes {
+			//ttt++
+			//if ttt>=3{
+			//	break
+			//}
 			ticketPurchase, err := w.TxStore.Tx(txmgrNs, ticketHash)
 			if err != nil || ticketPurchase == nil {
 				ticketPurchase, err = w.StakeMgr.TicketPurchase(dbtx, ticketHash)

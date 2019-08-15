@@ -9,13 +9,12 @@ package udb
 import (
 	"bytes"
 	"fmt"
-	"github.com/HcashOrg/hcd/txscript"
-	"github.com/HcashOrg/hcwallet/chain"
-
 	"github.com/HcashOrg/hcd/blockchain/stake"
 	"github.com/HcashOrg/hcd/chaincfg/chainhash"
+	"github.com/HcashOrg/hcd/txscript"
 	"github.com/HcashOrg/hcd/wire"
 	"github.com/HcashOrg/hcwallet/apperrors"
+	"github.com/HcashOrg/hcwallet/chain"
 	"github.com/HcashOrg/hcwallet/walletdb"
 )
 
@@ -300,7 +299,7 @@ func (s *Store) unminedTxHashes(ns walletdb.ReadBucket) ([]*chainhash.Hash, erro
 //   * Ticket purchases with a different ticket price than the passed stake
 //     difficulty
 //   * Votes that do not vote on the tip block
-func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff, aistakeDiff int64,chainClient *chain.RPCClient) error {
+func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff, aistakeDiff int64,chainClient *chain.RPCClient) ([]*chainhash.Hash,error) {
 	ns := dbtx.ReadWriteBucket(wtxmgrBucketKey)
 
 	_, tipHeight := s.MainChainTip(ns)
@@ -310,6 +309,7 @@ func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff, aistakeDiff i
 		hash *chainhash.Hash
 	}
 	var toRemove []*removeTx
+	var aiToRemove []*chainhash.Hash
 
 	c := ns.NestedReadBucket(bucketUnmined).ReadCursor()
 	for k, v := c.First(); k != nil; k, v = c.Next() {
@@ -317,7 +317,7 @@ func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff, aistakeDiff i
 		err := tx.Deserialize(bytes.NewReader(extractRawUnminedTx(v)))
 		if err != nil {
 			str := fmt.Sprintf("deserialize error")
-			return apperrors.Wrap(err, apperrors.ErrData, str)
+			return aiToRemove,apperrors.Wrap(err, apperrors.ErrData, str)
 		}
 
 
@@ -335,9 +335,10 @@ func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff, aistakeDiff i
 				txHash, err := chainhash.NewHash(k)
 				if err != nil {
 					str := fmt.Sprintf("unexpected hash string")
-					return apperrors.Wrap(err, apperrors.ErrData, str)
+					return aiToRemove,apperrors.Wrap(err, apperrors.ErrData, str)
 				}
 				toRemove = append(toRemove, &removeTx{tx, txHash})
+				aiToRemove = append(aiToRemove, txHash)
 				continue
 			}
 
@@ -376,7 +377,7 @@ func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff, aistakeDiff i
 		txHash, err := chainhash.NewHash(k)
 		if err != nil {
 			str := fmt.Sprintf("unexpected hash string")
-			return apperrors.Wrap(err, apperrors.ErrData, str)
+			return aiToRemove,apperrors.Wrap(err, apperrors.ErrData, str)
 		}
 
 		if expired {
@@ -393,9 +394,9 @@ func (s *Store) PruneUnmined(dbtx walletdb.ReadWriteTx, stakeDiff, aistakeDiff i
 	for _, r := range toRemove {
 		err := s.removeUnconfirmed(ns, &r.tx, r.hash)
 		if err != nil {
-			return err
+			return aiToRemove,err
 		}
 	}
 
-	return nil
+	return aiToRemove,nil
 }

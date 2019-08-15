@@ -313,6 +313,16 @@ func (s *NotificationServer) notifyUnminedTransaction(dbtx walletdb.ReadTx, deta
 	}
 }
 
+func (s *NotificationServer)NotifyRemoveTransaction(hash []*chainhash.Hash)  {
+	if len(hash)==0{
+		return
+	}
+	if s.currentTxNtfn == nil {
+		s.currentTxNtfn = &TransactionNotifications{}
+	}
+	s.currentTxNtfn.RemoveTransactionHashes= append(s.currentTxNtfn.RemoveTransactionHashes, hash...)
+}
+
 func (s *NotificationServer) notifyDetachedBlock(hash *chainhash.Hash) {
 	if s.currentTxNtfn == nil {
 		s.currentTxNtfn = &TransactionNotifications{}
@@ -426,6 +436,7 @@ type TransactionNotifications struct {
 	DetachedBlocks           []*chainhash.Hash
 	UnminedTransactions      []TransactionSummary
 	UnminedTransactionHashes []*chainhash.Hash
+	RemoveTransactionHashes  []*chainhash.Hash
 	NewBalances              []AccountBalance
 }
 
@@ -503,6 +514,7 @@ const (
 	TransactionTypeRevocation
 
 	TransactionTypeAiTx
+	TransactionTypeRemoveAiTx
 )
 
 // TxTransactionType returns the correct TransactionType given a wire transaction

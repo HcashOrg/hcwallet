@@ -2799,6 +2799,7 @@ type TransactionNotificationsResponse struct {
 	// Instead of notifying all of the removed unmined transactions,
 	// just send all of the current hashes.
 	UnminedTransactionHashes [][]byte `protobuf:"bytes,4,rep,name=unmined_transaction_hashes,json=unminedTransactionHashes,proto3" json:"unmined_transaction_hashes,omitempty"`
+	RemoveTransactionHashes  [][]byte `protobuf:"bytes,5,rep,name=remove_transaction_hashes,json=removeTransactionHashes,proto3" json:"remove_transaction_hashes,omitempty"`
 }
 
 func (m *TransactionNotificationsResponse) Reset()         { *m = TransactionNotificationsResponse{} }
