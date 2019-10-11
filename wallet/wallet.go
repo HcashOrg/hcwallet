@@ -1428,6 +1428,7 @@ func (w *Wallet) GetWalletSyncHeight() (uint32, *chainhash.Hash, error) {
 	}
 
 	rescanHeight := uint32(0)
+	omniRollbackHeight := 0
 	if rescanPoint != nil {
 		header, err := w.BlockHeader(rescanPoint)
 		if err != nil {
@@ -1438,49 +1439,50 @@ func (w *Wallet) GetWalletSyncHeight() (uint32, *chainhash.Hash, error) {
 		_, height := w.MainChainTip()
 		rescanHeight = uint32(height)
 	}
-	err = w.RollBackOminiTransaction(rescanHeight, nil)
-	if err != nil {
-		return 0, nil, err
-	}
-	//omni record height
-	req := omnilib.Request{
-		Method: "omni_getwaterline",
-	}
-	bytes, err := json.Marshal(req)
-	if err != nil {
-		return 0, nil, err
-	}
-	strRsp := omnilib.JsonCmdReqHcToOm(string(bytes))
-	var response hcjson.Response
-	err = json.Unmarshal([]byte(strRsp), &response)
-	if err != nil {
-		return 0, nil, err
-	}
-	if response.Error != nil {
-		return 0, nil, fmt.Errorf(response.Error.Message)
-	}
-	omniRollbackHeight, err := strconv.Atoi(string(response.Result))
-
-	if omniRollbackHeight > int(rescanHeight) {
-		omniRollbackHeight = int(rescanHeight)
-	}
-	//mini scan height
-	// omniRollbackHeight  omni rollback height
-	// rescanHeight rescan height
-	// omniRollbackHeight <= rescanHeight
-	if uint64(rescanHeight) > w.chainParams.OmniStartHeight {
-		if uint64(omniRollbackHeight) < w.chainParams.OmniStartHeight {
-			// OmniStartHeight|omniRollbackHeight|rescanHeight
-			// rollback from w.chainParams.OmniStartHeight
-			rescanHeight = uint32(w.chainParams.OmniStartHeight)
-		} else {
-			// omniRollbackHeight|OmniStartHeight|rescanHeight
-			// rollback from omniRollbackHeight
-			rescanHeight = uint32(omniRollbackHeight)
+	if w.enableOmni {
+		err = w.RollBackOminiTransaction(rescanHeight, nil)
+		if err != nil {
+			return 0, nil, err
 		}
-	} else {
-		// omniRollbackHeight|rescanHeight|OmniStartHeight
-		// rollback from rescanHeight
+		//omni record height
+		req := omnilib.Request{
+			Method: "omni_getwaterline",
+		}
+		bytes, err := json.Marshal(req)
+		if err != nil {
+			return 0, nil, err
+		}
+		strRsp := omnilib.JsonCmdReqHcToOm(string(bytes))
+		var response hcjson.Response
+		err = json.Unmarshal([]byte(strRsp), &response)
+		if err != nil {
+			return 0, nil, err
+		}
+		if response.Error != nil {
+			return 0, nil, fmt.Errorf(response.Error.Message)
+		}
+		omniRollbackHeight, err = strconv.Atoi(string(response.Result))
+		if omniRollbackHeight > int(rescanHeight) {
+			omniRollbackHeight = int(rescanHeight)
+		}
+		//mini scan height
+		// omniRollbackHeight  omni rollback height
+		// rescanHeight rescan height
+		// omniRollbackHeight <= rescanHeight
+		if uint64(rescanHeight) > w.chainParams.OmniStartHeight {
+			if uint64(omniRollbackHeight) < w.chainParams.OmniStartHeight {
+				// OmniStartHeight|omniRollbackHeight|rescanHeight
+				// rollback from w.chainParams.OmniStartHeight
+				rescanHeight = uint32(w.chainParams.OmniStartHeight)
+			} else {
+				// omniRollbackHeight|OmniStartHeight|rescanHeight
+				// rollback from omniRollbackHeight
+				rescanHeight = uint32(omniRollbackHeight)
+			}
+		} else {
+			// omniRollbackHeight|rescanHeight|OmniStartHeight
+			// rollback from rescanHeight
+		}
 	}
 
 	err = walletdb.View(w.db, func(tx walletdb.ReadTx) error {
