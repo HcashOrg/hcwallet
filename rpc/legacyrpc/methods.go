@@ -51,6 +51,10 @@ var (
 	rpcHandlers map[string]LegacyRpcHandler
 )
 
+// IsPos decide wallet is in pos
+var IsPos bool = false
+var IsPosLock sync.Mutex
+
 // confirms returns the number of confirmations for a transaction in a block at
 // height txHeight (or -1 for an unconfirmed tx) given the chain height
 // curHeight.
@@ -200,11 +204,19 @@ func init() {
 		"unregisterainode": {handler: UnregisterAiNode},
 		"ifainoderegisted": {handler: IfAiNodeRegisted},
 		"getconfigfile":    {handler: GetConfigFile},
+		"walletispos":      {handler: WalletIsPos},
 	}
 
 	for k, v := range getOminiMethod() {
 		rpcHandlers[k] = v
 	}
+}
+
+func WalletIsPos(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	cmd := icmd.(*hcjson.WalletIsPosCmd)
+	temp := cmd.IsPos
+	IsPos = temp
+	return nil, nil
 }
 
 // unimplemented handles an unimplemented RPC request with the
@@ -2692,6 +2704,10 @@ func isNilOrEmpty(s *string) bool {
 // the TxID for the created transaction is returned.
 func sendFrom(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
 	cmd := icmd.(*hcjson.SendFromCmd)
+	
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
 
 	// Transaction comments are not yet supported.  Error instead of
 	// pretending to save them.
@@ -2735,6 +2751,11 @@ func sendFrom(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Clien
 func sendMany(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*hcjson.SendManyCmd)
 
+	
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	// Transaction comments are not yet supported.  Error instead of
 	// pretending to save them.
 	if !isNilOrEmpty(cmd.Comment) {
@@ -2774,6 +2795,12 @@ func sendMany(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // or a fee for the miner are sent back to a designated  address or first address of the default account
 // in the wallet. Upon success, the TxID for the created transaction is returned.
 func sendManyV2(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	cmd := icmd.(*hcjson.SendManyV2Cmd)
 	account, err := w.AccountNumber(cmd.FromAccount)
 	if err != nil {
@@ -2819,6 +2846,12 @@ func sendManyV2(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // for the miner are sent back to a new address in the wallet.  Upon success,
 // the TxID for the created transaction is returned.
 func sendFromAddressToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	cmd := icmd.(*hcjson.SendFromAddressToAddressCmd)
 	account := uint32(udb.DefaultAccountNum)
 	amt, err := hcutil.NewAmount(cmd.Amount)
@@ -2847,6 +2880,10 @@ func sendFromAddressToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, 
 // the TxID for the created transaction is returned.
 func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*hcjson.SendToAddressCmd)
+	
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
 
 	// Transaction comments are not yet supported.  Error instead of
 	// pretending to save them.
@@ -2885,6 +2922,10 @@ func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // the TxID for the created transaction is returned.
 func aiSendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	cmd := icmd.(*hcjson.AiSendToAddressCmd)
+	
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
 
 	// Transaction comments are not yet supported.  Error instead of
 	// pretending to save them.
@@ -2981,6 +3022,10 @@ func getStraightPubKey(icmd interface{}, w *wallet.Wallet, chainClient *hcrpccli
 // TODO Use with non-default accounts as well
 func sendToMultiSig(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
 	cmd := icmd.(*hcjson.SendToMultiSigCmd)
+	
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
 
 	account, err := w.AccountNumber(cmd.FromAccount)
 	if err != nil {
@@ -3067,6 +3112,11 @@ func sendToMultiSig(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient
 // Upon success, the TxID for the created transaction is returned.
 // hcd TODO: Clean these up
 func sendToSStx(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
+	
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	cmd := icmd.(*hcjson.SendToSStxCmd)
 	minconf := int32(*cmd.MinConf)
 
@@ -3131,6 +3181,11 @@ func sendToSStx(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Cli
 // Upon success, the TxID for the created transaction is returned.
 // hcd TODO: Clean these up
 func sendToSSGen(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+	
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	cmd := icmd.(*hcjson.SendToSSGenCmd)
 
 	_, err := w.AccountNumber(cmd.FromAccount)
@@ -3174,6 +3229,11 @@ func sendToSSGen(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // Upon success, the TxID for the created transaction is returned.
 // hcd TODO: Clean these up
 func sendToSSRtx(icmd interface{}, w *wallet.Wallet, chainClient *hcrpcclient.Client) (interface{}, error) {
+	
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	cmd := icmd.(*hcjson.SendToSSRtxCmd)
 
 	_, err := w.AccountNumber(cmd.FromAccount)

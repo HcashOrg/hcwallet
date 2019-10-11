@@ -69,7 +69,7 @@ func getOminiMethod() map[string]LegacyRpcHandler {
 		"omni_getwalletaddressbalances":          {handler: OmniGetwalletaddressbalances},
 		"omni_gettransaction":                    {handler: OmniGettransaction},
 		"omni_listtransactions":                  {handler: OmniListtransactions},
-		"omni_listwallettransactions":           {handler: OmniListwallettransactions},
+		"omni_listwallettransactions":            {handler: OmniListwallettransactions},
 		"omni_listblocktransactions":             {handler: OmniListblocktransactions},
 		"omni_listpendingtransactions":           {handler: OmniListpendingtransactions},
 		"omni_getactivedexsells":                 {handler: OmniGetactivedexsells},
@@ -119,7 +119,7 @@ func getOminiMethod() map[string]LegacyRpcHandler {
 		"omni_rollback":                          {handler: OmniRollBack},
 		"omni_getblockinfo":                      {handler: OmniGetBlockInfo},
 		"omni_createagreement":                   {handler: OmniCreateAgreement},
-		"omni_sendagreement":                   {handler: OmniSendAgreement},
+		"omni_sendagreement":                     {handler: OmniSendAgreement},
 	}
 }
 
@@ -216,6 +216,11 @@ func omni_listproperties(icmd interface{}, w *wallet.Wallet) (interface{}, error
 }
 
 func omniSendIssuanceFixed(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	txIdBytes, err := omni_cmdReq(icmd, w)
 	sendIssueCmd := icmd.(*hcjson.OmniSendissuancefixedCmd)
 	if err != nil {
@@ -270,6 +275,11 @@ func sendIssuanceFixed(w *wallet.Wallet, payLoad []byte) (string, error) {
 // OmniSendchangeissuer Change the issuer on record of the given tokens.
 // $ omnicore-cli "omni_sendchangeissuer" \     "1ARjWDkZ7kT9fwjPrjcQyvbXDkEySzKHwu" "3HTHRxu3aSDV4deakjC7VmsiUp7c6dfbvs" 3
 func OmniSendchangeissuer(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	account := uint32(udb.DefaultAccountNum)
 	omniSendchangeissuerCmd := icmd.(*hcjson.OmniSendchangeissuerCmd)
 	ret, err := omni_cmdReq(icmd, w)
@@ -299,6 +309,11 @@ func OmniSendchangeissuer(icmd interface{}, w *wallet.Wallet) (interface{}, erro
 // OmniSendenablefreezing Enables address freezing for a centrally managed property.
 // $ omnicore-cli "omni_sendenablefreezing" "3M9qvHKtgARhqcMtM5cRT9VaiDJ5PSfQGY" 2
 func OmniSendenablefreezing(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	account := uint32(udb.DefaultAccountNum)
 	omniSendenablefreezingCmd := icmd.(*hcjson.OmniSendenablefreezingCmd)
 	ret, err := omni_cmdReq(icmd, w)
@@ -321,6 +336,11 @@ func OmniSendenablefreezing(icmd interface{}, w *wallet.Wallet) (interface{}, er
 // OmniSenddisablefreezing Disables address freezing for a centrally managed property.,IMPORTANT NOTE:  Disabling freezing for a property will UNFREEZE all frozen addresses for that property!
 // $ omnicore-cli "omni_senddisablefreezing" "3M9qvHKtgARhqcMtM5cRT9VaiDJ5PSfQGY" 2
 func OmniSenddisablefreezing(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	account := uint32(udb.DefaultAccountNum)
 	omniSenddisablefreezingCmd := icmd.(*hcjson.OmniSenddisablefreezingCmd)
 	ret, err := omni_cmdReq(icmd, w)
@@ -342,6 +362,11 @@ func OmniSenddisablefreezing(icmd interface{}, w *wallet.Wallet) (interface{}, e
 // OmniSendfreeze Freeze an address for a centrally managed token.,Note: Only the issuer may freeze tokens, and only if the token is of the managed type with the freezing option enabled.
 // $ omnicore-cli "omni_sendfreeze" "3M9qvHKtgARhqcMtM5cRT9VaiDJ5PSfQGY" "3HTHRxu3aSDV4deakjC7VmsiUp7c6dfbvs" 2 1000
 func OmniSendfreeze(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	account := uint32(udb.DefaultAccountNum)
 	omniSendfreezeCmd := icmd.(*hcjson.OmniSendfreezeCmd)
 	ret, err := omni_cmdReq(icmd, w)
@@ -367,6 +392,11 @@ func OmniSendfreeze(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // OmniSendunfreeze Unfreeze an address for a centrally managed token.,Note: Only the issuer may unfreeze tokens
 // $ omnicore-cli "omni_sendunfreeze" "3M9qvHKtgARhqcMtM5cRT9VaiDJ5PSfQGY" "3HTHRxu3aSDV4deakjC7VmsiUp7c6dfbvs" 2 1000
 func OmniSendunfreeze(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	account := uint32(udb.DefaultAccountNum)
 	omniSendunfreezeCmd := icmd.(*hcjson.OmniSendunfreezeCmd)
 	ret, err := omni_cmdReq(icmd, w)
@@ -452,6 +482,11 @@ func omniGetBalance(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 }
 
 func omniSend(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	omniSendCmd := icmd.(*hcjson.OmniSendCmd)
 	ret, err := omni_cmdReq(icmd, w)
 	if err != nil {
@@ -735,6 +770,10 @@ func OmniSend(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // $ omnicore-cli "omni_senddexsell" "37FaKponF7zqoMLUjEiko25pDiuVH5YLEa" 1 "1.5" "0.75" 25 "0.0005" 1
 func OmniSenddexsell(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	omniSenddexsellCmd := icmd.(*hcjson.OmniSenddexsellCmd)
 	ret, err := omni_cmdReq(icmd, w)
 	if err != nil {
@@ -789,6 +828,10 @@ func OmniSenddexaccept(icmd interface{}, w *wallet.Wallet) (interface{}, error) 
 	//_ = icmd.(*hcjson.OmniSenddexacceptCmd)
 	//return omni_cmdReq(icmd, w)
 
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	omniSenddexacceptCmd := icmd.(*hcjson.OmniSenddexacceptCmd)
 	ret, err := omni_cmdReq(icmd, w)
 	if err != nil {
@@ -817,6 +860,11 @@ func OmniSenddexaccept(icmd interface{}, w *wallet.Wallet) (interface{}, error) 
 // OmniSendissuancecrowdsale Create new tokens as crowdsale.
 // $ omnicore-cli "omni_sendissuancecrowdsale" \     "3JYd75REX3HXn1vAU83YuGfmiPXW7BpYXo" 2 1 0 "Companies" "Bitcoin Mining" \     "Quantum Miner" "" "" 2 "100" 1483228800 30 2
 func OmniSendissuancecrowdsale(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	txIdBytes, err := omni_cmdReq(icmd, w)
 	omniSendissuancecrowdsaleCmd := icmd.(*hcjson.OmniSendissuancecrowdsaleCmd)
 	if err != nil {
@@ -859,6 +907,11 @@ func OmniSendissuancefixed(icmd interface{}, w *wallet.Wallet) (interface{}, err
 // OmniSendissuancemanaged Create new tokens with manageable supply.
 // $ omnicore-cli "omni_sendissuancemanaged" \     "3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH" 2 1 0 "Companies" "Bitcoin Mining" "Quantum Miner" "" ""
 func OmniSendissuancemanaged(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	txIdBytes, err := omni_cmdReq(icmd, w)
 	sendIssueCmd := icmd.(*hcjson.OmniSendissuancemanagedCmd)
 	if err != nil {
@@ -889,6 +942,11 @@ func OmniSendissuancemanaged(icmd interface{}, w *wallet.Wallet) (interface{}, e
 // OmniSendsto Create and broadcast a send-to-owners transaction.
 // $ omnicore-cli "omni_sendsto" \     "32Z3tJccZuqQZ4PhJR2hxHC3tjgjA8cbqz" "37FaKponF7zqoMLUjEiko25pDiuVH5YLEa" 3 "5000"
 func OmniSendsto(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	omniSendCmd := icmd.(*hcjson.OmniSendstoCmd)
 	ret, err := omni_cmdReq(icmd, w)
 	if err != nil {
@@ -936,6 +994,11 @@ func OmniSendsto(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // OmniSendgrant Issue or grant new units of managed tokens.
 // $ omnicore-cli "omni_sendgrant" "3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH" "" 51 "7000"
 func OmniSendgrant(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	omniSendGrantCmd := icmd.(*hcjson.OmniSendgrantCmd)
 	ret, err := omni_cmdReq(icmd, w)
 	if err != nil {
@@ -959,6 +1022,11 @@ func OmniSendgrant(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // OmniSendrevoke Revoke units of managed tokens.
 // $ omnicore-cli "omni_sendrevoke" "3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH" "" 51 "100"
 func OmniSendrevoke(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	omniSendrevokeCmd := icmd.(*hcjson.OmniSendrevokeCmd)
 	ret, err := omni_cmdReq(icmd, w)
 	if err != nil {
@@ -984,6 +1052,11 @@ func OmniSendrevoke(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 func OmniSendclosecrowdsale(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	//_ = icmd.(*hcjson.OmniSendclosecrowdsaleCmd)
 	//return omni_cmdReq(icmd, w)
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	txIdBytes, err := omni_cmdReq(icmd, w)
 	if err != nil {
 		return nil, err
@@ -1014,6 +1087,11 @@ func OmniSendclosecrowdsale(icmd interface{}, w *wallet.Wallet) (interface{}, er
 // OmniSendtrade Place a trade offer on the distributed token exchange.
 // $ omnicore-cli "omni_sendtrade" "3BydPiSLPP3DR5cf726hDQ89fpqWLxPKLR" 31 "250.0" 1 "10.0"
 func OmniSendtrade(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	txIdBytes, err := omni_cmdReq(icmd, w)
 	if err != nil {
 		return nil, err
@@ -1047,6 +1125,11 @@ func OmniSendtrade(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 func OmniSendcanceltradesbyprice(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	//_ = icmd.(*hcjson.OmniSendcanceltradesbypriceCmd)
 	//return omni_cmdReq(icmd, w)
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	omniSendcanceltradesbypriceCmd := icmd.(*hcjson.OmniSendcanceltradesbypriceCmd)
 
 	txIdBytes, err := omni_cmdReq(icmd, w)
@@ -1102,6 +1185,11 @@ func OmniSendcanceltradesbyprice(icmd interface{}, w *wallet.Wallet) (interface{
 func OmniSendcanceltradesbypair(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	//_ = icmd.(*hcjson.OmniSendcanceltradesbypairCmd)
 	//return omni_cmdReq(icmd, w)
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	omniSendcanceltradesbypairCmd := icmd.(*hcjson.OmniSendcanceltradesbypairCmd)
 
 	txIdBytes, err := omni_cmdReq(icmd, w)
@@ -1159,6 +1247,11 @@ func OmniSendcanceltradesbypair(icmd interface{}, w *wallet.Wallet) (interface{}
 func OmniSendcancelalltrades(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	//_ = icmd.(*hcjson.OmniSendcancelalltradesCmd)
 	//return omni_cmdReq(icmd, w)
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	omniSendcancelalltradesCmd := icmd.(*hcjson.OmniSendcancelalltradesCmd)
 
 	txIdBytes, err := omni_cmdReq(icmd, w)
@@ -1213,6 +1306,11 @@ func OmniSendcancelalltrades(icmd interface{}, w *wallet.Wallet) (interface{}, e
 // $ omnicore-cli "omni_sendall" "3M9qvHKtgARhqcMtM5cRT9VaiDJ5PSfQGY" "37FaKponF7zqoMLUjEiko25pDiuVH5YLEa" 2
 func OmniSendall(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	omniSendallCmd := icmd.(*hcjson.OmniSendallCmd)
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	ret, err := omni_cmdReq(icmd, w)
 
 	if err != nil {
@@ -1235,6 +1333,11 @@ func OmniSendall(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 // OmniSendrawtx Broadcasts a raw Omni Layer transaction.
 // $ omnicore-cli "omni_sendrawtx" \     "1MCHESTptvd2LnNp7wmr2sGTpRomteAkq8" "000000000000000100000000017d7840" \     "1EqTta1Rt8ixAA32DuC29oukbsSWU62qAV"
 func OmniSendrawtx(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
 	_ = icmd.(*hcjson.OmniSendrawtxCmd)
 	return omni_cmdReq(icmd, w)
 }
@@ -1292,8 +1395,7 @@ func OmniListwallettransactions(icmd interface{}, w *wallet.Wallet) (interface{}
 
 	req := omnilib.Request{
 		Method: "omni_listwallettransactions",
-		Params: []interface{}{addresses,cmd.Count, cmd.Skip, cmd.Startblock, cmd.Endblock},
-
+		Params: []interface{}{addresses, cmd.Count, cmd.Skip, cmd.Startblock, cmd.Endblock},
 	}
 	bytes, err := json.Marshal(req)
 	if err != nil {

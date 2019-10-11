@@ -657,7 +657,7 @@ func (s *walletServer) Balance(ctx context.Context, req *pb.BalanceRequest) (
 		LockedByTickets:         int64(bals.LockedByTickets),
 		VotingAuthority:         int64(bals.VotingAuthority),
 		Unconfirmed:             int64(bals.Unconfirmed),
-		AiTxConfirmed:			 int64(bals.AiTxConfirmed),
+		AiTxConfirmed:           int64(bals.AiTxConfirmed),
 	}
 	return resp, nil
 }
@@ -1616,6 +1616,7 @@ func (s *walletServer) TransactionNotifications(req *pb.TransactionNotifications
 				DetachedBlocks:           marshalHashes(v.DetachedBlocks),
 				UnminedTransactions:      marshalTransactionDetailsSlice(v.UnminedTransactions),
 				UnminedTransactionHashes: marshalHashes(v.UnminedTransactionHashes),
+				RemoveTransactionHashes:  marshalHashes(v.RemoveTransactionHashes),
 			}
 			err := svr.Send(&resp)
 			if err != nil {
@@ -2059,7 +2060,7 @@ func (s *loaderServer) FetchHeaders(ctx context.Context, req *pb.FetchHeadersReq
 	}
 
 	fetchedHeaderCount, rescanFrom, rescanFromHeight,
-		mainChainTipBlockHash, mainChainTipBlockHeight, err := wallet.FetchHeaders(chainClient.Client)
+	mainChainTipBlockHash, mainChainTipBlockHeight, err := wallet.FetchHeaders(chainClient.Client)
 	if err != nil {
 		return nil, translateError(err)
 	}
@@ -2507,13 +2508,13 @@ func marshalDecodedTxInputs(mtx *wire.MsgTx) []*pb.DecodedTransaction_Input {
 		inputs[i] = &pb.DecodedTransaction_Input{
 			PreviousTransactionHash:  txIn.PreviousOutPoint.Hash[:],
 			PreviousTransactionIndex: txIn.PreviousOutPoint.Index,
-			Tree:               pb.DecodedTransaction_Input_TreeType(txIn.PreviousOutPoint.Tree),
-			Sequence:           txIn.Sequence,
-			AmountIn:           txIn.ValueIn,
-			BlockHeight:        txIn.BlockHeight,
-			BlockIndex:         txIn.BlockIndex,
-			SignatureScript:    txIn.SignatureScript,
-			SignatureScriptAsm: disbuf,
+			Tree:                     pb.DecodedTransaction_Input_TreeType(txIn.PreviousOutPoint.Tree),
+			Sequence:                 txIn.Sequence,
+			AmountIn:                 txIn.ValueIn,
+			BlockHeight:              txIn.BlockHeight,
+			BlockIndex:               txIn.BlockIndex,
+			SignatureScript:          txIn.SignatureScript,
+			SignatureScriptAsm:       disbuf,
 		}
 	}
 
@@ -2643,8 +2644,6 @@ func (s *walletServer) BestBlock(ctx context.Context, req *pb.BestBlockRequest) 
 	}
 	return resp, nil
 }
-
-
 
 func (s *walletServer) CommittedTickets(ctx context.Context, req *pb.CommittedTicketsRequest) (*pb.CommittedTicketsResponse, error) {
 
