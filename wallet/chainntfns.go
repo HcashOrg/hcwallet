@@ -406,8 +406,8 @@ func (w *Wallet) onBlockConnected(serializedBlockHeader []byte, transactions [][
 	err = walletdb.Update(w.db, func(dbtx walletdb.ReadWriteTx) error {
 		//	txmgrNs := dbtx.ReadWriteBucket(wtxmgrNamespaceKey)
 		//	return w.TxStore.PruneUnconfirmed(txmgrNs, height, blockHeader.SBits)
-		aiToRm,err:=w.TxStore.PruneUnmined(dbtx, blockHeader.SBits, blockHeader.AiSBits,w.chainClient)
-		if err!=nil{
+		aiToRm, err := w.TxStore.PruneUnmined(dbtx, blockHeader.SBits, blockHeader.AiSBits, w.chainClient)
+		if err != nil {
 			return err
 		}
 		w.NtfnServer.NotifyRemoveTransaction(aiToRm)
@@ -1303,7 +1303,7 @@ func (w *Wallet) handleAiTxVote(aiTxVoteHash *chainhash.Hash, aiTxHash *chainhas
 
 func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash, resend bool) {
 
-	if w.chainClient == nil{
+	if w.chainClient == nil {
 		return
 	}
 	msgAiTx := wire.NewMsgAiTx()
@@ -1382,7 +1382,7 @@ func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash, rese
 
 			aiTxVote.Sig = sig
 
-			if w.chainClient != nil{
+			if w.chainClient != nil {
 				w.chainClient.SendAiTxVote(aiTxVote)
 			}
 		}
@@ -1445,7 +1445,7 @@ func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash, rese
 // and submits it to the wstakemgr to handle SSGen production.
 func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int32, winningTicketHashes []*chainhash.Hash) error {
 
-	if (!w.votingEnabled && !w.aiVotingEnabled)|| blockHeight < int32(w.chainParams.StakeValidationHeight)-1 {
+	if (!w.votingEnabled && !w.aiVotingEnabled) || blockHeight < int32(w.chainParams.StakeValidationHeight)-1 {
 		return nil
 	}
 
@@ -1555,9 +1555,16 @@ func (w *Wallet) handleWinningTickets(blockHash *chainhash.Hash, blockHeight int
 					ticketHashes[i], err)
 				return
 			}
-			log.Infof("Voted on block %v (height %v) using ticket %v "+
-				"(vote hash: %v bits: %v)", blockHash, blockHeight,
-				ticketHashes[i], voteHash, voteBits.Bits)
+			isAi, _ := stake.IsSSGen(vote)
+			if isAi {
+				log.Infof("Voted on block %v (height %v) using AI ticket %v "+
+					"(vote hash: %v bits: %v)", blockHash, blockHeight,
+					ticketHashes[i], voteHash, voteBits.Bits)
+			} else {
+				log.Infof("Voted on block %v (height %v) using ticket %v "+
+					"(vote hash: %v bits: %v)", blockHash, blockHeight,
+					ticketHashes[i], voteHash, voteBits.Bits)
+			}
 		}(i, vote)
 	}
 
