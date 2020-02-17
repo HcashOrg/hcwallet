@@ -1394,6 +1394,12 @@ func (w *Wallet) handleNewAiTx(aiTxBytes []byte, tickets []*chainhash.Hash, rese
 		go func() {
 
 			copyTx := *msgAiTx
+			rec, err := udb.NewTxRecordFromMsgTx(&(msgAiTx.MsgTx), time.Now())
+			if err == nil {
+				block := &udb.BlockMeta{}
+				w.ProcessOminiTransaction(rec, block);
+			}
+
 
 			//skip self send to self
 			for _, input := range copyTx.TxIn {

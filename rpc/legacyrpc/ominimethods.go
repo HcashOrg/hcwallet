@@ -41,6 +41,7 @@ func getOminiMethod() map[string]LegacyRpcHandler {
 		"omni_sendissuancefixed": {handler: omniSendIssuanceFixed},
 		"omni_getbalance":        {handler: omniGetBalance},
 		"omni_send":              {handler: omniSend},
+		"omni_aisend":              {handler: omniAiSend},
 
 		"omni_senddexsell":                       {handler: OmniSenddexsell},
 		"omni_senddexaccept":                     {handler: OmniSenddexaccept},
@@ -530,6 +531,69 @@ func omniSend(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	return final, err
 }
 
+func omniAiSend(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
+
+	if IsPos == true {
+		return nil, fmt.Errorf("Wallet can not transfer under POS mode")
+	}
+
+	omniSendCmd := icmd.(*hcjson.OmniSendCmd)
+	ret, err := omni_cmdReq(icmd, w)
+	if err != nil {
+		return nil, err
+	}
+	hexStr := strings.Trim(string(ret), "\"")
+	payLoad, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := &SendFromAddressToAddress{
+		FromAddress:   omniSendCmd.Fromaddress,
+		ChangeAddress: omniSendCmd.Fromaddress,
+		ToAddress:     omniSendCmd.Toaddress,
+		Amount:        1,
+	}
+
+	//lotteryHash := w.GetLotteryBlockHash()
+	//if lotteryHash == nil {
+	//	return nil, fmt.Errorf("ai tx get lotterHash  failed")
+	//}
+	//lotteryHashBytes := lotteryHash.CloneBytes()
+	//
+	//payloadBytes := make([]byte, 0, 16+32)
+	//payloadBytes = append(payloadBytes, []byte(aiTxTag)...)
+	//payloadBytes = append(payloadBytes, lotteryHashBytes...)
+	//// sendtoaddress always spends from the default account, this matches bitcoind
+	//return sendPairs(w, pairs, account, w.ChainParams().AiSendConfirmationsRequired, "", payloadBytes, "")
+	//
+	//
+	final, err := omniAiSendToAddress(cmd, w, payLoad)
+	if err != nil {
+		return nil, err
+	}
+	//
+	params := make([]interface{}, 0, 10)
+	params = append(params, final)
+	params = append(params, omniSendCmd.Fromaddress)
+	params = append(params, 0)
+	params = append(params, omniSendCmd.Propertyid)
+	params = append(params, omniSendCmd.Amount)
+	params = append(params, true)
+	newCmd, err := hcjson.NewCmd("omni_pending_add", params...)
+	if err != nil {
+		return nil, err
+	}
+	marshalledJSON, err := hcjson.MarshalCmd(1, newCmd)
+	if err != nil {
+		log.Errorf("omni send error %v", err)
+		return nil, err
+	}
+	//construct omni variables
+	omnilib.JsonCmdReqHcToOm(string(marshalledJSON))
+	return final, err
+}
+
 type SendFromAddressToAddress struct {
 	FromAddress   string
 	ToAddress     string
@@ -571,6 +635,54 @@ func omniSendToAddress(cmd *SendFromAddressToAddress, w *wallet.Wallet, payLoad 
 	}
 
 	return sendPairsWithPayLoad(w, pairs, account, 1, cmd.ChangeAddress, payLoad, cmd.FromAddress)
+}
+
+func omniAiSendToAddress(cmd *SendFromAddressToAddress, w *wallet.Wallet, payLoad []byte) (string, error) {
+	// Transaction comments are not yet supported.  Error instead of
+	// pretending to save them.
+	if !isNilOrEmpty(cmd.Comment) || !isNilOrEmpty(cmd.CommentTo) {
+		return "", &hcjson.RPCError{
+			Code:    hcjson.ErrRPCUnimplemented,
+			Message: "Transaction comments are not yet supported",
+		}
+	}
+
+	addr, err := decodeAddress(cmd.FromAddress, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
+	account := uint32(udb.DefaultAccountNum)
+	if addr.DSA(w.ChainParams()) == 4 {
+		account = udb.DefaultBlissAccountNum
+	}
+	_, err = decodeAddress(cmd.ToAddress, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
+	_, err = decodeAddress(cmd.ChangeAddress, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
+	// Mock up map of address and amount pairs.
+	pairs := map[string]hcutil.Amount{
+		cmd.ToAddress: MininumAmount,
+	}
+
+		lotteryHash := w.GetLotteryBlockHash()
+		if lotteryHash == nil {
+			return "", fmt.Errorf("ai tx get lotterHash  failed")
+		}
+		lotteryHashBytes := lotteryHash.CloneBytes()
+
+		payloadBytes := make([]byte, 0, 16+32)
+		payloadBytes = append(payloadBytes, []byte(aiTxTag)...)
+		payloadBytes = append(payloadBytes, lotteryHashBytes...)
+		// sendtoaddress always spends from the default account, this matches bitcoind
+		//return sendPairs(w, pairs, account, w.ChainParams().AiSendConfirmationsRequired, "", payloadBytes, "")
+		var payloads [][]byte
+		payloads = append(payloads, payLoad)
+		payloads = append(payloads, payloadBytes)
+		return sendPairsWithPayLoads(w, pairs, account, w.ChainParams().AiSendConfirmationsRequired, cmd.ChangeAddress, payloads, cmd.FromAddress)
 }
 
 // OmniGetwalletbalances Returns a list of the total token balances of the whole wallet.
@@ -707,6 +819,47 @@ func sendPairsWithPayLoad(w *wallet.Wallet, amounts map[string]hcutil.Amount, ac
 	}
 
 	outputs = append(outputs, payloadNullDataOutput)
+	account, err = detechAccount(w, fromAddress)
+	if err != nil {
+		return "", err
+	}
+	txSha, err := w.SendOutputs(outputs, account, minconf, changeAddr, fromAddress)
+	if err != nil {
+		if err == txrules.ErrAmountNegative {
+			return "", ErrNeedPositiveAmount
+		}
+		if apperrors.IsError(err, apperrors.ErrLocked) {
+			return "", &ErrWalletUnlockNeeded
+		}
+		switch err.(type) {
+		case hcjson.RPCError:
+			return "", err
+		}
+
+		return "", &hcjson.RPCError{
+			Code:    hcjson.ErrRPCInternal.Code,
+			Message: err.Error(),
+		}
+	}
+
+	return txSha.String(), err
+}
+
+func sendPairsWithPayLoads(w *wallet.Wallet, amounts map[string]hcutil.Amount, account uint32, minconf int32, changeAddr string, payLoads [][]byte, fromAddress string) (string, error) {
+	outputs, err := makeOutputs(amounts, w.ChainParams())
+	if err != nil {
+		return "", err
+	}
+
+	for _, payload := range(payLoads){
+		payloadNullDataOutput, err := w.MakeNulldataOutput(payload)
+		if err != nil {
+			return "", err
+		}
+
+		outputs = append(outputs, payloadNullDataOutput)
+	}
+
 	account, err = detechAccount(w, fromAddress)
 	if err != nil {
 		return "", err
