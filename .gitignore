@@ -1,5 +1,4 @@
 config.toml
-vendor
 .vscode/
 .idea/
 hcwallet.exe
