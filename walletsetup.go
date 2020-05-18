@@ -51,10 +51,11 @@ func networkDir(dataDir string, chainParams *chaincfg.Params) string {
 func createWallet(cfg *config) error {
 	dbDir := networkDir(cfg.AppDataDir.Value, activeNet.Params)
 	stakeOptions := &loader.StakeOptions{
-		VotingEnabled: cfg.EnableVoting,
-		AddressReuse:  cfg.ReuseAddresses,
-		TicketAddress: cfg.TicketAddress,
-		TicketFee:     cfg.TicketFee.ToCoin(),
+		VotingEnabled:  cfg.EnableVoting,
+		AddressReuse:   cfg.ReuseAddresses,
+		TicketAddress:  cfg.TicketAddress,
+		SubsidyAddress: cfg.SubsidyAddress,
+		TicketFee:      cfg.TicketFee.ToCoin(),
 	}
 	loader := loader.NewLoader(activeNet.Params, dbDir, stakeOptions,
 		cfg.AddrIdxScanLen, cfg.AllowHighFees, cfg.RelayFee.ToCoin(), cfg.EnableOmni)

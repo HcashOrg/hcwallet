@@ -119,6 +119,7 @@ func walletMain() error {
 		VotingEnabled:       cfg.EnableVoting,
 		AddressReuse:        cfg.ReuseAddresses,
 		TicketAddress:       cfg.TicketAddress.Address,
+		SubsidyAddress:      cfg.SubsidyAddress.Address,
 		PoolAddress:         cfg.PoolAddress.Address,
 		PoolFees:            cfg.PoolFees,
 		StakePoolColdExtKey: cfg.StakePoolColdExtKey,

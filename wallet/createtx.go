@@ -1331,8 +1331,13 @@ func (w *Wallet) purchaseTickets(req purchaseTicketRequest) ([]*chainhash.Hash, 
 					}
 				}
 			}
-			addrSubsidy, err = addrFunc(w.persistReturnedChild(dbtx), req.account, dbtx)
-			return err
+			//get subsidyAddresss from w first
+			addrSubsidy = w.subsidyAddress
+			if addrSubsidy == nil {
+				addrSubsidy, err = addrFunc(w.persistReturnedChild(dbtx), req.account, dbtx)
+				return err
+			}
+			return nil
 		})
 		if err != nil {
 			return ticketHashes, err

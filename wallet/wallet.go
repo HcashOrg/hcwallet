@@ -126,6 +126,7 @@ type Wallet struct {
 	// Internal address handling.
 	addressReuse     bool
 	ticketAddress    hcutil.Address
+	subsidyAddress   hcutil.Address
 	addressBuffers   map[uint32]*bip0044AccountData
 	addressBuffersMu sync.Mutex
 
@@ -162,7 +163,7 @@ type Wallet struct {
 
 // newWallet creates a new Wallet structure with the provided address manager
 // and transaction store.
-func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Address,
+func newWallet(votingEnabled bool, addressReuse bool, ticketAddress, subsidyAddress hcutil.Address,
 	poolAddress hcutil.Address, pf float64, relayFee, ticketFee hcutil.Amount,
 	gapLimit int, stakePoolColdAddrs map[string]struct{}, AllowHighFees bool,
 	mgr *udb.Manager, txs *udb.Store, smgr *udb.StakeStore, db *walletdb.DB,
@@ -187,6 +188,7 @@ func newWallet(votingEnabled bool, addressReuse bool, ticketAddress hcutil.Addre
 		purchaseTicketRequests:   make(chan purchaseTicketRequest),
 		addressReuse:             addressReuse,
 		ticketAddress:            ticketAddress,
+		subsidyAddress:           subsidyAddress,
 		addressBuffers:           make(map[uint32]*bip0044AccountData),
 		poolAddress:              poolAddress,
 		poolFees:                 pf,
@@ -1328,7 +1330,7 @@ func (w *Wallet) GetWalletSyncHeight() (uint32, *chainhash.Hash, error) {
 		rescanHeight = uint32(height)
 	}
 	err = w.RollBackOminiTransaction(rescanHeight, nil)
-	if err != nil{
+	if err != nil {
 		return 0, nil, err
 	}
 	//omni record height
@@ -4406,7 +4408,7 @@ func decodeStakePoolColdExtKey(encStr string, params *chaincfg.Params) (map[stri
 
 // Open loads an already-created wallet from the passed database and namespaces.
 func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, addressReuse bool,
-	ticketAddress hcutil.Address, poolAddress hcutil.Address, poolFees float64, ticketFee float64,
+	ticketAddress ,subsidyAddress hcutil.Address, poolAddress hcutil.Address, poolFees float64, ticketFee float64,
 	gapLimit int, stakePoolColdExtKey string, allowHighFees bool,
 	relayFee float64, enableOmni bool, params *chaincfg.Params) (*Wallet, error) {
 
@@ -4455,6 +4457,7 @@ func Open(db walletdb.DB, pubPass []byte, privPass []byte, votingEnabled bool, a
 		votingEnabled,
 		addressReuse,
 		ticketAddress,
+		subsidyAddress,
 		poolAddress,
 		poolFees,
 		relayFeeAmt,

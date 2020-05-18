@@ -57,6 +57,7 @@ type StakeOptions struct {
 	TicketFee               float64
 	AddressReuse            bool
 	TicketAddress           hcutil.Address
+	SubsidyAddress          hcutil.Address
 	PoolAddress             hcutil.Address
 	PoolFees                float64
 	StakePoolColdExtKey     string
@@ -168,7 +169,7 @@ func (l *Loader) CreateNewWallet(pubPassphrase, privPassphrase, seed []byte) (w 
 	// Open the newly-created wallet.
 	so := l.stakeOptions
 	w, err = wallet.Open(db, pubPassphrase, privPassphrase, so.VotingEnabled, so.AddressReuse,
-		so.TicketAddress, so.PoolAddress, so.PoolFees, so.TicketFee,
+		so.TicketAddress, so.SubsidyAddress, so.PoolAddress, so.PoolFees, so.TicketFee,
 		l.addrIdxScanLen, so.StakePoolColdExtKey, l.allowHighFees,
 		l.relayFee, l.enableOmni, l.chainParams)
 	if err != nil {
@@ -211,7 +212,7 @@ func (l *Loader) OpenExistingWallet(pubPassphrase []byte, privPassphrase []byte)
 
 	so := l.stakeOptions
 	w, err = wallet.Open(db, pubPassphrase, privPassphrase, so.VotingEnabled, so.AddressReuse,
-		so.TicketAddress, so.PoolAddress, so.PoolFees, so.TicketFee,
+		so.TicketAddress, so.SubsidyAddress, so.PoolAddress, so.PoolFees, so.TicketFee,
 		l.addrIdxScanLen, so.StakePoolColdExtKey, l.allowHighFees,
 		l.relayFee, l.enableOmni, l.chainParams)
 	if err != nil {

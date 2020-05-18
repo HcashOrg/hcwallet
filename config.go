@@ -109,6 +109,7 @@ type config struct {
 	ReuseAddresses      bool                 `long:"reuseaddresses" description:"Reuse addresses for ticket purchase to cut down on address overuse"`
 	PurchaseAccount     string               `long:"purchaseaccount" description:"Name of the account to buy tickets from"`
 	TicketAddress       *cfgutil.AddressFlag `long:"ticketaddress" description:"Send all ticket outputs to this address (P2PKH or P2SH only)"`
+	SubsidyAddress      *cfgutil.AddressFlag `long:"subsidyaddress" description:"Send all stake subsidy to this address (P2PKH or P2SH only)"`
 	PoolAddress         *cfgutil.AddressFlag `long:"pooladdress" description:"The ticket pool address where ticket fees will go to"`
 	PoolFees            float64              `long:"poolfees" description:"The per-ticket fee mandated by the ticket pool as a percent (e.g. 1.00 for 1.00% fee)"`
 	AddrIdxScanLen      int                  `long:"addridxscanlen" description:"The width of the scan for last used addresses on wallet restore and start up"`
@@ -359,6 +360,7 @@ func loadConfig() (*config, []string, error) {
 		RelayFee:               cfgutil.NewAmountFlag(txrules.DefaultRelayFeePerKb),
 		TicketFee:              cfgutil.NewAmountFlag(txrules.DefaultRelayFeePerKb),
 		TicketAddress:          cfgutil.NewAddressFlag(nil),
+		SubsidyAddress:         cfgutil.NewAddressFlag(nil),
 		PoolAddress:            cfgutil.NewAddressFlag(nil),
 
 		createPass: "",
