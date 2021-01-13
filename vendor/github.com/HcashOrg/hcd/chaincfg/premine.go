@@ -30,5 +30,4 @@ var BlockOneLedgerTestNet2 = []*TokenPayout{
 var BlockOneLedgerSimNet = []*TokenPayout{
 	{"SsaQrdkhTeXe4qtPSLR5ov3158wyMj8PQGw", 100000 * 1e8},
 	{"SsZ421AssvH5cZKzYAdoc4R25s4S4fwd1Yr", 100000 * 1e8},
-	//{"SsaQrdkhTeXe4qtPSLR5ov3158wyMj8PQGw", 100000 * 1e8},
 }
