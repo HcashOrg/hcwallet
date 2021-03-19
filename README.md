@@ -55,7 +55,7 @@ Wallet clients can use one of two RPC servers:
 
 ## Current State
 
-This project is currently under active development and is in a Beta state. The default branch of hcwallet is currently testnet1. Please make sure to use --testnet flag when running hcwallet and report any issues by using the integrated issue tracker. Do not yet use this software yet as a store of value!
+This project is currently under active development and is in a Beta state. The default branch of hcwallet is currently testnet1. Please make sure to use --testnet flag when running hcwallet and report any issues by using the integrated issue tracker. Do not use this software as a store of value yet!
 
 MAKE SURE TO SAVE YOUR WALLET SEED SO YOU CAN RECOVER YOUR KEYS IF THE WALLET FAILS!
 
